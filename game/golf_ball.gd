@@ -10,6 +10,7 @@ extends CharacterBody3D
 signal ball_at_rest
 
 # State
+const START_HEIGHT := 0.02
 var state: PhysicsEnums.BallState = PhysicsEnums.BallState.REST
 var omega := Vector3.ZERO  ## Angular velocity (rad/s)
 var on_ground := false
@@ -214,7 +215,7 @@ func _enter_rest_state() -> void:
 
 ## Reset ball to starting position
 func reset() -> void:
-	position = Vector3(0.0, 0.1, 0.0)
+	position = Vector3(0.0, START_HEIGHT, 0.0)
 	velocity = Vector3.ZERO
 	omega = Vector3.ZERO
 	launch_spin_rpm = 0.0
@@ -248,7 +249,7 @@ func hit_from_data(data: Dictionary) -> void:
 	# Set state
 	state = PhysicsEnums.BallState.FLIGHT
 	on_ground = false
-	position = Vector3(0.0, 0.05, 0.0)
+	position = Vector3(0.0, START_HEIGHT, 0.0)
 
 	# Calculate initial velocity
 	velocity = Vector3(speed_mps, 0, 0) \
