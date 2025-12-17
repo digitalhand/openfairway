@@ -1,7 +1,7 @@
 [gd_scene load_steps=15 format=3 uid="uid://b1idtxfp7eoke"]
 
 [ext_resource type="Script" uid="uid://c4whkfuiysonu" path="res://courses/Range/range.gd" id="1_sunpe"]
-[ext_resource type="Script" uid="uid://bvqndli0pmmfb" path="res://tcp/tcp_server.gd" id="2_d1a0v"]
+[ext_resource type="Script" uid="uid://bq4cmytah7rs" path="res://tcp/TcpServer.cs" id="2_d1a0v"]
 [ext_resource type="PackedScene" uid="uid://w55fmvo7ly8g" path="res://game/shot_tracker.tscn" id="3_4jr3s"]
 [ext_resource type="PackedScene" uid="uid://da1vsfwmbk8vw" path="res://ui/range_ui.tscn" id="4_d1a0v"]
 [ext_resource type="Script" uid="uid://csjccrhj5wnx7" path="res://addons/phantom_camera/scripts/phantom_camera/phantom_camera_3d.gd" id="17_i3bow"]
@@ -109,8 +109,9 @@ transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 228.6,
 pixel_size = 0.02
 text = "250"
 
-[connection signal="hit_ball" from="TCPServer" to="." method="_on_tcp_client_hit_ball"]
-[connection signal="hit_ball" from="TCPServer" to="ShotTracker" method="_on_tcp_client_hit_ball"]
+[connection signal="HitBall" from="TCPServer" to="." method="_on_tcp_client_hit_ball"]
+[connection signal="HitBall" from="TCPServer" to="ShotTracker" method="_on_tcp_client_hit_ball"]
+[connection signal="HitBall" from="TCPServer" to="ShotTracker" method="_on_tcp_client_hit_ball"]
 [connection signal="bad_data" from="ShotTracker" to="TCPServer" method="_on_player_bad_data"]
 [connection signal="good_data" from="ShotTracker" to="TCPServer" method="_on_golf_ball_good_data"]
 [connection signal="shot_complete" from="ShotTracker" to="." method="_on_golf_ball_rest"]

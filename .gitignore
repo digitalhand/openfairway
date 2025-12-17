@@ -21,3 +21,6 @@ mono_crash.*.json
 .vscode
 
 *addons/terrain_3d/bin/*
+
+gut_temp/
+gut_logs/

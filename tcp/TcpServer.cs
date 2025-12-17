@@ -1,11 +1,13 @@
 using Godot;
 using Godot.Collections;
 using System.Text;
+using TcpClientPeer = Godot.StreamPeerTcp;
+using TcpServerPeer = Godot.TcpServer;
 
 public partial class TcpServer : Node
 {
-    private readonly TCPServer _tcpServer = new();
-    private StreamPeerTCP _tcpConnection;
+    private readonly TcpServerPeer _tcpServer = new();
+    private TcpClientPeer _tcpConnection;
     private bool _tcpConnected;
     private string _tcpString = string.Empty;
     private Dictionary _shotData = new();
@@ -40,24 +42,23 @@ public partial class TcpServer : Node
         _tcpConnection.Poll();
         var status = _tcpConnection.GetStatus();
 
-        if (status == StreamPeerTCP.Status.None)
+        if (status == StreamPeerTcp.Status.None)
         {
             _tcpConnected = false;
+            _tcpConnection = null;
+            _shotData.Clear();
             GD.Print("tcp disconnected");
             return;
         }
 
-        if (status != StreamPeerTCP.Status.Connected)
+        if (status != StreamPeerTcp.Status.Connected)
             return;
 
         var bytesAvailable = (int)_tcpConnection.GetAvailableBytes();
         if (bytesAvailable <= 0)
             return;
 
-        if (!TryReadBytes(bytesAvailable, out var buffer))
-            return;
-
-        _tcpString = Encoding.ASCII.GetString(buffer);
+        _tcpString = _tcpConnection.GetUtf8String(bytesAvailable);
 
         var json = new Json();
         var parseResult = json.Parse(_tcpString);
@@ -67,50 +68,35 @@ public partial class TcpServer : Node
             return;
         }
 
-        if (json.Data is Dictionary dict)
+        var data = json.GetData();
+        if (data.VariantType != Variant.Type.Dictionary)
         {
-            _shotData = dict;
-            GD.Print($"Launch monitor payload: {_tcpString}");
-            TryEmitHitBall(dict);
-        }
-    }
-
-    private bool TryReadBytes(int count, out byte[] buffer)
-    {
-        buffer = System.Array.Empty<byte>();
-
-        var result = _tcpConnection.GetData(count);
-        if (result is Array array && array.Count >= 2)
-        {
-            var error = (Error)(int)array[0];
-            if (error != Error.Ok)
-                return false;
-
-            buffer = (byte[])array[1];
-            return true;
+            RespondError(501, "Invalid payload");
+            return;
         }
 
-        if (result is byte[] bytes)
-        {
-            buffer = bytes;
-            return true;
-        }
-
-        return false;
+        var dict = data.AsGodotDictionary();
+        _shotData = dict;
+        GD.Print($"Launch monitor payload: {_tcpString}");
+        TryEmitHitBall(dict);
     }
 
     private void RespondError(int code, string message)
     {
+        if (_tcpConnection == null)
+            return;
+
         _tcpConnection.Poll();
         var status = _tcpConnection.GetStatus();
 
-        if (status == StreamPeerTCP.Status.None)
+        if (status == StreamPeerTcp.Status.None)
         {
             _tcpConnected = false;
+            _tcpConnection = null;
             return;
         }
 
-        if (status != StreamPeerTCP.Status.Connected)
+        if (status != StreamPeerTcp.Status.Connected)
             return;
 
         _resp50x["Code"] = code;
@@ -122,30 +108,41 @@ public partial class TcpServer : Node
 
     private void TryEmitHitBall(Dictionary data)
     {
-        if (!data.TryGetValue("ShotDataOptions", out var optionsObj) || optionsObj is not Dictionary options)
+        if (!data.TryGetValue("ShotDataOptions", out Variant optionsVar) || optionsVar.VariantType != Variant.Type.Dictionary)
             return;
 
-        if (!options.TryGetValue("ContainsBallData", out var containsObj) || containsObj is not bool containsBall || !containsBall)
+        var options = optionsVar.AsGodotDictionary();
+
+        if (!options.TryGetValue("ContainsBallData", out Variant containsVar) || containsVar.VariantType != Variant.Type.Bool)
             return;
 
-        if (!data.TryGetValue("BallData", out var ballObj) || ballObj is not Dictionary ballData)
+        var containsBall = (bool)containsVar;
+        if (!containsBall)
             return;
 
+        if (!data.TryGetValue("BallData", out Variant ballVar) || ballVar.VariantType != Variant.Type.Dictionary)
+            return;
+
+        var ballData = ballVar.AsGodotDictionary();
         EmitSignal(SignalName.HitBall, ballData);
     }
 
     private void _on_golf_ball_good_data()
     {
+        if (_tcpConnection == null)
+            return;
+
         _tcpConnection.Poll();
         var status = _tcpConnection.GetStatus();
 
-        if (status == StreamPeerTCP.Status.None)
+        if (status == StreamPeerTcp.Status.None)
         {
             _tcpConnected = false;
+            _tcpConnection = null;
             return;
         }
 
-        if (status == StreamPeerTCP.Status.Connected)
+        if (status == StreamPeerTcp.Status.Connected)
         {
             var payload = Encoding.ASCII.GetBytes(Json.Stringify(_resp200));
             _tcpConnection.PutData(payload);
@@ -154,6 +151,6 @@ public partial class TcpServer : Node
 
     private void _on_player_bad_data()
     {
-        // Hook for validation failures
+        RespondError(501, "Bad Ball Data");
     }
 }

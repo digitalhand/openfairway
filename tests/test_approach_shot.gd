@@ -1,0 +1,29 @@
+extends "res://addons/gut/test.gd"
+
+const PhysicsAdapter = preload("res://physics/physics_adapter.gd")
+
+const SHOT_PATH := "res://assets/data/approach_test_shot.json"
+
+func _load_json(path: String) -> Dictionary:
+	assert_true(FileAccess.file_exists(path), "Missing JSON file: %s" % path)
+
+	var text := FileAccess.get_file_as_string(path)
+	var data = JSON.parse_string(text)
+
+	assert_true(typeof(data) == TYPE_DICTIONARY, "JSON must parse to a Dictionary")
+	return data
+
+func test_approach_shot_carry_and_total():
+	var shot := _load_json(SHOT_PATH)
+
+	var result := PhysicsAdapter.simulate_shot_from_json(shot)
+	assert_true(result.has("carry_yd"), "Result missing carry_yd")
+	assert_true(result.has("total_yd"), "Result missing total_yd")
+
+	var carry := float(result["carry_yd"])
+	var total := float(result["total_yd"])
+
+	# Replace these with your expected ranges once you see real output.
+	# Start wide, then tighten.
+	assert_between(carry, 10.0, 200.0, "Carry out of expected range")
+	assert_between(total, carry, 260.0, "Total out of expected range (should be >= carry)")
