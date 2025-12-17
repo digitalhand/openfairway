@@ -1,0 +1,50 @@
+class_name Surface
+extends RefCounted
+
+## Utility class for ground surface physics parameters.
+##
+## Provides friction coefficients and interaction parameters for different
+## playing surfaces based on golf physics research.
+## Reference: https://raypenner.com/golf-physics.pdf
+
+## Returns ground interaction parameters for a given surface type.
+## [br][br]
+## Parameters returned:
+## - u_k: Kinetic friction coefficient (sliding)
+## - u_kr: Rolling friction coefficient
+## - nu_g: Grass drag viscosity
+## - theta_c: Critical bounce angle in radians (from Penner's golf physics)
+static func get_params(surface: PhysicsEnums.Surface) -> Dictionary:
+	match surface:
+		PhysicsEnums.Surface.ROUGH:
+			# High grip, more friction - ball checks up quickly
+			return {
+				"u_k": 0.15,
+				"u_kr": 0.05,
+				"nu_g": 0.0005,
+				"theta_c": 0.38  # ~22°
+			}
+		PhysicsEnums.Surface.FAIRWAY:
+			# Medium grip - standard conditions
+			return {
+				"u_k": 0.42,
+				"u_kr": 0.18,
+				"nu_g": 0.0020,
+				"theta_c": 0.30  # ~17°
+			}
+		PhysicsEnums.Surface.FIRM:
+			# Low grip - ball runs out more
+			return {
+				"u_k": 0.08,
+				"u_kr": 0.02,
+				"nu_g": 0.0002,
+				"theta_c": 0.21  # ~12°
+			}
+		_:
+			# Default to fairway
+			return {
+				"u_k": 0.42,
+				"u_kr": 0.18,
+				"nu_g": 0.0020,
+				"theta_c": 0.30
+			}

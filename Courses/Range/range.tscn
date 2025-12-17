@@ -1,0 +1,118 @@
+[gd_scene load_steps=14 format=3 uid="uid://b1idtxfp7eoke"]
+
+[ext_resource type="Script" path="res://Courses/Range/range.gd" id="1_sunpe"]
+[ext_resource type="Script" path="res://TCP/tcp_server.gd" id="2_d1a0v"]
+[ext_resource type="PackedScene" uid="uid://w55fmvo7ly8g" path="res://game/shot_tracker.tscn" id="3_4jr3s"]
+[ext_resource type="PackedScene" uid="uid://da1vsfwmbk8vw" path="res://UI/range_ui.tscn" id="4_d1a0v"]
+[ext_resource type="Script" path="res://addons/phantom_camera/scripts/phantom_camera/phantom_camera_3d.gd" id="17_i3bow"]
+[ext_resource type="Script" path="res://addons/phantom_camera/scripts/resources/tween_resource.gd" id="18_gqfs3"]
+[ext_resource type="Script" path="res://addons/phantom_camera/scripts/phantom_camera_host/phantom_camera_host.gd" id="19_gqfs3"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_basic"]
+sky_top_color = Color(0.4, 0.6, 0.8, 1)
+sky_horizon_color = Color(0.7, 0.8, 0.9, 1)
+ground_bottom_color = Color(0.2, 0.3, 0.2, 1)
+ground_horizon_color = Color(0.4, 0.5, 0.4, 1)
+
+[sub_resource type="Sky" id="Sky_basic"]
+sky_material = SubResource("ProceduralSkyMaterial_basic")
+
+[sub_resource type="Environment" id="Environment_basic"]
+background_mode = 2
+sky = SubResource("Sky_basic")
+ambient_light_source = 3
+ambient_light_color = Color(0.9, 0.9, 0.9, 1)
+tonemap_mode = 3
+
+[sub_resource type="Resource" id="Resource_hbh3r"]
+script = ExtResource("18_gqfs3")
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_ground"]
+size = Vector3(400, 0.1, 100)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_grass"]
+albedo_color = Color(0.2, 0.5, 0.2, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_ground"]
+size = Vector3(400, 0.1, 100)
+material = SubResource("StandardMaterial3D_grass")
+
+[node name="Range" type="Node3D"]
+script = ExtResource("1_sunpe")
+
+[node name="TCPServer" type="Node" parent="."]
+script = ExtResource("2_d1a0v")
+
+[node name="ShotTracker" parent="." instance=ExtResource("3_4jr3s")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.2, 0)
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 174.334, 165.881, 0)
+light_indirect_energy = 6.592
+shadow_enabled = true
+
+[node name="RangeUI" parent="." instance=ExtResource("4_d1a0v")]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_basic")
+
+[node name="Ground" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 150, -0.05, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Ground"]
+shape = SubResource("BoxShape3D_ground")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Ground"]
+mesh = SubResource("BoxMesh_ground")
+
+[node name="PhantomCamera3D" type="Node3D" parent="."]
+transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, -6.04467, 3.02244, 0)
+script = ExtResource("17_i3bow")
+tween_resource = SubResource("Resource_hbh3r")
+follow_offset = Vector3(-2.5, 1.5, 0)
+follow_damping = true
+follow_damping_value = Vector3(0.4, 0.1, 0.1)
+dead_zone_height = 0.204
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, -6.04467, 3.02244, 0)
+
+[node name="PhantomCameraHost" type="Node" parent="Camera3D"]
+process_priority = 300
+process_physics_priority = 300
+script = ExtResource("19_gqfs3")
+
+[node name="YardMarkers" type="Node3D" parent="."]
+
+[node name="50Yards" type="Label3D" parent="YardMarkers"]
+transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 45.72, 0.379, -0.5)
+pixel_size = 0.02
+text = "50"
+
+[node name="100Yards" type="Label3D" parent="YardMarkers"]
+transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 91.4, 0.379, -0.7)
+pixel_size = 0.02
+text = "100"
+
+[node name="150Yards" type="Label3D" parent="YardMarkers"]
+transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 137.16, 0.379, -0.7)
+pixel_size = 0.02
+text = "150"
+
+[node name="200" type="Label3D" parent="YardMarkers"]
+transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 182.88, 0.379, -0.7)
+pixel_size = 0.02
+text = "200"
+
+[node name="250" type="Label3D" parent="YardMarkers"]
+transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 228.6, 0.379, -0.7)
+pixel_size = 0.02
+text = "250"
+
+[connection signal="hit_ball" from="TCPServer" to="." method="_on_tcp_client_hit_ball"]
+[connection signal="hit_ball" from="TCPServer" to="ShotTracker" method="_on_tcp_client_hit_ball"]
+[connection signal="bad_data" from="ShotTracker" to="TCPServer" method="_on_player_bad_data"]
+[connection signal="good_data" from="ShotTracker" to="TCPServer" method="_on_golf_ball_good_data"]
+[connection signal="shot_complete" from="ShotTracker" to="." method="_on_golf_ball_rest"]
+[connection signal="hit_shot" from="RangeUI" to="ShotTracker" method="_on_range_ui_hit_shot"]
+[connection signal="hit_shot" from="RangeUI" to="." method="_on_range_ui_hit_shot"]
