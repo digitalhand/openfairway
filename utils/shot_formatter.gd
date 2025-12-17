@@ -50,7 +50,7 @@ static func _format_imperial(
 	tracker: Node,
 	show_distance: bool,
 	prev_data: Dictionary,
-	spin: Dictionary
+	_spin: Dictionary
 ) -> Dictionary:
 	var data: Dictionary = {}
 
@@ -84,7 +84,7 @@ static func _format_metric(
 	tracker: Node,
 	show_distance: bool,
 	prev_data: Dictionary,
-	spin: Dictionary
+	_spin: Dictionary
 ) -> Dictionary:
 	var data: Dictionary = {}
 

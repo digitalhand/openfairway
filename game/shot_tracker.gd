@@ -53,19 +53,23 @@ func _process(_delta: float) -> void:
 
 
 func _physics_process(delta: float) -> void:
-	if not _track_points or _current_tracer == null:
+	if not _track_points:
 		return
 
 	apex = maxf(apex, _ball.position.y)
 	side_distance = _ball.position.z
 
 	if _ball.state == PhysicsEnums.BallState.FLIGHT:
-		carry = _ball.get_downrange_yards() / 1.09361  # Convert to meters
+		var new_carry := _ball.get_downrange_yards() / 1.09361  # Convert to meters
+		if new_carry > carry:
+			carry = new_carry
 
-	_trail_timer += delta
-	if _trail_timer >= trail_resolution:
-		_current_tracer.add_point(_ball.position)
-		_trail_timer = 0.0
+	# Update tracer visual if enabled
+	if _current_tracer != null:
+		_trail_timer += delta
+		if _trail_timer >= trail_resolution:
+			_current_tracer.add_point(_ball.position)
+			_trail_timer = 0.0
 
 
 func _start_shot() -> void:

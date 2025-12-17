@@ -108,7 +108,7 @@ func _reset_camera_to_start() -> void:
 	$ShotTracker/Ball.state = PhysicsEnums.BallState.REST
 
 
-func _on_surface_changed(value: PhysicsEnums.Surface) -> void:
+func _on_surface_changed(_value: PhysicsEnums.Surface) -> void:
 	_apply_surface_to_ball()
 
 

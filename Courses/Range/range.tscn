@@ -1,12 +1,12 @@
-[gd_scene load_steps=14 format=3 uid="uid://b1idtxfp7eoke"]
+[gd_scene load_steps=15 format=3 uid="uid://b1idtxfp7eoke"]
 
-[ext_resource type="Script" path="res://Courses/Range/range.gd" id="1_sunpe"]
-[ext_resource type="Script" path="res://TCP/tcp_server.gd" id="2_d1a0v"]
+[ext_resource type="Script" uid="uid://c4whkfuiysonu" path="res://courses/Range/range.gd" id="1_sunpe"]
+[ext_resource type="Script" uid="uid://bvqndli0pmmfb" path="res://tcp/tcp_server.gd" id="2_d1a0v"]
 [ext_resource type="PackedScene" uid="uid://w55fmvo7ly8g" path="res://game/shot_tracker.tscn" id="3_4jr3s"]
-[ext_resource type="PackedScene" uid="uid://da1vsfwmbk8vw" path="res://UI/range_ui.tscn" id="4_d1a0v"]
-[ext_resource type="Script" path="res://addons/phantom_camera/scripts/phantom_camera/phantom_camera_3d.gd" id="17_i3bow"]
-[ext_resource type="Script" path="res://addons/phantom_camera/scripts/resources/tween_resource.gd" id="18_gqfs3"]
-[ext_resource type="Script" path="res://addons/phantom_camera/scripts/phantom_camera_host/phantom_camera_host.gd" id="19_gqfs3"]
+[ext_resource type="PackedScene" uid="uid://da1vsfwmbk8vw" path="res://ui/range_ui.tscn" id="4_d1a0v"]
+[ext_resource type="Script" uid="uid://csjccrhj5wnx7" path="res://addons/phantom_camera/scripts/phantom_camera/phantom_camera_3d.gd" id="17_i3bow"]
+[ext_resource type="Script" uid="uid://8umksf8e80fw" path="res://addons/phantom_camera/scripts/resources/tween_resource.gd" id="18_gqfs3"]
+[ext_resource type="Script" uid="uid://bd046eokvcnu2" path="res://addons/phantom_camera/scripts/phantom_camera_host/phantom_camera_host.gd" id="19_gqfs3"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_basic"]
 sky_top_color = Color(0.4, 0.6, 0.8, 1)
@@ -24,9 +24,6 @@ ambient_light_source = 3
 ambient_light_color = Color(0.9, 0.9, 0.9, 1)
 tonemap_mode = 3
 
-[sub_resource type="Resource" id="Resource_hbh3r"]
-script = ExtResource("18_gqfs3")
-
 [sub_resource type="BoxShape3D" id="BoxShape3D_ground"]
 size = Vector3(400, 0.1, 100)
 
@@ -34,8 +31,11 @@ size = Vector3(400, 0.1, 100)
 albedo_color = Color(0.2, 0.5, 0.2, 1)
 
 [sub_resource type="BoxMesh" id="BoxMesh_ground"]
-size = Vector3(400, 0.1, 100)
 material = SubResource("StandardMaterial3D_grass")
+size = Vector3(400, 0.1, 100)
+
+[sub_resource type="Resource" id="Resource_hbh3r"]
+script = ExtResource("18_gqfs3")
 
 [node name="Range" type="Node3D"]
 script = ExtResource("1_sunpe")
@@ -44,7 +44,7 @@ script = ExtResource("1_sunpe")
 script = ExtResource("2_d1a0v")
 
 [node name="ShotTracker" parent="." instance=ExtResource("3_4jr3s")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.2, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0)
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 174.334, 165.881, 0)
@@ -114,5 +114,5 @@ text = "250"
 [connection signal="bad_data" from="ShotTracker" to="TCPServer" method="_on_player_bad_data"]
 [connection signal="good_data" from="ShotTracker" to="TCPServer" method="_on_golf_ball_good_data"]
 [connection signal="shot_complete" from="ShotTracker" to="." method="_on_golf_ball_rest"]
-[connection signal="hit_shot" from="RangeUI" to="ShotTracker" method="_on_range_ui_hit_shot"]
 [connection signal="hit_shot" from="RangeUI" to="." method="_on_range_ui_hit_shot"]
+[connection signal="hit_shot" from="RangeUI" to="ShotTracker" method="_on_range_ui_hit_shot"]

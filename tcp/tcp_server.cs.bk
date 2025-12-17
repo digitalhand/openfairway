@@ -1,0 +1,159 @@
+using Godot;
+using Godot.Collections;
+using System.Text;
+
+public partial class TcpServer : Node
+{
+    private readonly TCPServer _tcpServer = new();
+    private StreamPeerTCP _tcpConnection;
+    private bool _tcpConnected;
+    private string _tcpString = string.Empty;
+    private Dictionary _shotData = new();
+
+    private readonly Dictionary _resp200 = new() { { "Code", 200 } };
+    private readonly Dictionary _resp201 = new() { { "Code", 201 }, { "Message", "Player Information" } };
+    private readonly Dictionary _resp50x = new() { { "Code", 501 }, { "Message", "Failure Occured" } };
+
+    [Signal]
+    public delegate void HitBallEventHandler(Dictionary data);
+
+    public override void _Ready()
+    {
+        _tcpServer.Listen(49152);
+    }
+
+    public override void _Process(double delta)
+    {
+        // Accept new connection
+        if (!_tcpConnected)
+        {
+            _tcpConnection = _tcpServer.TakeConnection();
+            if (_tcpConnection != null)
+            {
+                GD.Print($"We have a tcp connection at {_tcpConnection.GetConnectedHost()}");
+                _tcpConnected = true;
+            }
+            return;
+        }
+
+        // Poll existing connection
+        _tcpConnection.Poll();
+        var status = _tcpConnection.GetStatus();
+
+        if (status == StreamPeerTCP.Status.None)
+        {
+            _tcpConnected = false;
+            GD.Print("tcp disconnected");
+            return;
+        }
+
+        if (status != StreamPeerTCP.Status.Connected)
+            return;
+
+        var bytesAvailable = (int)_tcpConnection.GetAvailableBytes();
+        if (bytesAvailable <= 0)
+            return;
+
+        if (!TryReadBytes(bytesAvailable, out var buffer))
+            return;
+
+        _tcpString = Encoding.ASCII.GetString(buffer);
+
+        var json = new Json();
+        var parseResult = json.Parse(_tcpString);
+        if (parseResult != Error.Ok)
+        {
+            RespondError(501, "Bad JSON data");
+            return;
+        }
+
+        if (json.Data is Dictionary dict)
+        {
+            _shotData = dict;
+            GD.Print($"Launch monitor payload: {_tcpString}");
+            TryEmitHitBall(dict);
+        }
+    }
+
+    private bool TryReadBytes(int count, out byte[] buffer)
+    {
+        buffer = System.Array.Empty<byte>();
+
+        var result = _tcpConnection.GetData(count);
+        if (result is Array array && array.Count >= 2)
+        {
+            var error = (Error)(int)array[0];
+            if (error != Error.Ok)
+                return false;
+
+            buffer = (byte[])array[1];
+            return true;
+        }
+
+        if (result is byte[] bytes)
+        {
+            buffer = bytes;
+            return true;
+        }
+
+        return false;
+    }
+
+    private void RespondError(int code, string message)
+    {
+        _tcpConnection.Poll();
+        var status = _tcpConnection.GetStatus();
+
+        if (status == StreamPeerTCP.Status.None)
+        {
+            _tcpConnected = false;
+            return;
+        }
+
+        if (status != StreamPeerTCP.Status.Connected)
+            return;
+
+        _resp50x["Code"] = code;
+        _resp50x["Message"] = message;
+
+        var payload = Encoding.ASCII.GetBytes(Json.Stringify(_resp50x));
+        _tcpConnection.PutData(payload);
+    }
+
+    private void TryEmitHitBall(Dictionary data)
+    {
+        if (!data.TryGetValue("ShotDataOptions", out var optionsObj) || optionsObj is not Dictionary options)
+            return;
+
+        if (!options.TryGetValue("ContainsBallData", out var containsObj) || containsObj is not bool containsBall || !containsBall)
+            return;
+
+        if (!data.TryGetValue("BallData", out var ballObj) || ballObj is not Dictionary ballData)
+            return;
+
+        EmitSignal(SignalName.HitBall, ballData);
+    }
+
+    private void _on_golf_ball_good_data()
+    {
+        _tcpConnection.Poll();
+        var status = _tcpConnection.GetStatus();
+
+        if (status == StreamPeerTCP.Status.None)
+        {
+            _tcpConnected = false;
+            return;
+        }
+
+        if (status == StreamPeerTCP.Status.Connected)
+        {
+            var payload = Encoding.ASCII.GetBytes(Json.Stringify(_resp200));
+            _tcpConnection.PutData(payload);
+        }
+    }
+
+    private void _on_player_bad_data()
+    {
+        // Hook for validation failures
+    }
+}
