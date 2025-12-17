@@ -50,25 +50,28 @@ func _on_tcp_client_hit_ball(data: Dictionary) -> void:
 	raw_ball_data = data.duplicate()
 	_update_ball_display()
 
-	if GlobalSettings.range_settings.camera_follow_mode.value:
-		_on_camera_follow_changed(true)
+	# Enable camera follow when shot is hit
+	_on_camera_follow_changed(true)
 
 
 func _on_golf_ball_rest(_ball_data: Dictionary) -> void:
 	raw_ball_data = _ball_data.duplicate()
 	_update_ball_display()
 
+	# Stop camera follow and disable damping immediately to prevent drift
+	$PhantomCamera3D.follow_mode = 0  # NONE
+	$PhantomCamera3D.follow_target = null
+	$PhantomCamera3D.follow_damping = false
+
 	var settings := GlobalSettings.range_settings
 
-	# Reset camera after delay if follow mode enabled
-	if settings.camera_follow_mode.value:
-		var delay: float = settings.ball_reset_timer.value
-		await get_tree().create_timer(delay).timeout
-		_reset_camera_to_start()
+	# Reset camera after delay
+	var delay: float = settings.ball_reset_timer.value
+	await get_tree().create_timer(delay).timeout
+	_reset_camera_to_start()
 
 	# Auto-reset ball if enabled
 	if settings.auto_ball_reset.value:
-		await get_tree().create_timer(settings.ball_reset_timer.value).timeout
 		_reset_display_data()
 		_range_ui.set_data(display_data)
 		_shot_tracker.reset_ball()
@@ -78,14 +81,15 @@ func _on_range_ui_hit_shot(data: Dictionary) -> void:
 	raw_ball_data = data.duplicate()
 	_update_ball_display()
 
-	if GlobalSettings.range_settings.camera_follow_mode.value:
-		_on_camera_follow_changed(true)
+	# Enable camera follow when shot is hit
+	_on_camera_follow_changed(true)
 
 
 func _on_camera_follow_changed(value: bool) -> void:
 	if value:
 		$PhantomCamera3D.follow_mode = 1  # FRAMED
 		$PhantomCamera3D.follow_target = $ShotTracker/Ball
+		$PhantomCamera3D.follow_damping = true  # Re-enable damping for smooth follow
 	else:
 		$PhantomCamera3D.follow_mode = 0  # NONE
 

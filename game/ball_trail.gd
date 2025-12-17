@@ -7,6 +7,7 @@ extends MeshInstance3D
 
 @export var color := Color(0.6, 0.0, 0.0, 1.0)  ## Trail color (darker red default)
 @export var line_width := 0.08  ## Width of the trail ribbon
+@export var smoothing_step: float = 0.05  ## Meters between baked samples for smoother ribbons
 
 var _points: PackedVector3Array = []
 var _material: StandardMaterial3D
@@ -14,6 +15,7 @@ var _material: StandardMaterial3D
 
 func _ready() -> void:
 	mesh = ArrayMesh.new()
+	cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_setup_material()
 
 
@@ -74,14 +76,16 @@ func _create_ribbon_mesh(array_mesh: ArrayMesh) -> void:
 	if camera == null:
 		return
 
-	for i in range(_points.size()):
-		var point: Vector3 = _points[i]
+	var render_points := _get_smoothed_points(_points, smoothing_step)
+
+	for i in range(render_points.size()):
+		var point: Vector3 = render_points[i]
 
 		# Billboard direction to camera
 		var to_camera := (camera.global_position - point).normalized()
 
 		# Forward direction along the path
-		var forward := _get_forward_direction(i)
+		var forward := _get_forward_direction(render_points, i)
 
 		# Perpendicular vector for ribbon width
 		var right := to_camera.cross(forward).normalized()
@@ -89,7 +93,7 @@ func _create_ribbon_mesh(array_mesh: ArrayMesh) -> void:
 			right = Vector3.RIGHT
 
 		# Fade out towards the end
-		var alpha := _calculate_alpha(i)
+		var alpha := _calculate_alpha(render_points.size(), i)
 
 		# Create two vertices (left and right of center)
 		var half_width := line_width * 0.5
@@ -97,7 +101,7 @@ func _create_ribbon_mesh(array_mesh: ArrayMesh) -> void:
 		vertices.append(point + right * half_width)
 
 		# UVs
-		var t := float(i) / float(_points.size() - 1)
+		var t := float(i) / float(render_points.size() - 1)
 		uvs.append(Vector2(0, t))
 		uvs.append(Vector2(1, t))
 
@@ -130,17 +134,39 @@ func _create_ribbon_mesh(array_mesh: ArrayMesh) -> void:
 	array_mesh.surface_set_material(0, _material)
 
 
-func _get_forward_direction(index: int) -> Vector3:
-	if index < _points.size() - 1:
-		return (_points[index + 1] - _points[index]).normalized()
+func _get_forward_direction(points: PackedVector3Array, index: int) -> Vector3:
+	if index < points.size() - 1:
+		return (points[index + 1] - points[index]).normalized()
 	elif index > 0:
-		return (_points[index] - _points[index - 1]).normalized()
+		return (points[index] - points[index - 1]).normalized()
 	else:
 		return Vector3.FORWARD
 
 
-func _calculate_alpha(index: int) -> float:
-	var points_from_end := _points.size() - 1 - index
+func _calculate_alpha(point_count: int, index: int) -> float:
+	var points_from_end := point_count - 1 - index
 	if points_from_end < 3:
 		return float(points_from_end + 1) / 4.0
 	return 1.0
+
+
+func _get_smoothed_points(points: PackedVector3Array, step: float) -> PackedVector3Array:
+	if points.size() < 2 or step <= 0.0:
+		return points
+
+	var curve := Curve3D.new()
+	for p in points:
+		curve.add_point(p)
+
+	curve.bake_interval = step
+	var total_length := curve.get_baked_length()
+
+	var smoothed := PackedVector3Array()
+	var d := 0.0
+	while d < total_length:
+		smoothed.append(curve.sample_baked(d))
+		d += step
+
+	# Ensure final point included
+	smoothed.append(points[points.size() - 1])
+	return smoothed
