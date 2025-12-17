@@ -25,6 +25,7 @@ func _populate_payloads() -> void:
 		"Wood Low test shot": "res://assets/data/wood_low_test_shot.json",
 		"Wedge test shot": "res://assets/data/wedge_test_shot.json",
 		"Bump test shot": "res://assets/data/bump_test_shot.json",
+		"Approach": "res://assets/data/approach_test_shot.json",
 	}
 	var selected := 0
 	var idx := 0

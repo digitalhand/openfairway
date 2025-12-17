@@ -8,6 +8,7 @@ var shot_payloads := {
 	"Wood Low": "res://assets/data/wood_low_test_shot.json",
 	"Wedge": "res://assets/data/wedge_test_shot.json",
 	"Bump": "res://assets/data/bump_test_shot.json",
+	"Approach": "res://assets/data/approach_test_shot.json",
 }
 
 # Called when the node enters the scene tree for the first time.

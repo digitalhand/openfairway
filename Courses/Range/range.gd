@@ -9,8 +9,8 @@ var display_data: Dictionary = {
 	"Carry": "---",
 	"Offline": "---",
 	"Apex": "---",
-	"VLA": 0.0,
-	"HLA": 0.0,
+	"VLA": "---",
+	"HLA": "---",
 	"Speed": "---",
 	"BackSpin": "---",
 	"SideSpin": "---",
@@ -100,6 +100,11 @@ func _on_camera_follow_changed(value: bool) -> void:
 func _reset_camera_to_start() -> void:
 	$PhantomCamera3D.follow_mode = PhantomCamera3D.FollowMode.NONE
 
+	# Point camera at ball start position BEFORE tweening to avoid rotation snap
+	var ball_look_pos: Vector3 = $ShotTracker/Ball.global_position + CAMERA_LOOK_OFFSET
+	$PhantomCamera3D.look_at(ball_look_pos, Vector3.UP)
+	_sync_main_camera_to_phantom()
+
 	var start_pos := CAMERA_START_POS
 	var tween := create_tween()
 	tween.set_trans(Tween.TRANS_CUBIC)
@@ -113,8 +118,6 @@ func _reset_camera_to_start() -> void:
 	$ShotTracker/Ball.velocity = Vector3.ZERO
 	$ShotTracker/Ball.omega = Vector3.ZERO
 	$ShotTracker/Ball.state = PhysicsEnums.BallState.REST
-	$PhantomCamera3D.look_at($ShotTracker/Ball.global_position + CAMERA_LOOK_OFFSET, Vector3.UP)
-	_sync_main_camera_to_phantom()
 
 
 func _start_camera_follow() -> void:

@@ -78,15 +78,26 @@ static func calculate_ground_forces(
 	var tangent_velocity := contact_velocity - params.floor_normal * contact_velocity.dot(params.floor_normal)
 
 	var friction := Vector3.ZERO
-	if tangent_velocity.length() < 0.05:
-		# Rolling without slipping
+	var tangent_vel_mag := tangent_velocity.length()
+
+	# Debug: print every 60 frames (~1 second) when on ground
+	var should_debug := Engine.get_physics_frames() % 60 == 0
+
+	if tangent_vel_mag < 0.05:
+		# Pure rolling - use proper rolling resistance (c_rr), not sliding friction
+		# Rolling resistance coefficient for fairway: 0.015-0.025 (not 0.18!)
 		var flat_velocity := velocity - params.floor_normal * velocity.dot(params.floor_normal)
 		var friction_dir := flat_velocity.normalized() if flat_velocity.length() > 0.01 else Vector3.ZERO
-		friction = friction_dir * (-params.rolling_friction * MASS * 9.81)
+		var rolling_resistance := 0.020  # c_rr for fairway grass
+		friction = friction_dir * (-rolling_resistance * MASS * 9.81)
+		if should_debug:
+			print("  ROLLING: vel=%.2f m/s, spin=%.0f rpm, c_rr=%.3f" % [velocity.length(), (omega.length() / 0.10472), rolling_resistance])
 	else:
 		# Slipping - kinetic friction
 		var slip_dir := tangent_velocity.normalized()
 		friction = slip_dir * (-params.kinetic_friction * MASS * 9.81)
+		if should_debug:
+			print("  SLIPPING: vel=%.2f m/s, spin=%.0f rpm, tangent_vel=%.2f, μ_k=%.2f" % [velocity.length(), (omega.length() / 0.10472), tangent_vel_mag, params.kinetic_friction])
 
 	return grass_drag + friction
 
@@ -149,9 +160,11 @@ static func calculate_ground_torques(
 
 	var friction_force := Vector3.ZERO
 	if tangent_velocity.length() < 0.05:
+		# Pure rolling - use proper rolling resistance
 		var flat_velocity := velocity - params.floor_normal * velocity.dot(params.floor_normal)
 		var friction_dir := flat_velocity.normalized() if flat_velocity.length() > 0.01 else Vector3.ZERO
-		friction_force = friction_dir * (-params.rolling_friction * MASS * 9.81)
+		var rolling_resistance := 0.020  # c_rr for fairway grass
+		friction_force = friction_dir * (-rolling_resistance * MASS * 9.81)
 	else:
 		var slip_dir := tangent_velocity.normalized()
 		friction_force = slip_dir * (-params.kinetic_friction * MASS * 9.81)
@@ -195,21 +208,47 @@ static func calculate_bounce(
 	var omega_tangent := omega - omega_normal
 
 	var impact_angle := vel.angle_to(normal)
-	var spin_component: float = omega.dot(normal)
+
+	# Use tangential spin magnitude for bounce calculation (backspin creates reverse velocity)
+	var omega_tangent_magnitude: float = omega_tangent.length()
 
 	# Tangential retention based on spin
 	var current_spin_rpm := omega.length() / 0.10472
-	var spin_factor := clampf(1.0 - (current_spin_rpm / 8000.0), 0.40, 1.0)
-	var tangential_retention := 0.55 * spin_factor
+
+	var tangential_retention: float
+
+	if current_state == PhysicsEnums.BallState.FLIGHT:
+		# First bounce from flight: Use spin-based penalty
+		var spin_factor := clampf(1.0 - (current_spin_rpm / 8000.0), 0.40, 1.0)
+		tangential_retention = 0.55 * spin_factor
+	else:
+		# Rollout bounces: Higher retention, no spin penalty
+		# Use spin ratio to determine how much velocity to keep
+		var ball_speed := vel.length()
+		var spin_ratio := (omega.length() * RADIUS) / ball_speed if ball_speed > 0.1 else 0.0
+
+		# Low spin ratio = more rollout retention
+		if spin_ratio < 0.20:
+			tangential_retention = lerpf(0.85, 0.70, spin_ratio / 0.20)
+		else:
+			tangential_retention = 0.70
 
 	if new_state == PhysicsEnums.BallState.ROLLOUT:
-		print("  Bounce: spin=%.0f rpm, factor=%.3f, retention=%.3f" % [
-			current_spin_rpm, spin_factor, tangential_retention
+		print("  Bounce: spin=%.0f rpm, retention=%.3f" % [
+			current_spin_rpm, tangential_retention
 		])
 
 	# Calculate new tangential speed
-	var new_tangent_speed := tangential_retention * vel.length() * sin(impact_angle - params.critical_angle) - \
-		2.0 * RADIUS * absf(spin_component) / 7.0
+	var new_tangent_speed: float
+
+	if current_state == PhysicsEnums.BallState.FLIGHT:
+		# First bounce from flight: Use Penner model - backspin creates reverse velocity
+		new_tangent_speed = tangential_retention * vel.length() * sin(impact_angle - params.critical_angle) - \
+			2.0 * RADIUS * omega_tangent_magnitude / 7.0
+	else:
+		# Subsequent bounces during rollout: Simple friction factor (like libgolf)
+		# Don't subtract spin - just apply friction to existing tangential velocity
+		new_tangent_speed = speed_tangent * tangential_retention
 
 	if speed_tangent < 0.01 or new_tangent_speed <= 0.0:
 		vel_tangent = Vector3.ZERO
@@ -217,14 +256,35 @@ static func calculate_bounce(
 		vel_tangent = vel_tangent.limit_length(new_tangent_speed)
 
 	# Update tangential angular velocity
-	var new_omega_tangent := new_tangent_speed / RADIUS
-	if omega_tangent.length() < 0.1 or new_omega_tangent <= 0.0:
-		omega_tangent = Vector3.ZERO
+	if current_state == PhysicsEnums.BallState.FLIGHT:
+		# First bounce: compute omega from tangent speed
+		var new_omega_tangent := new_tangent_speed / RADIUS
+		if omega_tangent.length() < 0.1 or new_omega_tangent <= 0.0:
+			omega_tangent = Vector3.ZERO
+		else:
+			omega_tangent = omega_tangent.limit_length(new_omega_tangent)
 	else:
-		omega_tangent = omega_tangent.limit_length(new_omega_tangent)
+		# Rollout: force spin to match rolling velocity to avoid prolonged slipping
+		if new_tangent_speed > 0.1:
+			# Set spin for pure rolling: omega = v/r in direction of velocity
+			var tangent_dir := vel_tangent.normalized() if vel_tangent.length() > 0.01 else Vector3.RIGHT
+			var rolling_axis := normal.cross(tangent_dir).normalized()
+			omega_tangent = rolling_axis * (new_tangent_speed / RADIUS)
+		else:
+			omega_tangent = Vector3.ZERO
 
 	# Coefficient of restitution (speed-dependent)
-	var cor := get_coefficient_of_restitution(speed_normal)
+	var cor: float
+	if current_state == PhysicsEnums.BallState.FLIGHT:
+		# First bounce from flight: use full COR
+		cor = get_coefficient_of_restitution(speed_normal)
+	else:
+		# Rollout bounces: kill small bounces aggressively to settle into roll
+		if speed_normal < 4.0:
+			cor = 0.0  # Kill small rollout bounces completely
+		else:
+			cor = get_coefficient_of_restitution(speed_normal) * 0.5  # Halve COR for rollout
+
 	vel_normal = vel_normal * -cor
 
 	var new_omega := omega_normal + omega_tangent
