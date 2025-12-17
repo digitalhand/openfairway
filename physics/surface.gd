@@ -25,7 +25,7 @@ static func get_params(surface: PhysicsEnums.Surface) -> Dictionary:
 				"theta_c": 0.38  # ~22°
 			}
 		PhysicsEnums.Surface.FAIRWAY:
-			# Normal fairway - good conditions with 35-60 yd rollout
+			# Normal fairway - good conditions with 30-40 yd rollout, low rpm, high ball speed, low apex.
 			return {
 				"u_k": 0.30,      # Lower kinetic friction for less skid loss
 				"u_kr": 0.015,    # Proper rolling resistance
