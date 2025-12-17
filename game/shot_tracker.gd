@@ -13,7 +13,7 @@ signal shot_complete(data: Dictionary)
 
 # Tracer settings
 @export var max_tracers: int = 4
-@export var trail_resolution: float = 0.1
+@export var trail_resolution: float = 0.01
 
 # Shot statistics
 var apex := 0.0
@@ -80,7 +80,7 @@ func _start_shot() -> void:
 	_create_new_tracer()
 
 	if _current_tracer != null:
-		_current_tracer.add_point(Vector3(0.0, 0.05, 0.0))
+		_current_tracer.add_point(_ball.position)
 
 	_track_points = true
 	_trail_timer = 0.0

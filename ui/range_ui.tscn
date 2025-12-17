@@ -1,9 +1,9 @@
 [gd_scene load_steps=4 format=3 uid="uid://da1vsfwmbk8vw"]
 
-[ext_resource type="Script" uid="uid://dginc6hghigy3" path="res://ui/range_ui.gd" id="1_kur1t"]
-[ext_resource type="PackedScene" uid="uid://bxqjwaed60ykh" path="res://ui/data_panel.tscn" id="1_q72xt"]
-[ext_resource type="Script" uid="uid://3iepiwkqvgs7" path="res://ui/grid_canvas.gd" id="5_rfb4h"]
-[ext_resource type="Script" uid="uid://cgdpaxem0op8k" path="res://ui/shot_injector.gd" id="6_j5yvw"]
+[ext_resource type="Script" path="res://ui/range_ui.gd" id="1_kur1t"]
+[ext_resource type="PackedScene" path="res://ui/data_panel.tscn" id="1_q72xt"]
+[ext_resource type="Script" path="res://ui/grid_canvas.gd" id="5_rfb4h"]
+[ext_resource type="Script" path="res://ui/shot_injector.gd" id="6_j5yvw"]
 
 [node name="RangeUI" type="MarginContainer"]
 anchors_preset = 15

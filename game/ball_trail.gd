@@ -5,7 +5,7 @@ extends MeshInstance3D
 ##
 ## Creates a camera-facing ribbon mesh that follows the ball's trajectory.
 
-@export var color := Color(0.6, 0.0, 0.0, 1.0)  ## Trail color (darker red default)
+@export var color := Color(0.169, 0.076, 0.873, 1.0)  ## Trail color (darker red default)
 @export var line_width := 0.08  ## Width of the trail ribbon
 
 var _points: PackedVector3Array = []

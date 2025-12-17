@@ -18,7 +18,8 @@ enum Units {
 
 ## Ground surface types affecting ball behavior
 enum Surface {
-	FAIRWAY,  ## Standard fairway conditions
-	ROUGH,    ## Longer grass, more friction
-	FIRM      ## Hard ground, less friction
+	FAIRWAY,       ## Normal fairway - good conditions with 35-60 yd rollout
+	FAIRWAY_SOFT,  ## Soft/wet fairway - reduced rollout (~20-30 yds)
+	ROUGH,         ## Longer grass, more friction
+	FIRM           ## Hard ground, less friction
 }

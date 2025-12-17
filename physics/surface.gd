@@ -25,12 +25,20 @@ static func get_params(surface: PhysicsEnums.Surface) -> Dictionary:
 				"theta_c": 0.38  # ~22°
 			}
 		PhysicsEnums.Surface.FAIRWAY:
-			# Medium grip - standard conditions
+			# Normal fairway - good conditions with 30-40 yd rollout, low rpm, high ball speed, low apex.
 			return {
-				"u_k": 0.42,
-				"u_kr": 0.18,
-				"nu_g": 0.0020,
-				"theta_c": 0.30  # ~17°
+				"u_k": 0.30,      # Lower kinetic friction for less skid loss
+				"u_kr": 0.015,    # Proper rolling resistance
+				"nu_g": 0.0010,   # Less grass drag for better rollout
+				"theta_c": 0.25   # ~14° - firmer surface
+			}
+		PhysicsEnums.Surface.FAIRWAY_SOFT:
+			# Soft/wet fairway - reduced rollout (~20-30 yds)
+			return {
+				"u_k": 0.42,      # Higher kinetic friction
+				"u_kr": 0.18,     # Higher rolling resistance
+				"nu_g": 0.0020,   # More grass drag
+				"theta_c": 0.30   # ~17° - softer surface
 			}
 		PhysicsEnums.Surface.FIRM:
 			# Low grip - ball runs out more
@@ -41,10 +49,10 @@ static func get_params(surface: PhysicsEnums.Surface) -> Dictionary:
 				"theta_c": 0.21  # ~12°
 			}
 		_:
-			# Default to fairway
+			# Default to normal fairway
 			return {
-				"u_k": 0.42,
-				"u_kr": 0.18,
-				"nu_g": 0.0020,
-				"theta_c": 0.30
+				"u_k": 0.30,
+				"u_kr": 0.015,
+				"nu_g": 0.0010,
+				"theta_c": 0.25
 			}

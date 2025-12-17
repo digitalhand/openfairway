@@ -8,6 +8,7 @@ var shot_payloads := {
 	"Wood Low": "res://assets/data/wood_low_test_shot.json",
 	"Wedge": "res://assets/data/wedge_test_shot.json",
 	"Bump": "res://assets/data/bump_test_shot.json",
+	"Approach": "res://assets/data/approach_test_shot.json",
 }
 
 # Called when the node enters the scene tree for the first time.
@@ -37,8 +38,8 @@ func set_data(data: Dictionary) -> void:
 		$GridCanvas/TotalSpin.set_data(str(data["TotalSpin"]))
 		$GridCanvas/SpinAxis.set_units("deg")
 		$GridCanvas/SpinAxis.set_data(str(data["SpinAxis"]))
-		$GridCanvas/VLA.set_data("%3.1f" % data["VLA"])
-		$GridCanvas/HLA.set_data("%3.1f" % data["HLA"])
+		$GridCanvas/VLA.set_data(_format_angle(data.get("VLA", 0.0)))
+		$GridCanvas/HLA.set_data(_format_angle(data.get("HLA", 0.0)))
 	else:
 		$GridCanvas/Distance.set_data(data["Distance"])
 		$GridCanvas/Carry.set_data(data["Carry"])
@@ -54,8 +55,14 @@ func set_data(data: Dictionary) -> void:
 		$GridCanvas/TotalSpin.set_data(str(data["TotalSpin"]))
 		$GridCanvas/SpinAxis.set_units("deg")
 		$GridCanvas/SpinAxis.set_data(str(data["SpinAxis"]))
-		$GridCanvas/VLA.set_data("%3.1f" % data["VLA"])
-		$GridCanvas/HLA.set_data("%3.1f" % data["HLA"])
+		$GridCanvas/VLA.set_data(_format_angle(data.get("VLA", 0.0)))
+		$GridCanvas/HLA.set_data(_format_angle(data.get("HLA", 0.0)))
+
+
+func _format_angle(val: Variant) -> String:
+	if val is float or val is int:
+		return "%3.1f" % float(val)
+	return "0.0"
 
 
 func _on_shot_injector_inject(data: Variant) -> void:

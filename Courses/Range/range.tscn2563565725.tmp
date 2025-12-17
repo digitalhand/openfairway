@@ -66,17 +66,16 @@ shape = SubResource("BoxShape3D_ground")
 mesh = SubResource("BoxMesh_ground")
 
 [node name="PhantomCamera3D" type="Node3D" parent="."]
-transform = Transform3D(-0.17364818, -0.09952102, -0.9797662, 0, 0.99488074, -0.101056285, 0.98480767, -0.017548243, -0.17275923, -6.921, 3, 0)
+transform = Transform3D(0.094108306, 0, -0.99556196, 0, 1, 0, 0.99556196, 0, 0.094108306, -6.045, 5, 0)
 script = ExtResource("17_i3bow")
 tween_resource = SubResource("Resource_hbh3r")
-tween_on_load = false
 follow_offset = Vector3(-2.5, 1.5, 0)
 follow_damping = true
 follow_damping_value = Vector3(0.4, 0.1, 0.1)
 dead_zone_height = 0.204
 
 [node name="Camera3D" type="Camera3D" parent="."]
-transform = Transform3D(-0.17364818, -0.09952102, -0.9797662, 0, 0.99488074, -0.101056285, 0.98480767, -0.017548243, -0.17275923, -6.921, 3, 0)
+transform = Transform3D(0.094108306, 0, -0.99556196, 0, 1, 0, 0.99556196, 0, 0.094108306, -6.045, 5, 0)
 
 [node name="PhantomCameraHost" type="Node" parent="Camera3D"]
 process_priority = 300
