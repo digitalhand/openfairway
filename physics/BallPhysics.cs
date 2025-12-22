@@ -114,25 +114,39 @@ public static partial class BallPhysics
 
         if (tangentVelMag < 0.05f)
         {
-            // Pure rolling - use proper rolling resistance (c_rr), not sliding friction
-            // Rolling resistance coefficient for fairway: 0.015-0.025 (not 0.18!)
+            // Pure rolling - use rolling resistance from surface parameters
             Vector3 flatVelocity = velocity - parameters.FloorNormal * velocity.Dot(parameters.FloorNormal);
             Vector3 frictionDir = flatVelocity.Length() > 0.01f ? flatVelocity.Normalized() : Vector3.Zero;
-            float rollingResistance = 0.020f;  // c_rr for fairway grass
-            friction = frictionDir * (-rollingResistance * MASS * 9.81f);
+            friction = frictionDir * (-parameters.RollingFriction * MASS * 9.81f);
             if (shouldDebug)
             {
-                GD.Print($"  ROLLING: vel={velocity.Length():F2} m/s, spin={omega.Length() / 0.10472f:F0} rpm, c_rr={rollingResistance:F3}");
+                GD.Print($"  ROLLING: vel={velocity.Length():F2} m/s, spin={omega.Length() / 0.10472f:F0} rpm, c_rr={parameters.RollingFriction:F3}");
             }
         }
         else
         {
-            // Slipping - kinetic friction
+            // Slipping - use blended friction for smooth transition
+            // For low-velocity rollout, reduce friction to allow more rollout
+            float velocityMag = velocity.Length();
+            float effectiveFriction;
+
+            if (velocityMag < 15.0f)
+            {
+                // Blend between rolling resistance and kinetic friction based on velocity
+                // At v=0: use rolling resistance, at v=15: use kinetic friction
+                float blendFactor = Mathf.Clamp(velocityMag / 15.0f, 0.0f, 1.0f);
+                effectiveFriction = Mathf.Lerp(parameters.RollingFriction, parameters.KineticFriction, blendFactor);
+            }
+            else
+            {
+                effectiveFriction = parameters.KineticFriction;
+            }
+
             Vector3 slipDir = tangentVelocity.Normalized();
-            friction = slipDir * (-parameters.KineticFriction * MASS * 9.81f);
+            friction = slipDir * (-effectiveFriction * MASS * 9.81f);
             if (shouldDebug)
             {
-                GD.Print($"  SLIPPING: vel={velocity.Length():F2} m/s, spin={omega.Length() / 0.10472f:F0} rpm, tangent_vel={tangentVelMag:F2}, μ_k={parameters.KineticFriction:F2}");
+                GD.Print($"  SLIPPING: vel={velocityMag:F2} m/s, spin={omega.Length() / 0.10472f:F0} rpm, tangent_vel={tangentVelMag:F2}, μ_eff={effectiveFriction:F3}");
             }
         }
 
@@ -208,18 +222,33 @@ public static partial class BallPhysics
         Vector3 tangentVelocity = contactVelocity - parameters.FloorNormal * contactVelocity.Dot(parameters.FloorNormal);
 
         Vector3 frictionForce = Vector3.Zero;
-        if (tangentVelocity.Length() < 0.05f)
+        float tangentVelMag = tangentVelocity.Length();
+
+        if (tangentVelMag < 0.05f)
         {
-            // Pure rolling - use proper rolling resistance
+            // Pure rolling - use rolling resistance from surface parameters
             Vector3 flatVelocity = velocity - parameters.FloorNormal * velocity.Dot(parameters.FloorNormal);
             Vector3 frictionDir = flatVelocity.Length() > 0.01f ? flatVelocity.Normalized() : Vector3.Zero;
-            float rollingResistance = 0.020f;  // c_rr for fairway grass
-            frictionForce = frictionDir * (-rollingResistance * MASS * 9.81f);
+            frictionForce = frictionDir * (-parameters.RollingFriction * MASS * 9.81f);
         }
         else
         {
+            // Slipping - use blended friction (same as in CalculateGroundForces)
+            float velocityMag = velocity.Length();
+            float effectiveFriction;
+
+            if (velocityMag < 15.0f)
+            {
+                float blendFactor = Mathf.Clamp(velocityMag / 15.0f, 0.0f, 1.0f);
+                effectiveFriction = Mathf.Lerp(parameters.RollingFriction, parameters.KineticFriction, blendFactor);
+            }
+            else
+            {
+                effectiveFriction = parameters.KineticFriction;
+            }
+
             Vector3 slipDir = tangentVelocity.Normalized();
-            frictionForce = slipDir * (-parameters.KineticFriction * MASS * 9.81f);
+            frictionForce = slipDir * (-effectiveFriction * MASS * 9.81f);
         }
 
         if (frictionForce.Length() > 0.001f)
@@ -254,7 +283,10 @@ public static partial class BallPhysics
         Vector3 omegaNormal = omega.Project(normal);
         Vector3 omegaTangent = omega - omegaNormal;
 
-        float impactAngle = vel.AngleTo(normal);
+        // Calculate impact angle from the SURFACE (not from the normal)
+        // vel.AngleTo(normal) gives angle to normal, but Penner's critical angle is from surface
+        float angleToNormal = vel.AngleTo(normal);
+        float impactAngle = Mathf.Abs(angleToNormal - Mathf.Pi / 2.0f);
 
         // Use tangential spin magnitude for bounce calculation (backspin creates reverse velocity)
         float omegaTangentMagnitude = omegaTangent.Length();
@@ -298,9 +330,28 @@ public static partial class BallPhysics
 
         if (currentState == PhysicsEnums.BallState.Flight)
         {
-            // First bounce from flight: Use Penner model - backspin creates reverse velocity
-            newTangentSpeed = tangentialRetention * vel.Length() * Mathf.Sin(impactAngle - parameters.CriticalAngle) -
-                2.0f * RADIUS * omegaTangentMagnitude / 7.0f;
+            // First bounce from flight
+            // The Penner model only works when impactAngle > criticalAngle (steep impacts with high spin)
+            // For shallow-angle driver shots (impactAngle < criticalAngle), use simple retention model
+            float impactAngleDeg = Mathf.RadToDeg(impactAngle);
+            float criticalAngleDeg = Mathf.RadToDeg(parameters.CriticalAngle);
+
+            if (impactAngle < parameters.CriticalAngle)
+            {
+                // Shallow impact (driver/wood): preserve tangential velocity with retention factor
+                // This is appropriate for low-spin, low-trajectory shots that should roll out
+                newTangentSpeed = speedTangent * tangentialRetention;
+                GD.Print($"  Bounce: Shallow angle ({impactAngleDeg:F2}° < {criticalAngleDeg:F2}°) - using simple retention");
+                GD.Print($"    speedTangent={speedTangent:F2} m/s, newTangentSpeed={newTangentSpeed:F2} m/s");
+            }
+            else
+            {
+                // Steep impact (wedge): Use Penner model - backspin creates reverse velocity
+                newTangentSpeed = tangentialRetention * vel.Length() * Mathf.Sin(impactAngle - parameters.CriticalAngle) -
+                    2.0f * RADIUS * omegaTangentMagnitude / 7.0f;
+                GD.Print($"  Bounce: Steep angle ({impactAngleDeg:F2}° > {criticalAngleDeg:F2}°) - using Penner model");
+                GD.Print($"    speedTangent={speedTangent:F2} m/s, newTangentSpeed={newTangentSpeed:F2} m/s");
+            }
         }
         else
         {
@@ -334,13 +385,25 @@ public static partial class BallPhysics
         }
         else
         {
-            // Rollout: force spin to match rolling velocity to avoid prolonged slipping
+            // Rollout: preserve existing spin, don't force it to match rolling velocity
+            // The ball will slip initially, but forcing high spin kills rollout energy
+            // Natural spin decay will occur through ground torques
             if (newTangentSpeed > 0.1f)
             {
-                // Set spin for pure rolling: omega = v/r in direction of velocity
+                // Keep existing spin magnitude but ensure it's in the right direction
+                float existingSpinMag = omegaTangent.Length();
                 Vector3 tangentDir = velTangent.Length() > 0.01f ? velTangent.Normalized() : Vector3.Right;
                 Vector3 rollingAxis = normal.Cross(tangentDir).Normalized();
-                omegaTangent = rollingAxis * (newTangentSpeed / RADIUS);
+
+                // Gradually adjust spin toward rolling direction, but don't increase magnitude
+                if (existingSpinMag > 0.1f)
+                {
+                    omegaTangent = rollingAxis * existingSpinMag;
+                }
+                else
+                {
+                    omegaTangent = Vector3.Zero;
+                }
             }
             else
             {
@@ -366,6 +429,11 @@ public static partial class BallPhysics
             {
                 cor = GetCoefficientOfRestitution(speedNormal) * 0.5f;  // Halve COR for rollout
             }
+        }
+
+        if (newState == PhysicsEnums.BallState.Rollout && speedNormal > 0.5f)
+        {
+            GD.Print($"    speedNormal={speedNormal:F2} m/s, COR={cor:F3}, velNormal will be {speedNormal * cor:F2} m/s");
         }
 
         velNormal = velNormal * -cor;
