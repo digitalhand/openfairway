@@ -470,12 +470,42 @@ public static partial class BallPhysics
             }
         }
 
-        // Coefficient of restitution (speed-dependent)
+        // Coefficient of restitution (speed-dependent and spin-dependent)
         float cor;
         if (currentState == PhysicsEnums.BallState.Flight)
         {
-            // First bounce from flight: use full COR
-            cor = GetCoefficientOfRestitution(speedNormal);
+            // First bounce from flight: use base COR, reduced by spin
+            // High spin causes ball to "stick" to turf, reducing bounce
+            float baseCor = GetCoefficientOfRestitution(speedNormal);
+
+            // Spin-based COR reduction
+            float spinRpm = omega.Length() / 0.10472f;
+            float spinCORReduction;
+
+            if (spinRpm < 1500.0f)
+            {
+                // Low spin: Minimal COR reduction (0% to 30%)
+                spinCORReduction = (spinRpm / 1500.0f) * 0.30f;
+            }
+            else
+            {
+                // High spin: Strong COR reduction (30% to 70%)
+                // At 1500 rpm: 30% reduction
+                // At 3000+ rpm: 70% reduction (flop shots stick!)
+                float excessSpin = spinRpm - 1500.0f;
+                float spinFactor = Mathf.Min(excessSpin / 1500.0f, 1.0f);
+                spinCORReduction = 0.30f + spinFactor * 0.40f;
+            }
+
+            cor = baseCor * (1.0f - spinCORReduction);
+
+            // Debug output for first bounce
+            if (newState == PhysicsEnums.BallState.Rollout)
+            {
+                GD.Print($"    speedNormal={speedNormal:F2} m/s, spin={spinRpm:F0} rpm");
+                GD.Print($"    baseCOR={baseCor:F3}, spinReduction={spinCORReduction:F2}, finalCOR={cor:F3}");
+                GD.Print($"    velNormal will be {speedNormal * cor:F2} m/s");
+            }
         }
         else
         {
@@ -488,11 +518,11 @@ public static partial class BallPhysics
             {
                 cor = GetCoefficientOfRestitution(speedNormal) * 0.5f;  // Halve COR for rollout
             }
-        }
 
-        if (newState == PhysicsEnums.BallState.Rollout && speedNormal > 0.5f)
-        {
-            GD.Print($"    speedNormal={speedNormal:F2} m/s, COR={cor:F3}, velNormal will be {speedNormal * cor:F2} m/s");
+            if (speedNormal > 0.5f)
+            {
+                GD.Print($"    speedNormal={speedNormal:F2} m/s, COR={cor:F3}, velNormal will be {speedNormal * cor:F2} m/s");
+            }
         }
 
         velNormal = velNormal * -cor;
