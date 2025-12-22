@@ -36,6 +36,7 @@ public partial class GolfBall : CharacterBody3D
     public Vector3 ShotStartPos { get; set; } = Vector3.Zero;
     public Vector3 ShotDirection { get; set; } = new Vector3(1.0f, 0.0f, 0.0f);  // Normalized horizontal direction
     public float LaunchSpinRpm { get; set; } = 0.0f;  // Stored for bounce calculations
+    public float RolloutImpactSpinRpm { get; set; } = 0.0f;  // Spin when first landing (for friction calculation)
 
     public override void _Ready()
     {
@@ -157,7 +158,8 @@ public partial class GolfBall : CharacterBody3D
             _rollingFriction,
             _grassViscosity,
             _criticalAngle,
-            FloorNormal
+            FloorNormal,
+            RolloutImpactSpinRpm
         );
     }
 
@@ -199,6 +201,9 @@ public partial class GolfBall : CharacterBody3D
                     if (State == PhysicsEnums.BallState.Flight)
                     {
                         PrintImpactDebug();
+                        // Capture impact spin for friction calculation during rollout
+                        // This preserves the "bite" effect even as spin decays
+                        RolloutImpactSpinRpm = Omega.Length() / 0.10472f;
                     }
 
                     var parameters = CreatePhysicsParams();
@@ -208,7 +213,21 @@ public partial class GolfBall : CharacterBody3D
                     State = bounceResult.NewState;
 
                     GD.Print($"  Velocity after bounce: {Velocity} ({Velocity.Length():F2} m/s)");
-                    OnGround = false;
+
+                    // If the bounce resulted in very low vertical velocity (damped bounce),
+                    // keep the ball on the ground instead of letting it bounce again
+                    if (Mathf.Abs(Velocity.Y) < 0.5f && State == PhysicsEnums.BallState.Rollout)
+                    {
+                        OnGround = true;
+                        var vel = Velocity;
+                        vel.Y = 0;
+                        Velocity = vel;
+                        GD.Print($"  -> Ball grounded, continuing roll at {vel.Length():F2} m/s");
+                    }
+                    else
+                    {
+                        OnGround = false;
+                    }
                 }
                 else
                 {
@@ -274,6 +293,7 @@ public partial class GolfBall : CharacterBody3D
         Velocity = Vector3.Zero;
         Omega = Vector3.Zero;
         LaunchSpinRpm = 0.0f;
+        RolloutImpactSpinRpm = 0.0f;
         State = PhysicsEnums.BallState.Rest;
         OnGround = false;
     }
@@ -311,6 +331,7 @@ public partial class GolfBall : CharacterBody3D
         // Set state
         State = PhysicsEnums.BallState.Flight;
         OnGround = false;
+        RolloutImpactSpinRpm = 0.0f;
         Position = new Vector3(0.0f, START_HEIGHT, 0.0f);
 
         // Calculate initial velocity

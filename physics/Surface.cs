@@ -31,13 +31,13 @@ public static class Surface
                 },
 
             PhysicsEnums.SurfaceType.Fairway =>
-                // Normal fairway - good conditions with 30-40 yd rollout, low rpm, high ball speed, low apex.
+                // Firm fairway - good conditions with 50-70 yd rollout for low-spin drivers
                 new Dictionary
                 {
-                    { "u_k", 0.30f },      // Lower kinetic friction for less skid loss
-                    { "u_kr", 0.015f },    // Proper rolling resistance
-                    { "nu_g", 0.0010f },   // Less grass drag for better rollout
-                    { "theta_c", 0.25f }   // ~14° - firmer surface
+                    { "u_k", 0.30f },      // Kinetic friction (sliding)
+                    { "u_kr", 0.030f },    // Rolling resistance for firm fairway grass
+                    { "nu_g", 0.0010f },   // Grass drag viscosity
+                    { "theta_c", 0.25f }   // ~14° critical angle - firmer surface
                 },
 
             PhysicsEnums.SurfaceType.FairwaySoft =>

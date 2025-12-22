@@ -30,6 +30,10 @@ public partial class Range : Node3D
     private const float CAMERA_FOLLOW_HEIGHT = 2.0f;
     private static readonly Vector3 CAMERA_START_POS = new Vector3(-2.5f, 1.5f, 0.0f);
     private static readonly Vector3 CAMERA_LOOK_OFFSET = new Vector3(0.0f, 1.5f, 0.0f);
+    private const float CAMERA_START_TWEEN_DURATION = 2.0f;
+    private const float CAMERA_START_CLOSE_BACK = 0.9f;
+    private const float CAMERA_START_CLOSE_HEIGHT = 0.25f;
+    private const float CAMERA_START_CLOSE_LOOK_HEIGHT = 0.1f;
 
     private ShotTracker _shotTracker;
     private RangeUI _rangeUi;
@@ -60,7 +64,15 @@ public partial class Range : Node3D
         settings.CameraFollowMode.SettingChanged += OnCameraFollowChanged;
         settings.SurfaceType.SettingChanged += OnSurfaceChanged;
 
-        SetCameraToStartImmediate();
+        bool followEnabled = (bool)settings.CameraFollowMode.Value;
+        if (followEnabled)
+        {
+            SetCameraToStartImmediate();
+        }
+        else
+        {
+            TweenCameraFromCloseToStart();
+        }
         OnCameraFollowChanged(settings.CameraFollowMode.Value);
         ApplySurfaceToBall();
     }
@@ -207,6 +219,37 @@ public partial class Range : Node3D
         // Point the camera toward the ball start position
         _phantomCamera.Call("look_at", _ball.GlobalPosition + CAMERA_LOOK_OFFSET, Vector3.Up);
         SyncMainCameraToPhantom();
+    }
+
+    private void TweenCameraFromCloseToStart()
+    {
+        _phantomCamera.Set("follow_mode", (int)FollowMode3D.None);
+        _phantomCamera.Set("look_at_mode", (int)LookAtMode.None);
+
+        Vector3 ballLookPos = _ball.GlobalPosition + CAMERA_LOOK_OFFSET;
+        Vector3 closeLookPos = _ball.GlobalPosition + Vector3.Up * CAMERA_START_CLOSE_LOOK_HEIGHT;
+        Vector3 startPos = CAMERA_START_POS;
+        Vector3 shotDir = _ball.ShotDirection;
+        if (shotDir.Length() < 0.5f)
+        {
+            shotDir = Vector3.Right;
+        }
+        shotDir = shotDir.Normalized();
+        Vector3 closePos = _ball.GlobalPosition - shotDir * CAMERA_START_CLOSE_BACK
+            + Vector3.Up * CAMERA_START_CLOSE_HEIGHT;
+
+        _phantomCamera.Set("global_position", closePos);
+        _phantomCamera.Call("look_at", closeLookPos, Vector3.Up);
+        SyncMainCameraToPhantom();
+
+        var tween = CreateTween();
+        tween.SetTrans(Tween.TransitionType.Cubic);
+        tween.SetEase(Tween.EaseType.InOut);
+        tween.Parallel().TweenProperty(_phantomCamera, "global_position", startPos, CAMERA_START_TWEEN_DURATION);
+        tween.Parallel().TweenMethod(Callable.From<Vector3>((pos) =>
+        {
+            _phantomCamera.Call("look_at", pos, Vector3.Up);
+        }), closeLookPos, ballLookPos, CAMERA_START_TWEEN_DURATION);
     }
 
     private void SyncMainCameraToPhantom()

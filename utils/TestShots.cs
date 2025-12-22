@@ -13,7 +13,9 @@ public static class TestShots
         { "Wedge", "res://assets/data/wedge_test_shot.json" },
         { "Bump", "res://assets/data/bump_test_shot.json" },
         { "Approach", "res://assets/data/approach_test_shot.json" },
-        { "Topped", "res://assets/data/topped_test_shot.json" }
+        { "Topped", "res://assets/data/topped_test_shot.json" },
+        { "Checked", "res://assets/data/checked_test_shot.json" },
+        { "Flop", "res://assets/data/flop_test_shot.json" }
     };
 
     public const string DefaultShot = "res://assets/data/drive_test_shot.json";
