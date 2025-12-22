@@ -1,9 +1,9 @@
 [gd_scene load_steps=4 format=3 uid="uid://da1vsfwmbk8vw"]
 
-[ext_resource type="Script" path="res://ui/range_ui.gd" id="1_kur1t"]
+[ext_resource type="Script" path="res://ui/RangeUI.cs" id="1_kur1t"]
 [ext_resource type="PackedScene" path="res://ui/data_panel.tscn" id="1_q72xt"]
-[ext_resource type="Script" path="res://ui/grid_canvas.gd" id="5_rfb4h"]
-[ext_resource type="Script" path="res://ui/shot_injector.gd" id="6_j5yvw"]
+[ext_resource type="Script" path="res://ui/GridCanvas.cs" id="5_rfb4h"]
+[ext_resource type="Script" path="res://ui/ShotInjector.cs" id="6_j5yvw"]
 
 [node name="RangeUI" type="MarginContainer"]
 anchors_preset = 15
@@ -72,88 +72,88 @@ layout_mode = 0
 offset_top = 70.0
 offset_right = 120.0
 offset_bottom = 163.0
-label = "Distance"
-units = "yd"
+Label = "Distance"
+Units = "yd"
 
 [node name="Carry" parent="GridCanvas" instance=ExtResource("1_q72xt")]
 layout_mode = 0
 offset_top = 118.0
 offset_right = 120.0
 offset_bottom = 211.0
-label = "Carry"
-units = "yd"
+Label = "Carry"
+Units = "yd"
 
 [node name="Side" parent="GridCanvas" instance=ExtResource("1_q72xt")]
 layout_mode = 0
 offset_top = 167.0
 offset_right = 120.0
 offset_bottom = 260.0
-label = "Side"
-units = "yd"
+Label = "Side"
+Units = "yd"
 
 [node name="Apex" parent="GridCanvas" instance=ExtResource("1_q72xt")]
 layout_mode = 0
 offset_top = 215.0
 offset_right = 120.0
 offset_bottom = 308.0
-label = "Apex"
-units = "ft"
+Label = "Apex"
+Units = "ft"
 
 [node name="VLA" parent="GridCanvas" instance=ExtResource("1_q72xt")]
 layout_mode = 0
 offset_top = 264.0
 offset_right = 120.0
 offset_bottom = 357.0
-label = "VLA"
-units = "deg"
+Label = "VLA"
+Units = "deg"
 
 [node name="HLA" parent="GridCanvas" instance=ExtResource("1_q72xt")]
 layout_mode = 0
 offset_top = 312.0
 offset_right = 120.0
 offset_bottom = 405.0
-label = "HLA"
-units = "deg"
+Label = "HLA"
+Units = "deg"
 
 [node name="Speed" parent="GridCanvas" instance=ExtResource("1_q72xt")]
 layout_mode = 0
 offset_top = 360.0
 offset_right = 120.0
 offset_bottom = 453.0
-label = "Speed"
-units = "mph"
+Label = "Speed"
+Units = "mph"
 
 [node name="BackSpin" parent="GridCanvas" instance=ExtResource("1_q72xt")]
 layout_mode = 0
 offset_top = 408.0
 offset_right = 120.0
 offset_bottom = 501.0
-label = "BackSpin"
-units = "rpm"
+Label = "BackSpin"
+Units = "rpm"
 
 [node name="SideSpin" parent="GridCanvas" instance=ExtResource("1_q72xt")]
 layout_mode = 0
 offset_top = 456.0
 offset_right = 120.0
 offset_bottom = 549.0
-label = "SideSpin"
-units = "rpm"
+Label = "SideSpin"
+Units = "rpm"
 
 [node name="TotalSpin" parent="GridCanvas" instance=ExtResource("1_q72xt")]
 layout_mode = 0
 offset_top = 504.0
 offset_right = 120.0
 offset_bottom = 597.0
-label = "TotalSpin"
-units = "rpm"
+Label = "TotalSpin"
+Units = "rpm"
 
 [node name="SpinAxis" parent="GridCanvas" instance=ExtResource("1_q72xt")]
 layout_mode = 0
 offset_top = 552.0
 offset_right = 120.0
 offset_bottom = 645.0
-label = "SpinAxis"
-units = "deg"
+Label = "SpinAxis"
+Units = "deg"
 
 [node name="ShotInjector" type="VBoxContainer" parent="."]
 visible = false
@@ -218,30 +218,3 @@ text = "Test Payload"
 [node name="PayloadOption" type="OptionButton" parent="ShotInjector"]
 layout_mode = 2
 
-[connection signal="drag_ended" from="GridCanvas/Distance" to="GridCanvas" method="_on_panel_drag_ended"]
-[connection signal="drag_started" from="GridCanvas/Distance" to="GridCanvas" method="_on_panel_drag_started"]
-[connection signal="drag_ended" from="GridCanvas/Carry" to="GridCanvas" method="_on_panel_drag_ended"]
-[connection signal="drag_started" from="GridCanvas/Carry" to="GridCanvas" method="_on_panel_drag_started"]
-[connection signal="drag_ended" from="GridCanvas/Side" to="GridCanvas" method="_on_panel_drag_ended"]
-[connection signal="drag_started" from="GridCanvas/Side" to="GridCanvas" method="_on_panel_drag_started"]
-[connection signal="drag_ended" from="GridCanvas/Apex" to="GridCanvas" method="_on_panel_drag_ended"]
-[connection signal="drag_started" from="GridCanvas/Apex" to="GridCanvas" method="_on_panel_drag_started"]
-[connection signal="drag_ended" from="GridCanvas/VLA" to="GridCanvas" method="_on_panel_drag_ended"]
-[connection signal="drag_started" from="GridCanvas/VLA" to="GridCanvas" method="_on_panel_drag_started"]
-[connection signal="drag_ended" from="GridCanvas/HLA" to="GridCanvas" method="_on_panel_drag_ended"]
-[connection signal="drag_started" from="GridCanvas/HLA" to="GridCanvas" method="_on_panel_drag_started"]
-[connection signal="drag_ended" from="GridCanvas/Speed" to="GridCanvas" method="_on_panel_drag_ended"]
-[connection signal="drag_started" from="GridCanvas/Speed" to="GridCanvas" method="_on_panel_drag_started"]
-[connection signal="drag_ended" from="GridCanvas/BackSpin" to="GridCanvas" method="_on_panel_drag_ended"]
-[connection signal="drag_started" from="GridCanvas/BackSpin" to="GridCanvas" method="_on_panel_drag_started"]
-[connection signal="drag_ended" from="GridCanvas/SideSpin" to="GridCanvas" method="_on_panel_drag_ended"]
-[connection signal="drag_started" from="GridCanvas/SideSpin" to="GridCanvas" method="_on_panel_drag_started"]
-[connection signal="drag_ended" from="GridCanvas/TotalSpin" to="GridCanvas" method="_on_panel_drag_ended"]
-[connection signal="drag_started" from="GridCanvas/TotalSpin" to="GridCanvas" method="_on_panel_drag_started"]
-[connection signal="drag_ended" from="GridCanvas/SpinAxis" to="GridCanvas" method="_on_panel_drag_ended"]
-[connection signal="drag_started" from="GridCanvas/SpinAxis" to="GridCanvas" method="_on_panel_drag_started"]
-[connection signal="item_selected" from="HBoxContainer/ShotTypeOption" to="." method="_on_shot_type_selected"]
-[connection signal="pressed" from="HBoxContainer/HitShotButton" to="." method="_on_hit_shot_pressed"]
-[connection signal="inject" from="ShotInjector" to="." method="_on_shot_injector_inject"]
-[connection signal="pressed" from="ShotInjector/Button" to="ShotInjector" method="_on_button_pressed"]
-[connection signal="item_selected" from="ShotInjector/PayloadOption" to="ShotInjector" method="_on_payload_option_item_selected"]

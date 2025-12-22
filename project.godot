@@ -17,7 +17,7 @@ config/features=PackedStringArray("4.5", "C#", "Mobile")
 [autoload]
 
 PhantomCameraManager="*res://addons/phantom_camera/scripts/managers/phantom_camera_manager.gd"
-GlobalSettings="*res://Utils/Settings/global_settings.gd"
+GlobalSettings="*res://utils/Settings/GlobalSettings.cs"
 
 [display]
 
