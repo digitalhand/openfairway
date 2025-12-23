@@ -24,3 +24,6 @@ mono_crash.*.json
 
 gut_temp/
 gut_logs/
+
+tests/PhysicsTests/bin/*
+tests/PhysicsTests/obj/*
