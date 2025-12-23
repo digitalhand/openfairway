@@ -85,6 +85,7 @@ public partial class GridCanvas : Control
         foreach (Control panel in GetChildren())
         {
             config.SetValue("positions", panel.Name, panel.Position);
+            config.SetValue("visibility", panel.Name, panel.Visible);
         }
         config.Save("user://layout.cfg");
     }
@@ -102,6 +103,10 @@ public partial class GridCanvas : Control
             if (config.HasSectionKey("positions", panel.Name))
             {
                 panel.Position = (Vector2)config.GetValue("positions", panel.Name);
+            }
+            if (config.HasSectionKey("visibility", panel.Name))
+            {
+                panel.Visible = (bool)config.GetValue("visibility", panel.Name);
             }
         }
     }

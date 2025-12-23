@@ -7,9 +7,17 @@ public partial class RangeUI : MarginContainer
     public delegate void HitShotEventHandler(Dictionary data);
 
     private string _selectedShotPath = TestShots.DefaultShot;
+    private GridCanvas _gridCanvas;
+    private Button _panelsMenu;
+    private PopupMenu _panelsPopup;
+    private OptionButton _shotTypeOption;
+    private Button _hitShotButton;
+    private bool _shotControlsVisible;
+    private readonly System.Collections.Generic.Dictionary<int, string> _panelMenuIndexToName = new();
 
     public override void _Ready()
     {
+        _gridCanvas = GetNode<GridCanvas>("GridCanvas");
         GetNode<GlobalSettings>("/root/GlobalSettings").RangeSettings.ShotInjectorEnabled.SettingChanged += ToggleShotInjector;
 
         // Connect ShotInjector signal
@@ -17,13 +25,26 @@ public partial class RangeUI : MarginContainer
         shotInjector.Inject += OnShotInjectorInject;
 
         // Connect UI button signals
-        var hitShotButton = GetNode<Button>("HBoxContainer/HitShotButton");
-        hitShotButton.Pressed += OnHitShotPressed;
+        _hitShotButton = GetNode<Button>("HBoxContainer/HitShotButton");
+        _hitShotButton.Pressed += OnHitShotPressed;
 
-        var shotTypeOption = GetNode<OptionButton>("HBoxContainer/ShotTypeOption");
-        shotTypeOption.ItemSelected += OnShotTypeSelected;
+        _shotTypeOption = GetNode<OptionButton>("HBoxContainer/ShotTypeOption");
+        _shotTypeOption.ItemSelected += OnShotTypeSelected;
 
         PopulateShotTypes();
+        SetupPanelsMenu();
+        SetShotControlsVisible(false);
+    }
+
+    public override void _Input(InputEvent @event)
+    {
+        if (@event is InputEventKey keyEvent && keyEvent.Pressed && !keyEvent.Echo)
+        {
+            if (keyEvent.Keycode == Key.D)
+            {
+                SetShotControlsVisible(!_shotControlsVisible);
+            }
+        }
     }
 
     public void SetData(Dictionary data)
@@ -82,22 +103,20 @@ public partial class RangeUI : MarginContainer
 
     private void PopulateShotTypes()
     {
-        var optionButton = GetNode<OptionButton>("HBoxContainer/ShotTypeOption");
-        optionButton.Clear();
+        _shotTypeOption.Clear();
         int idx = 0;
         foreach (var kvp in TestShots.Shots)
         {
-            optionButton.AddItem(kvp.Key);
-            optionButton.SetItemMetadata(idx, kvp.Value);
+            _shotTypeOption.AddItem(kvp.Key);
+            _shotTypeOption.SetItemMetadata(idx, kvp.Value);
             idx++;
         }
-        optionButton.Select(0);
+        _shotTypeOption.Select(0);
     }
 
     private void OnShotTypeSelected(long index)
     {
-        var optionButton = GetNode<OptionButton>("HBoxContainer/ShotTypeOption");
-        var metadata = optionButton.GetItemMetadata((int)index);
+        var metadata = _shotTypeOption.GetItemMetadata((int)index);
         if (metadata.VariantType == Variant.Type.String)
         {
             _selectedShotPath = (string)metadata;
@@ -116,5 +135,58 @@ public partial class RangeUI : MarginContainer
 
         GD.Print($"Hit Shot: Loaded from {_selectedShotPath}");
         EmitSignal(SignalName.HitShot, data);
+    }
+
+    private void SetupPanelsMenu()
+    {
+        _panelsMenu = GetNode<Button>("HBoxContainer/PanelsMenu");
+        _panelsPopup = GetNode<PopupMenu>("HBoxContainer/PanelsMenu/PanelsPopup");
+        _panelsPopup.Clear();
+        _panelMenuIndexToName.Clear();
+
+        int index = 0;
+        foreach (var child in _gridCanvas.GetChildren())
+        {
+            if (child is DataPanel panel)
+            {
+                string label = string.IsNullOrWhiteSpace(panel.Label) ? panel.Name : panel.Label;
+                _panelsPopup.AddCheckItem(label, index);
+                _panelsPopup.SetItemChecked(index, panel.Visible);
+                _panelMenuIndexToName[index] = panel.Name;
+                index++;
+            }
+        }
+
+        _panelsPopup.IdPressed += OnPanelsMenuIdPressed;
+        _panelsMenu.Pressed += OnPanelsMenuPressed;
+    }
+
+    private void OnPanelsMenuIdPressed(long id)
+    {
+        int index = (int)id;
+        if (!_panelMenuIndexToName.TryGetValue(index, out var panelName))
+        {
+            return;
+        }
+
+        var panel = _gridCanvas.GetNode<DataPanel>(panelName);
+        bool newVisible = !panel.Visible;
+        panel.Visible = newVisible;
+        _panelsPopup.SetItemChecked(index, newVisible);
+        _gridCanvas.SaveLayout();
+    }
+
+    private void OnPanelsMenuPressed()
+    {
+        var popupPos = _panelsMenu.GlobalPosition + new Vector2(0, _panelsMenu.Size.Y);
+        _panelsPopup.Position = new Vector2I((int)popupPos.X, (int)popupPos.Y);
+        _panelsPopup.Popup();
+    }
+
+    private void SetShotControlsVisible(bool visible)
+    {
+        _shotControlsVisible = visible;
+        _shotTypeOption.Visible = visible;
+        _hitShotButton.Visible = visible;
     }
 }
