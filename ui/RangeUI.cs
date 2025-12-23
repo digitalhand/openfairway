@@ -10,6 +10,9 @@ public partial class RangeUI : MarginContainer
     private GridCanvas _gridCanvas;
     private Button _panelsMenu;
     private PopupMenu _panelsPopup;
+    private OptionButton _shotTypeOption;
+    private Button _hitShotButton;
+    private bool _shotControlsVisible;
     private readonly System.Collections.Generic.Dictionary<int, string> _panelMenuIndexToName = new();
 
     public override void _Ready()
@@ -22,14 +25,26 @@ public partial class RangeUI : MarginContainer
         shotInjector.Inject += OnShotInjectorInject;
 
         // Connect UI button signals
-        var hitShotButton = GetNode<Button>("HBoxContainer/HitShotButton");
-        hitShotButton.Pressed += OnHitShotPressed;
+        _hitShotButton = GetNode<Button>("HBoxContainer/HitShotButton");
+        _hitShotButton.Pressed += OnHitShotPressed;
 
-        var shotTypeOption = GetNode<OptionButton>("HBoxContainer/ShotTypeOption");
-        shotTypeOption.ItemSelected += OnShotTypeSelected;
+        _shotTypeOption = GetNode<OptionButton>("HBoxContainer/ShotTypeOption");
+        _shotTypeOption.ItemSelected += OnShotTypeSelected;
 
         PopulateShotTypes();
         SetupPanelsMenu();
+        SetShotControlsVisible(false);
+    }
+
+    public override void _Input(InputEvent @event)
+    {
+        if (@event is InputEventKey keyEvent && keyEvent.Pressed && !keyEvent.Echo)
+        {
+            if (keyEvent.Keycode == Key.D)
+            {
+                SetShotControlsVisible(!_shotControlsVisible);
+            }
+        }
     }
 
     public void SetData(Dictionary data)
@@ -88,22 +103,20 @@ public partial class RangeUI : MarginContainer
 
     private void PopulateShotTypes()
     {
-        var optionButton = GetNode<OptionButton>("HBoxContainer/ShotTypeOption");
-        optionButton.Clear();
+        _shotTypeOption.Clear();
         int idx = 0;
         foreach (var kvp in TestShots.Shots)
         {
-            optionButton.AddItem(kvp.Key);
-            optionButton.SetItemMetadata(idx, kvp.Value);
+            _shotTypeOption.AddItem(kvp.Key);
+            _shotTypeOption.SetItemMetadata(idx, kvp.Value);
             idx++;
         }
-        optionButton.Select(0);
+        _shotTypeOption.Select(0);
     }
 
     private void OnShotTypeSelected(long index)
     {
-        var optionButton = GetNode<OptionButton>("HBoxContainer/ShotTypeOption");
-        var metadata = optionButton.GetItemMetadata((int)index);
+        var metadata = _shotTypeOption.GetItemMetadata((int)index);
         if (metadata.VariantType == Variant.Type.String)
         {
             _selectedShotPath = (string)metadata;
@@ -168,5 +181,12 @@ public partial class RangeUI : MarginContainer
         var popupPos = _panelsMenu.GlobalPosition + new Vector2(0, _panelsMenu.Size.Y);
         _panelsPopup.Position = new Vector2I((int)popupPos.X, (int)popupPos.Y);
         _panelsPopup.Popup();
+    }
+
+    private void SetShotControlsVisible(bool visible)
+    {
+        _shotControlsVisible = visible;
+        _shotTypeOption.Visible = visible;
+        _hitShotButton.Visible = visible;
     }
 }

@@ -7,7 +7,7 @@ using Godot.Collections;
 /// </summary>
 public partial class BallTrail : MeshInstance3D
 {
-    [Export] public Color Color { get; set; } = new Color(0.169f, 0.076f, 0.873f, 1.0f);  // Trail color (darker red default)
+    [Export] public Color Color { get; set; } = new Color(0.153f, 0.408f, 0.663f, 0.6f);  // Trail color (light blue default)
     [Export] public float LineWidth { get; set; } = 0.08f;  // Width of the trail ribbon
 
     private Vector3[] _points = System.Array.Empty<Vector3>();
@@ -125,7 +125,7 @@ public partial class BallTrail : MeshInstance3D
             uvs.Add(new Vector2(1, t));
 
             // Colors with alpha
-            var vertexColor = new Color(Color.R, Color.G, Color.B, alpha);
+            var vertexColor = new Color(Color.R, Color.G, Color.B, alpha * Color.A);
             colors.Add(vertexColor);
             colors.Add(vertexColor);
 

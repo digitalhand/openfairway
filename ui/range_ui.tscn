@@ -35,8 +35,17 @@ layout_mode = 2
 size_flags_horizontal = 3
 
 [node name="ShotTypeOption" type="OptionButton" parent="HBoxContainer"]
+visible = false
 layout_mode = 2
 size_flags_vertical = 0
+
+[node name="HitShotButton" type="Button" parent="HBoxContainer"]
+visible = false
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+size_flags_vertical = 0
+theme_override_font_sizes/font_size = 18
+text = "Hit Shot"
 
 [node name="PanelsMenu" type="Button" parent="HBoxContainer"]
 custom_minimum_size = Vector2(120, 0)
@@ -46,13 +55,6 @@ theme_override_font_sizes/font_size = 18
 text = "Panels"
 
 [node name="PanelsPopup" type="PopupMenu" parent="HBoxContainer/PanelsMenu"]
-
-[node name="HitShotButton" type="Button" parent="HBoxContainer"]
-custom_minimum_size = Vector2(120, 0)
-layout_mode = 2
-size_flags_vertical = 0
-theme_override_font_sizes/font_size = 18
-text = "Hit Shot"
 
 [node name="OverlayLayer" type="CanvasLayer" parent="."]
 
