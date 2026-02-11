@@ -392,6 +392,19 @@ public partial class GolfBall : CharacterBody3D
             }
         }
 
+        // Validate consistency: if all three are present, components are ground truth
+        // (launch monitors measure backspin/sidespin directly; TotalSpin is derived)
+        if (hasBackspin && hasSidespin && hasTotal)
+        {
+            float computedTotal = Mathf.Sqrt(backspin * backspin + sidespin * sidespin);
+            if (Mathf.Abs(computedTotal - totalSpin) > 1.0f)
+            {
+                GD.Print($"  Spin data inconsistent: TotalSpin={totalSpin:F0} but sqrt(BS²+SS²)={computedTotal:F0}, using computed value");
+                totalSpin = computedTotal;
+                spinAxis = Mathf.RadToDeg(Mathf.Atan2(sidespin, backspin));
+            }
+        }
+
         return new Dictionary
         {
             { "backspin", backspin },

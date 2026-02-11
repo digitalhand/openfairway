@@ -76,7 +76,7 @@ public partial class BallPhysics : RefCounted
     public const float RADIUS = 0.021335f;  // m (regulation golf ball)
     public const float CROSS_SECTION = Mathf.Pi * RADIUS * RADIUS;  // m²
     public const float MOMENT_OF_INERTIA = 0.4f * MASS * RADIUS * RADIUS;  // kg*m²
-    public const float SPIN_DECAY_TAU = 3.0f;  // Spin decay time constant (seconds)
+    public const float SPIN_DECAY_TAU = 5.0f;  // Spin decay time constant (seconds)
 
     // Read-only properties for GDScript access to constants (private set satisfies [Export] requirement)
     [Export] public float BallMass { get => MASS; private set { } }
@@ -125,23 +125,22 @@ public partial class BallPhysics : RefCounted
         float currentSpinRpm = omega.Length() / 0.10472f;
         float effectiveSpinRpm = Mathf.Max(currentSpinRpm, impactSpinRpm);
 
-        // Non-linear with threshold: Grooves don't really "bite" until >1000 rpm
-        // Below 1000 rpm: Minimal effect (drivers should roll)
-        // Above 1000 rpm: Strong increase (wedges should check up)
+        // Non-linear with threshold: Grooves don't really "bite" until >1250 rpm
+        // Below 1250 rpm: Minimal effect (drivers/woods should roll)
+        // Above 1250 rpm: Strong increase (wedges should check up)
         float spinMultiplier;
 
-        if (effectiveSpinRpm < 1000.0f)
+        if (effectiveSpinRpm < 1250.0f)
         {
-            // Low spin (drivers): Minimal friction increase (1.0x to 1.15x)
-            spinMultiplier = 1.0f + (effectiveSpinRpm / 1000.0f) * 0.15f;
+            // Low spin (drivers/woods): Minimal friction increase (1.0x to 1.15x)
+            spinMultiplier = 1.0f + (effectiveSpinRpm / 1250.0f) * 0.15f;
         }
         else
         {
             // High spin (wedges): Strong friction increase (1.15x to 2.5x)
-            // At 1000 rpm: 1.15x
-            // At 1500 rpm: 1.58x
-            // At 2500+ rpm: 2.5x (maximum)
-            float excessSpin = effectiveSpinRpm - 1000.0f;
+            // At 1250 rpm: 1.15x
+            // At 2750+ rpm: 2.5x (maximum)
+            float excessSpin = effectiveSpinRpm - 1250.0f;
             float spinFactor = Mathf.Min(excessSpin / 1500.0f, 1.0f);
             spinMultiplier = 1.15f + spinFactor * 1.35f;
         }
@@ -434,9 +433,14 @@ public partial class BallPhysics : RefCounted
             newTangentSpeed = speedTangent * tangentialRetention;
         }
 
-        if (speedTangent < 0.01f || newTangentSpeed <= 0.0f)
+        if (speedTangent < 0.01f && Mathf.Abs(newTangentSpeed) < 0.01f)
         {
             velTangent = Vector3.Zero;
+        }
+        else if (newTangentSpeed < 0.0f)
+        {
+            // Spin-back: reverse tangential direction
+            velTangent = -velTangent.Normalized() * Mathf.Abs(newTangentSpeed);
         }
         else
         {
@@ -447,10 +451,14 @@ public partial class BallPhysics : RefCounted
         if (currentState == PhysicsEnums.BallState.Flight)
         {
             // First bounce: compute omega from tangent speed
-            float newOmegaTangent = newTangentSpeed / RADIUS;
-            if (omegaTangent.Length() < 0.1f || newOmegaTangent <= 0.0f)
+            float newOmegaTangent = Mathf.Abs(newTangentSpeed) / RADIUS;
+            if (omegaTangent.Length() < 0.1f || newOmegaTangent < 0.01f)
             {
                 omegaTangent = Vector3.Zero;
+            }
+            else if (newTangentSpeed < 0.0f)
+            {
+                omegaTangent = -omegaTangent.Normalized() * newOmegaTangent;
             }
             else
             {
