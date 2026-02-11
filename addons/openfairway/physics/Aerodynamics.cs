@@ -6,6 +6,7 @@ using Godot;
 /// Provides drag (Cd) and lift (Cl) coefficients based on Reynolds number
 /// and spin ratio, using polynomial interpolations from wind tunnel data.
 /// </summary>
+[GlobalClass]
 public partial class Aerodynamics : RefCounted
 {
     // Physical constants

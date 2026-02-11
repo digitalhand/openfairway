@@ -16,6 +16,7 @@ public partial class GolfBall : CharacterBody3D
     private readonly BallPhysics _ballPhysics = new();
     private readonly Aerodynamics _aerodynamics = new();
     private readonly Surface _surfaceHelper = new();
+    private readonly ShotSetup _shotSetup = new();
 
     // State
     public const float START_HEIGHT = 0.02f;
@@ -324,14 +325,17 @@ public partial class GolfBall : CharacterBody3D
     /// </summary>
     public void HitFromData(Dictionary data)
     {
-        float speedMps = (float)(data.ContainsKey("Speed") ? data["Speed"] : 0.0f) * 0.44704f;  // mph to m/s
+        float speedMph = (float)(data.ContainsKey("Speed") ? data["Speed"] : 0.0f);
         float vlaDeg = (float)(data.ContainsKey("VLA") ? data["VLA"] : 0.0f);
         float hlaDeg = (float)(data.ContainsKey("HLA") ? data["HLA"] : 0.0f);
 
         // Parse spin data (handle both backspin/sidespin and totalspin/axis formats)
-        var spinData = ParseSpinData(data);
+        var spinData = _shotSetup.ParseSpin(data);
         float totalSpin = (float)spinData["total"];
         float spinAxis = (float)spinData["axis"];
+
+        // Build launch vectors from monitor data
+        var launch = _shotSetup.BuildLaunchVectors(speedMph, vlaDeg, hlaDeg, totalSpin, spinAxis);
 
         // Set state
         State = PhysicsEnums.BallState.Flight;
@@ -339,79 +343,13 @@ public partial class GolfBall : CharacterBody3D
         RolloutImpactSpinRpm = 0.0f;
         Position = new Vector3(0.0f, START_HEIGHT, 0.0f);
 
-        // Calculate initial velocity
-        Velocity = new Vector3(speedMps, 0, 0)
-            .Rotated(Vector3.Forward, Mathf.DegToRad(-vlaDeg))
-            .Rotated(Vector3.Up, Mathf.DegToRad(-hlaDeg));
-
-        // Set shot tracking
+        Velocity = (Vector3)launch["velocity"];
+        Omega = (Vector3)launch["omega"];
         ShotStartPos = Position;
-        Vector3 flatVelocity = new Vector3(Velocity.X, 0.0f, Velocity.Z);
-        ShotDirection = flatVelocity.Length() > 0.001f ? flatVelocity.Normalized() : Vector3.Right;
-
-        // Set angular velocity
-        Omega = new Vector3(0.0f, 0.0f, totalSpin * 0.10472f)
-            .Rotated(Vector3.Right, Mathf.DegToRad(spinAxis));
+        ShotDirection = (Vector3)launch["shot_direction"];
         LaunchSpinRpm = totalSpin;
 
-        PrintLaunchDebug(data, speedMps, vlaDeg, hlaDeg, totalSpin, spinAxis);
-    }
-
-    private Dictionary ParseSpinData(Dictionary data)
-    {
-        bool hasBackspin = data.ContainsKey("BackSpin");
-        bool hasSidespin = data.ContainsKey("SideSpin");
-        bool hasTotal = data.ContainsKey("TotalSpin");
-        bool hasAxis = data.ContainsKey("SpinAxis");
-
-        float backspin = (float)(data.ContainsKey("BackSpin") ? data["BackSpin"] : 0.0f);
-        float sidespin = (float)(data.ContainsKey("SideSpin") ? data["SideSpin"] : 0.0f);
-        float totalSpin = (float)(data.ContainsKey("TotalSpin") ? data["TotalSpin"] : 0.0f);
-        float spinAxis = (float)(data.ContainsKey("SpinAxis") ? data["SpinAxis"] : 0.0f);
-
-        // Calculate missing values
-        if (totalSpin == 0.0f && (hasBackspin || hasSidespin))
-        {
-            totalSpin = Mathf.Sqrt(backspin * backspin + sidespin * sidespin);
-        }
-
-        if (!hasAxis && (hasBackspin || hasSidespin))
-        {
-            spinAxis = Mathf.RadToDeg(Mathf.Atan2(sidespin, backspin));
-        }
-
-        if (hasTotal && hasAxis)
-        {
-            if (!hasBackspin)
-            {
-                backspin = totalSpin * Mathf.Cos(Mathf.DegToRad(spinAxis));
-            }
-            if (!hasSidespin)
-            {
-                sidespin = totalSpin * Mathf.Sin(Mathf.DegToRad(spinAxis));
-            }
-        }
-
-        // Validate consistency: if all three are present, components are ground truth
-        // (launch monitors measure backspin/sidespin directly; TotalSpin is derived)
-        if (hasBackspin && hasSidespin && hasTotal)
-        {
-            float computedTotal = Mathf.Sqrt(backspin * backspin + sidespin * sidespin);
-            if (Mathf.Abs(computedTotal - totalSpin) > 1.0f)
-            {
-                GD.Print($"  Spin data inconsistent: TotalSpin={totalSpin:F0} but sqrt(BS²+SS²)={computedTotal:F0}, using computed value");
-                totalSpin = computedTotal;
-                spinAxis = Mathf.RadToDeg(Mathf.Atan2(sidespin, backspin));
-            }
-        }
-
-        return new Dictionary
-        {
-            { "backspin", backspin },
-            { "sidespin", sidespin },
-            { "total", totalSpin },
-            { "axis", spinAxis }
-        };
+        PrintLaunchDebug(data, speedMph * 0.44704f, vlaDeg, hlaDeg, totalSpin, spinAxis);
     }
 
     private void PrintLaunchDebug(Dictionary data, float speedMps, float vla, float hla, float spin, float axis)

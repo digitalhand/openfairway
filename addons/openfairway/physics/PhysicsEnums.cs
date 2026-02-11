@@ -1,10 +1,9 @@
-using Godot;
-
 /// <summary>
 /// Physics-related enumerations for the golf simulation.
-/// Container class to expose enums to GDScript.
+/// Used internally by C# physics classes. GDScript consumers use
+/// the physics_enums.gd mirror instead (avoids duplicate class name).
 /// </summary>
-public partial class PhysicsEnums : Resource
+public static class PhysicsEnums
 {
     /// <summary>
     /// Ball flight states

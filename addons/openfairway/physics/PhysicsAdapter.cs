@@ -5,6 +5,7 @@ using Godot.Collections;
 /// <summary>
 /// Adapter/utility for simulating shots from JSON data (headless simulation)
 /// </summary>
+[GlobalClass]
 public partial class PhysicsAdapter : RefCounted
 {
     private const float MPS_PER_MPH = 0.44704f;
@@ -18,6 +19,7 @@ public partial class PhysicsAdapter : RefCounted
     private readonly BallPhysics _physics = new();
     private readonly Aerodynamics _aero = new();
     private readonly Surface _surface = new();
+    private readonly ShotSetup _shotSetup = new();
 
     /// <summary>
     /// Simulate a shot from JSON data and return carry/total distances
@@ -31,22 +33,17 @@ public partial class PhysicsAdapter : RefCounted
             return new Dictionary();
         }
 
-        float speedMps = (float)(ballDict.ContainsKey("Speed") ? ballDict["Speed"] : 0.0) * MPS_PER_MPH;
+        float speedMph = (float)(ballDict.ContainsKey("Speed") ? ballDict["Speed"] : 0.0);
         float vla = (float)(ballDict.ContainsKey("VLA") ? ballDict["VLA"] : 0.0);
         float hla = (float)(ballDict.ContainsKey("HLA") ? ballDict["HLA"] : 0.0);
-        var spinData = ParseSpin(ballDict);
+        var spinData = _shotSetup.ParseSpin(ballDict);
         float totalSpin = (float)spinData["total"];
         float spinAxis = (float)spinData["axis"];
 
-        Vector3 velocity = new Vector3(speedMps, 0, 0)
-            .Rotated(Vector3.Forward, Mathf.DegToRad(-vla))
-            .Rotated(Vector3.Up, Mathf.DegToRad(-hla));
-
-        Vector3 omega = new Vector3(0.0f, 0.0f, totalSpin * 0.10472f)
-            .Rotated(Vector3.Right, Mathf.DegToRad(spinAxis));
-
-        Vector3 flatVelocity = new Vector3(velocity.X, 0.0f, velocity.Z);
-        Vector3 shotDir = flatVelocity.Length() > 0.001f ? flatVelocity.Normalized() : Vector3.Right;
+        var launch = _shotSetup.BuildLaunchVectors(speedMph, vla, hla, totalSpin, spinAxis);
+        Vector3 velocity = (Vector3)launch["velocity"];
+        Vector3 omega = (Vector3)launch["omega"];
+        Vector3 shotDir = (Vector3)launch["shot_direction"];
 
         var parameters = CreateParams(Vector3.Up, PhysicsEnums.SurfaceType.Fairway);
 
@@ -114,62 +111,6 @@ public partial class PhysicsAdapter : RefCounted
         {
             { "carry_yd", carryM * YARDS_PER_METER },
             { "total_yd", totalM * YARDS_PER_METER }
-        };
-    }
-
-    private Dictionary ParseSpin(Dictionary data)
-    {
-        bool hasBackspin = data.ContainsKey("BackSpin");
-        bool hasSidespin = data.ContainsKey("SideSpin");
-        bool hasTotal = data.ContainsKey("TotalSpin");
-        bool hasAxis = data.ContainsKey("SpinAxis");
-
-        float backspin = (float)(data.ContainsKey("BackSpin") ? data["BackSpin"] : 0.0);
-        float sidespin = (float)(data.ContainsKey("SideSpin") ? data["SideSpin"] : 0.0);
-        float totalSpin = (float)(data.ContainsKey("TotalSpin") ? data["TotalSpin"] : 0.0);
-        float spinAxis = (float)(data.ContainsKey("SpinAxis") ? data["SpinAxis"] : 0.0);
-
-        if (totalSpin == 0.0f && (hasBackspin || hasSidespin))
-        {
-            totalSpin = Mathf.Sqrt(backspin * backspin + sidespin * sidespin);
-        }
-
-        if (!hasAxis && (hasBackspin || hasSidespin))
-        {
-            spinAxis = Mathf.RadToDeg(Mathf.Atan2(sidespin, backspin));
-        }
-
-        if (hasTotal && hasAxis)
-        {
-            if (!hasBackspin)
-            {
-                backspin = totalSpin * Mathf.Cos(Mathf.DegToRad(spinAxis));
-            }
-            if (!hasSidespin)
-            {
-                sidespin = totalSpin * Mathf.Sin(Mathf.DegToRad(spinAxis));
-            }
-        }
-
-        // Validate consistency: if all three are present, components are ground truth
-        // (launch monitors measure backspin/sidespin directly; TotalSpin is derived)
-        if (hasBackspin && hasSidespin && hasTotal)
-        {
-            float computedTotal = Mathf.Sqrt(backspin * backspin + sidespin * sidespin);
-            if (Mathf.Abs(computedTotal - totalSpin) > 1.0f)
-            {
-                GD.Print($"  Spin data inconsistent: TotalSpin={totalSpin:F0} but sqrt(BS²+SS²)={computedTotal:F0}, using computed value");
-                totalSpin = computedTotal;
-                spinAxis = Mathf.RadToDeg(Mathf.Atan2(sidespin, backspin));
-            }
-        }
-
-        return new Dictionary
-        {
-            { "backspin", backspin },
-            { "sidespin", sidespin },
-            { "total", totalSpin },
-            { "axis", spinAxis }
         };
     }
 

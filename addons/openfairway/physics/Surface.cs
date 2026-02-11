@@ -7,6 +7,7 @@ using Godot.Collections;
 /// playing surfaces based on golf physics research.
 /// Reference: https://raypenner.com/golf-physics.pdf
 /// </summary>
+[GlobalClass]
 public partial class Surface : RefCounted
 {
     /// <summary>

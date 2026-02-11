@@ -13,6 +13,7 @@ Realistic golf ball physics engine with aerodynamics, bounce, and surface intera
   - [Aerodynamics](#aerodynamics)
   - [Surface](#surface)
   - [PhysicsEnums](#physicsenums)
+  - [ShotSetup](#shotsetup)
   - [PhysicsAdapter](#physicsadapter)
 - [Full Example — GDScript Physics Loop](#full-example--gdscript-physics-loop)
 - [Full Example — Headless Shot Simulation](#full-example--headless-shot-simulation-gdscript)
@@ -23,14 +24,38 @@ Realistic golf ball physics engine with aerodynamics, bounce, and surface intera
 ## Requirements
 
 - **Godot 4.5+** with **.NET support** (the standard GDScript-only editor build will not work)
+- **.NET 8.0 SDK** (or later)
 - The .NET build is required because this addon is written in C#
 - GDScript projects **can** use this addon — Godot's cross-language scripting handles the interop automatically
 
+### Installing .NET 8.0 SDK
+
+**Windows:**
+1. Download the .NET 8.0 SDK installer from https://dotnet.microsoft.com/download/dotnet/8.0
+2. Run the installer and follow the prompts
+3. Verify: open a terminal and run `dotnet --version`
+
+**Linux (Ubuntu/Debian):**
+```bash
+sudo apt update
+sudo apt install dotnet-sdk-8.0
+dotnet --version
+```
+
+**Linux (Fedora):**
+```bash
+sudo dnf install dotnet-sdk-8.0
+dotnet --version
+```
+
+For other distributions, see the [official .NET install guide](https://learn.microsoft.com/dotnet/core/install/linux).
+
 ## Installation
 
-1. Copy the `addons/openfairway/` folder into your project's `addons/` directory
-2. Build the C# project: **Build > Build Project** in the editor, or run `dotnet build` from the command line
-3. Enable the plugin: **Project > Project Settings > Plugins > OpenFairway Physics**
+1. Copy the `addons/openfairway/` folder into your project's `addons/` directory.
+2. **Ensure your project has a C# solution.** If your project already has a `.csproj` and `.sln`, skip to step 3. Otherwise, generate them by going to **Project > Tools > C# > Create C# Solution** in the Godot editor. Alternatively, create any temporary C# script (Node > Attach Script > Language: C#) and Godot will generate both files automatically.
+3. Build your project: **Build > Build Project** in the editor or `Alt+B`, or run `dotnet build YourProject.csproj` from the command line. Godot compiles all `.cs` files under `addons/` as part of your project.
+4. Enable the plugin: **Project > Project Settings > Plugins > OpenFairway Physics**.
 
 ## Quick Start (GDScript)
 
@@ -73,7 +98,7 @@ var physics = BallPhysics.new()
 | `physics.ball_radius`      | 0.02134 m            | Regulation golf ball radius  |
 | `physics.ball_cross_section` | pi * r^2 m^2       | Cross-sectional area         |
 | `physics.ball_moment_of_inertia` | 0.4 * m * r^2 | Moment of inertia            |
-| `physics.spin_decay_tau`   | 5.0 s                | Spin decay time constant     |
+| `physics.spin_decay_tau`   | 3.0 s                | Spin decay time constant     |
 
 **Methods:**
 
@@ -173,23 +198,58 @@ Available surface types:
 
 ### PhysicsEnums
 
-Container class exposing enums to GDScript. C# enum values are accessed in SCREAMING_SNAKE_CASE.
+The addon ships a GDScript mirror (`physics_enums.gd`) that provides enum access for GDScript consumers. Nested C# enums don't reliably expose to GDScript through Godot's cross-language interop, so this mirror ensures enums are always available. The integer values match the C# definitions so interop works seamlessly.
 
 ```gdscript
 # Ball states
-PhysicsEnums.BallState.REST      # Ball is stationary
-PhysicsEnums.BallState.FLIGHT    # Ball is airborne
-PhysicsEnums.BallState.ROLLOUT   # Ball is rolling after landing
+PhysicsEnums.BallState.Rest       # 0 - Ball is stationary
+PhysicsEnums.BallState.Flight     # 1 - Ball is airborne
+PhysicsEnums.BallState.Rollout    # 2 - Ball is rolling after landing
 
 # Unit systems
-PhysicsEnums.Units.METRIC        # Meters, Celsius
-PhysicsEnums.Units.IMPERIAL      # Feet/yards, Fahrenheit
+PhysicsEnums.Units.Metric         # 0 - Meters, Celsius
+PhysicsEnums.Units.Imperial       # 1 - Feet/yards, Fahrenheit
 
 # Surface types
-PhysicsEnums.SurfaceType.FAIRWAY
-PhysicsEnums.SurfaceType.FAIRWAY_SOFT
-PhysicsEnums.SurfaceType.ROUGH
-PhysicsEnums.SurfaceType.FIRM
+PhysicsEnums.SurfaceType.Fairway      # 0
+PhysicsEnums.SurfaceType.FairwaySoft  # 1
+PhysicsEnums.SurfaceType.Rough        # 2
+PhysicsEnums.SurfaceType.Firm         # 3
+```
+
+> **Note:** The C# physics classes (`BallPhysics`, `Aerodynamics`, etc.) use `[GlobalClass]` and do **not** need GDScript mirrors — Godot registers them automatically after building. Only the enums require a mirror.
+
+### ShotSetup
+
+Shared utilities for parsing launch monitor spin data and converting shot parameters to physics vectors. Used internally by `PhysicsAdapter` and intended for game-layer consumers (e.g., a `CharacterBody3D` ball node).
+
+```gdscript
+var setup = ShotSetup.new()
+
+# Parse spin data from various launch monitor formats
+# Accepts any combination of BackSpin/SideSpin and TotalSpin/SpinAxis
+# Returns { "backspin", "sidespin", "total", "axis" } (RPM / degrees)
+var spin: Dictionary = setup.parse_spin({
+    "TotalSpin": 6500.0,
+    "SpinAxis": 15.0
+})
+print(spin["backspin"])   # 6278.1 RPM (computed)
+print(spin["sidespin"])   # 1682.3 RPM (computed)
+print(spin["total"])      # 6500.0 RPM
+print(spin["axis"])       # 15.0 degrees
+
+# Build physics vectors from launch monitor data (mph, degrees, RPM)
+# Returns { "velocity": Vector3, "omega": Vector3, "shot_direction": Vector3 }
+var launch: Dictionary = setup.build_launch_vectors(
+    150.0,   # speed_mph
+    12.5,    # vla_deg  (vertical launch angle)
+    -2.0,    # hla_deg  (horizontal launch angle)
+    2800.0,  # total_spin_rpm
+    5.0      # spin_axis_deg
+)
+var velocity: Vector3 = launch["velocity"]          # m/s
+var omega: Vector3 = launch["omega"]                # rad/s
+var shot_direction: Vector3 = launch["shot_direction"]  # normalized horizontal
 ```
 
 ### PhysicsAdapter
