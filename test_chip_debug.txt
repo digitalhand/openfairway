@@ -1,0 +1,42 @@
+=== SHOT DEBUG ===
+Speed: 24.6769337602615 mph (11.03 m/s)
+VLA: 17.94°, HLA: 20.35°
+Spin: 3204 rpm, Axis: -0.00°
+drag_cf: 1.00, lift_cf: 1.00
+Air density: 1.1883 kg/m³
+Dynamic viscosity: 0.00001852198
+Reynolds number: 30200
+Spin ratio: 0.649
+Cl (before scale): 0.100, after: 0.100
+Initial velocity: (9.84003, 3.3976703, 3.6503847)
+Initial omega: (0, 0, 335.51154) (3204 rpm)
+Shot direction: (0.9375647, 0, 0.3478111)
+===================
+FIRST IMPACT at pos: (6.6177826, -0.033623036, 2.4571216), downrange: 7.72 yds
+  Velocity at impact: (9.201862, -3.3491194, 3.4139726) (10.37 m/s)
+  Spin at impact: (0, 0, 291.6115) (2785 rpm)
+  Normal: (-0.00031526937, 0.99999994, -0)
+  Bounce: spin=2785 rpm, retention=0.359
+  Bounce: Low energy (10.37 m/s < 20 m/s) - using simple retention
+    speedTangent=9.81 m/s, newTangentSpeed=3.52 m/s
+    speedNormal=3.35 m/s, spin=2785 rpm
+    baseCOR=0.419, spinReduction=0.09, finalCOR=0.381
+    velNormal will be 1.28 m/s
+  Velocity after bounce: (3.298577, 1.2786531, 1.2240913) (3.74 m/s)
+  Bounce: spin=1478 rpm, retention=0.700
+    speedNormal=1.82 m/s, COR=0.000, velNormal will be 0.00 m/s
+  Velocity after bounce: (2.2851949, -0.00040955542, 0.84783244) (2.44 m/s)
+  -> Ball grounded, continuing roll at 2.44 m/s
+  ROLLING: vel=2.33 m/s, spin=1024 rpm, c_rr=0.026 (×1.32)
+  ROLLING: vel=2.03 m/s, spin=890 rpm, c_rr=0.026 (×1.31)
+  ROLLING: vel=1.76 m/s, spin=767 rpm, c_rr=0.026 (×1.31)
+  ROLLING: vel=1.49 m/s, spin=645 rpm, c_rr=0.026 (×1.30)
+  ROLLING: vel=1.23 m/s, spin=535 rpm, c_rr=0.026 (×1.29)
+  SLIPPING: vel=0.98 m/s, spin=461 rpm, tangent_vel=0.05, μ_eff=0.027 (×1.29)
+  ROLLING: vel=0.78 m/s, spin=368 rpm, c_rr=0.026 (×1.28)
+  ROLLING: vel=0.61 m/s, spin=289 rpm, c_rr=0.026 (×1.28)
+  ROLLING: vel=0.47 m/s, spin=230 rpm, c_rr=0.026 (×1.27)
+  SLIPPING: vel=0.36 m/s, spin=184 rpm, tangent_vel=0.05, μ_eff=0.026 (×1.27)
+  SLIPPING: vel=0.27 m/s, spin=145 rpm, tangent_vel=0.06, μ_eff=0.025 (×1.27)
+  ROLLING: vel=0.20 m/s, spin=107 rpm, c_rr=0.025 (×1.27)
+  ROLLING: vel=0.14 m/s, spin=85 rpm, c_rr=0.025 (×1.26)
