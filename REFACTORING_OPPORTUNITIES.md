@@ -16,7 +16,9 @@ private readonly Dictionary<string, string> _shotPayloads = new()
     { "Wedge", "res://assets/data/wedge_test_shot.json" },
     { "Bump", "res://assets/data/bump_test_shot.json" },
     { "Approach", "res://assets/data/approach_test_shot.json" },
-    { "Topped", "res://assets/data/topped_test_shot.json" }
+    { "Topped", "res://assets/data/topped_test_shot.json" },
+    { "Chip", "res://assets/data/chip_test_shot.json" },
+    { "flop", "res://assets/data/flop_test_shot.json" },
 };
 
 // ShotInjector.cs - DUPLICATE

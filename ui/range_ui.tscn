@@ -1,11 +1,11 @@
-[gd_scene load_steps=4 format=3 uid="uid://da1vsfwmbk8vw"]
+[gd_scene format=3 uid="uid://da1vsfwmbk8vw"]
 
-[ext_resource type="Script" path="res://ui/RangeUI.cs" id="1_kur1t"]
-[ext_resource type="PackedScene" path="res://ui/data_panel.tscn" id="1_q72xt"]
-[ext_resource type="Script" path="res://ui/GridCanvas.cs" id="5_rfb4h"]
-[ext_resource type="Script" path="res://ui/ShotInjector.cs" id="6_j5yvw"]
+[ext_resource type="Script" uid="uid://81pmo36d7km5" path="res://ui/RangeUI.cs" id="1_kur1t"]
+[ext_resource type="PackedScene" uid="uid://bxqjwaed60ykh" path="res://ui/data_panel.tscn" id="1_q72xt"]
+[ext_resource type="Script" uid="uid://kehfldgysi44" path="res://ui/GridCanvas.cs" id="5_rfb4h"]
+[ext_resource type="Script" uid="uid://by5qgm64uh0v8" path="res://ui/ShotInjector.cs" id="6_j5yvw"]
 
-[node name="RangeUI" type="MarginContainer"]
+[node name="RangeUI" type="MarginContainer" unique_id=1754073492]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -18,28 +18,28 @@ theme_override_constants/margin_right = 15
 theme_override_constants/margin_bottom = 15
 script = ExtResource("1_kur1t")
 
-[node name="HBoxContainer" type="HBoxContainer" parent="."]
+[node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=1177287301]
 layout_mode = 2
 size_flags_vertical = 0
 theme_override_constants/separation = 11
 
-[node name="PlayerName" type="Label" parent="HBoxContainer"]
+[node name="PlayerName" type="Label" parent="HBoxContainer" unique_id=2137630634]
 layout_mode = 2
 size_flags_vertical = 0
 theme_override_font_sizes/font_size = 32
 text = "OpenFairway"
 vertical_alignment = 1
 
-[node name="Control" type="Control" parent="HBoxContainer"]
+[node name="Control" type="Control" parent="HBoxContainer" unique_id=1936266922]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="ShotTypeOption" type="OptionButton" parent="HBoxContainer"]
+[node name="ShotTypeOption" type="OptionButton" parent="HBoxContainer" unique_id=536066020]
 visible = false
 layout_mode = 2
 size_flags_vertical = 0
 
-[node name="HitShotButton" type="Button" parent="HBoxContainer"]
+[node name="HitShotButton" type="Button" parent="HBoxContainer" unique_id=1466247724]
 visible = false
 custom_minimum_size = Vector2(120, 0)
 layout_mode = 2
@@ -47,18 +47,18 @@ size_flags_vertical = 0
 theme_override_font_sizes/font_size = 18
 text = "Hit Shot"
 
-[node name="PanelsMenu" type="Button" parent="HBoxContainer"]
+[node name="PanelsMenu" type="Button" parent="HBoxContainer" unique_id=36180300]
 custom_minimum_size = Vector2(120, 0)
 layout_mode = 2
 size_flags_vertical = 0
 theme_override_font_sizes/font_size = 18
 text = "Panels"
 
-[node name="PanelsPopup" type="PopupMenu" parent="HBoxContainer/PanelsMenu"]
+[node name="PanelsPopup" type="PopupMenu" parent="HBoxContainer/PanelsMenu" unique_id=488506219]
 
-[node name="OverlayLayer" type="CanvasLayer" parent="."]
+[node name="OverlayLayer" type="CanvasLayer" parent="." unique_id=1270438998]
 
-[node name="TotalDistanceOverlay" type="Label" parent="OverlayLayer"]
+[node name="TotalDistanceOverlay" type="Label" parent="OverlayLayer" unique_id=793381493]
 visible = false
 anchors_preset = -1
 anchor_top = 0.2
@@ -73,12 +73,12 @@ text = "Total Distance --"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="GridCanvas" type="Control" parent="."]
+[node name="GridCanvas" type="Control" parent="." unique_id=218176839]
 layout_mode = 2
 mouse_filter = 2
 script = ExtResource("5_rfb4h")
 
-[node name="Distance" parent="GridCanvas" instance=ExtResource("1_q72xt")]
+[node name="Distance" parent="GridCanvas" unique_id=928722756 instance=ExtResource("1_q72xt")]
 layout_mode = 0
 offset_top = 70.0
 offset_right = 120.0
@@ -86,7 +86,7 @@ offset_bottom = 163.0
 Label = "Distance"
 Units = "yd"
 
-[node name="Carry" parent="GridCanvas" instance=ExtResource("1_q72xt")]
+[node name="Carry" parent="GridCanvas" unique_id=31144674 instance=ExtResource("1_q72xt")]
 layout_mode = 0
 offset_top = 118.0
 offset_right = 120.0
@@ -94,7 +94,7 @@ offset_bottom = 211.0
 Label = "Carry"
 Units = "yd"
 
-[node name="Side" parent="GridCanvas" instance=ExtResource("1_q72xt")]
+[node name="Side" parent="GridCanvas" unique_id=2021554997 instance=ExtResource("1_q72xt")]
 layout_mode = 0
 offset_top = 167.0
 offset_right = 120.0
@@ -102,7 +102,7 @@ offset_bottom = 260.0
 Label = "Side"
 Units = "yd"
 
-[node name="Apex" parent="GridCanvas" instance=ExtResource("1_q72xt")]
+[node name="Apex" parent="GridCanvas" unique_id=783310596 instance=ExtResource("1_q72xt")]
 layout_mode = 0
 offset_top = 215.0
 offset_right = 120.0
@@ -110,7 +110,7 @@ offset_bottom = 308.0
 Label = "Apex"
 Units = "ft"
 
-[node name="VLA" parent="GridCanvas" instance=ExtResource("1_q72xt")]
+[node name="VLA" parent="GridCanvas" unique_id=720737871 instance=ExtResource("1_q72xt")]
 layout_mode = 0
 offset_top = 264.0
 offset_right = 120.0
@@ -118,7 +118,7 @@ offset_bottom = 357.0
 Label = "VLA"
 Units = "deg"
 
-[node name="HLA" parent="GridCanvas" instance=ExtResource("1_q72xt")]
+[node name="HLA" parent="GridCanvas" unique_id=473222270 instance=ExtResource("1_q72xt")]
 layout_mode = 0
 offset_top = 312.0
 offset_right = 120.0
@@ -126,7 +126,7 @@ offset_bottom = 405.0
 Label = "HLA"
 Units = "deg"
 
-[node name="Speed" parent="GridCanvas" instance=ExtResource("1_q72xt")]
+[node name="Speed" parent="GridCanvas" unique_id=1046874515 instance=ExtResource("1_q72xt")]
 layout_mode = 0
 offset_top = 360.0
 offset_right = 120.0
@@ -134,7 +134,7 @@ offset_bottom = 453.0
 Label = "Speed"
 Units = "mph"
 
-[node name="BackSpin" parent="GridCanvas" instance=ExtResource("1_q72xt")]
+[node name="BackSpin" parent="GridCanvas" unique_id=1568522208 instance=ExtResource("1_q72xt")]
 layout_mode = 0
 offset_top = 408.0
 offset_right = 120.0
@@ -142,7 +142,7 @@ offset_bottom = 501.0
 Label = "BackSpin"
 Units = "rpm"
 
-[node name="SideSpin" parent="GridCanvas" instance=ExtResource("1_q72xt")]
+[node name="SideSpin" parent="GridCanvas" unique_id=980224028 instance=ExtResource("1_q72xt")]
 layout_mode = 0
 offset_top = 456.0
 offset_right = 120.0
@@ -150,7 +150,7 @@ offset_bottom = 549.0
 Label = "SideSpin"
 Units = "rpm"
 
-[node name="TotalSpin" parent="GridCanvas" instance=ExtResource("1_q72xt")]
+[node name="TotalSpin" parent="GridCanvas" unique_id=2086269771 instance=ExtResource("1_q72xt")]
 layout_mode = 0
 offset_top = 504.0
 offset_right = 120.0
@@ -158,7 +158,7 @@ offset_bottom = 597.0
 Label = "TotalSpin"
 Units = "rpm"
 
-[node name="SpinAxis" parent="GridCanvas" instance=ExtResource("1_q72xt")]
+[node name="SpinAxis" parent="GridCanvas" unique_id=1955013112 instance=ExtResource("1_q72xt")]
 layout_mode = 0
 offset_top = 552.0
 offset_right = 120.0
@@ -166,65 +166,65 @@ offset_bottom = 645.0
 Label = "SpinAxis"
 Units = "deg"
 
-[node name="ShotInjector" type="VBoxContainer" parent="."]
+[node name="ShotInjector" type="VBoxContainer" parent="." unique_id=2113327364]
 visible = false
 layout_mode = 2
 size_flags_horizontal = 8
 size_flags_vertical = 4
 script = ExtResource("6_j5yvw")
 
-[node name="Speed" type="Label" parent="ShotInjector"]
+[node name="Speed" type="Label" parent="ShotInjector" unique_id=425258405]
 layout_mode = 2
 text = "Speed"
 
-[node name="SpeedText" type="TextEdit" parent="ShotInjector"]
+[node name="SpeedText" type="TextEdit" parent="ShotInjector" unique_id=1009919726]
 custom_minimum_size = Vector2(0, 35)
 layout_mode = 2
 placeholder_text = "0.0"
 
-[node name="SpinAxis" type="Label" parent="ShotInjector"]
+[node name="SpinAxis" type="Label" parent="ShotInjector" unique_id=454051299]
 layout_mode = 2
 text = "SpinAxis"
 
-[node name="SpinAxisText" type="TextEdit" parent="ShotInjector"]
+[node name="SpinAxisText" type="TextEdit" parent="ShotInjector" unique_id=2017113177]
 custom_minimum_size = Vector2(0, 35)
 layout_mode = 2
 placeholder_text = "0.0"
 
-[node name="TotalSpin" type="Label" parent="ShotInjector"]
+[node name="TotalSpin" type="Label" parent="ShotInjector" unique_id=1904952796]
 layout_mode = 2
 text = "Total Spin"
 
-[node name="TotalSpinText" type="TextEdit" parent="ShotInjector"]
+[node name="TotalSpinText" type="TextEdit" parent="ShotInjector" unique_id=1340986782]
 custom_minimum_size = Vector2(0, 35)
 layout_mode = 2
 placeholder_text = "0.0"
 
-[node name="HLA" type="Label" parent="ShotInjector"]
+[node name="HLA" type="Label" parent="ShotInjector" unique_id=585161524]
 layout_mode = 2
 text = "HLA"
 
-[node name="HLAText" type="TextEdit" parent="ShotInjector"]
+[node name="HLAText" type="TextEdit" parent="ShotInjector" unique_id=571875001]
 custom_minimum_size = Vector2(0, 35)
 layout_mode = 2
 placeholder_text = "0.0"
 
-[node name="VLA" type="Label" parent="ShotInjector"]
+[node name="VLA" type="Label" parent="ShotInjector" unique_id=1007535629]
 layout_mode = 2
 text = "VLA"
 
-[node name="VLAText" type="TextEdit" parent="ShotInjector"]
+[node name="VLAText" type="TextEdit" parent="ShotInjector" unique_id=1272275384]
 custom_minimum_size = Vector2(0, 35)
 layout_mode = 2
 placeholder_text = "0.0"
 
-[node name="Button" type="Button" parent="ShotInjector"]
+[node name="Button" type="Button" parent="ShotInjector" unique_id=223078783]
 layout_mode = 2
 text = "Hit Shot"
 
-[node name="PayloadLabel" type="Label" parent="ShotInjector"]
+[node name="PayloadLabel" type="Label" parent="ShotInjector" unique_id=561760245]
 layout_mode = 2
 text = "Test Payload"
 
-[node name="PayloadOption" type="OptionButton" parent="ShotInjector"]
+[node name="PayloadOption" type="OptionButton" parent="ShotInjector" unique_id=1478542372]
 layout_mode = 2
