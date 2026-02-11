@@ -2,7 +2,7 @@
 
 Realistic golf ball physics engine for Godot 4.5+ (.NET/C#). Provides force, torque, bounce, and surface interaction calculations usable from both C# and GDScript.
 
-![](assets/images/logo.png)
+ <img src="assets/images/logo.png" width="50%">  
 
 ## Features
 
