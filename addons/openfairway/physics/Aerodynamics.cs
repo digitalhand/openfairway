@@ -6,7 +6,8 @@ using Godot;
 /// Provides drag (Cd) and lift (Cl) coefficients based on Reynolds number
 /// and spin ratio, using polynomial interpolations from wind tunnel data.
 /// </summary>
-public static class Aerodynamics
+[GlobalClass]
+public partial class Aerodynamics : RefCounted
 {
     // Physical constants
     private const float KELVIN_CELSIUS = 273.15f;
@@ -22,10 +23,13 @@ public static class Aerodynamics
     // Lift coefficient cap to prevent ballooning on high-spin shots
     public const float CL_MAX = 0.55f;
 
+    // Read-only property for GDScript access to constant (private set satisfies [Export] requirement)
+    [Export] public float ClMax { get => CL_MAX; private set { } }
+
     /// <summary>
     /// Convert Fahrenheit to Celsius
     /// </summary>
-    private static float FahrenheitToCelsius(float tempF)
+    private float FahrenheitToCelsius(float tempF)
     {
         return (tempF - 32.0f) * 5.0f / 9.0f;
     }
@@ -37,7 +41,7 @@ public static class Aerodynamics
     /// <param name="temp">Temperature in Fahrenheit (Imperial) or Celsius (Metric)</param>
     /// <param name="units">Unit system being used</param>
     /// <returns>Air density in kg/m³</returns>
-    public static float GetAirDensity(float altitude, float temp, PhysicsEnums.Units units)
+    public float GetAirDensity(float altitude, float temp, PhysicsEnums.Units units)
     {
         float tempK;
         float altitudeM;
@@ -66,7 +70,7 @@ public static class Aerodynamics
     /// <param name="temp">Temperature in Fahrenheit (Imperial) or Celsius (Metric)</param>
     /// <param name="units">Unit system being used</param>
     /// <returns>Dynamic viscosity in kg/(m*s)</returns>
-    public static float GetDynamicViscosity(float temp, PhysicsEnums.Units units)
+    public float GetDynamicViscosity(float temp, PhysicsEnums.Units units)
     {
         float tempK;
 
@@ -90,7 +94,7 @@ public static class Aerodynamics
     /// </summary>
     /// <param name="Re">Reynolds number</param>
     /// <returns>Drag coefficient (Cd)</returns>
-    public static float GetCd(float Re)
+    public float GetCd(float Re)
     {
         if (Re < 50000.0f)
             return 0.5f;
@@ -108,7 +112,7 @@ public static class Aerodynamics
     /// <param name="Re">Reynolds number</param>
     /// <param name="spinRatio">Spin ratio (omega * radius / velocity)</param>
     /// <returns>Lift coefficient (Cl)</returns>
-    public static float GetCl(float Re, float spinRatio)
+    public float GetCl(float Re, float spinRatio)
     {
         // Low Reynolds number - minimal lift
         if (Re < 50000.0f)
@@ -157,27 +161,27 @@ public static class Aerodynamics
     }
 
     // Polynomial models for different Reynolds number ranges
-    private static float ClRe50k(float S)
+    private float ClRe50k(float S)
     {
         return 0.0472121f + 2.84795f * S - 23.4342f * S * S + 45.4849f * S * S * S;
     }
 
-    private static float ClRe60k(float S)
+    private float ClRe60k(float S)
     {
         return 0.320524f - 4.7032f * S + 14.0613f * S * S;
     }
 
-    private static float ClRe65k(float S)
+    private float ClRe65k(float S)
     {
         return 0.266667f - 4.0f * S + 13.3333f * S * S;
     }
 
-    private static float ClRe70k(float S)
+    private float ClRe70k(float S)
     {
         return 0.0496189f + 0.00211396f * S + 2.34201f * S * S;
     }
 
-    private static float ClHighRe(float S)
+    private float ClHighRe(float S)
     {
         // Linear model for high Reynolds numbers (Re >= 75k)
         // Calibrated to match realistic carry distances

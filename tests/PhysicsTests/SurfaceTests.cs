@@ -22,7 +22,7 @@ public class SurfaceTests
         // Verify the method exists on the Surface class (not SurfaceType enum)
         var method = typeof(Surface).GetMethod("GetParams");
         Assert.That(method, Is.Not.Null);
-        Assert.That(method.IsStatic, Is.True);
+        Assert.That(method.IsStatic, Is.False);
     }
 
     [Test]

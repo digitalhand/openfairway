@@ -27,3 +27,7 @@ gut_logs/
 
 tests/PhysicsTests/bin/*
 tests/PhysicsTests/obj/*
+
+*.claude
+CLAUDE.md
+AGENT.md

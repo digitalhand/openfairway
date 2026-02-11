@@ -4,13 +4,13 @@
     "ShotNumber": 13,
     "APIversion": "1",
     "BallData" : {
-    "Speed": 62.0547040,
+    "Speed": 68.0547040,
     "SpinAxis": 0.8414904,
-    "TotalSpin": 10200.8457,
-    "BackSpin": 10150.7803545724255,
+    "TotalSpin": 12550.8457,
+    "BackSpin": 12150.7803545724255,
     "SideSpin": 140.266167598911,
     "HLA": 0.4455228805541992,
-    "VLA": 44.503028869628906,
+    "VLA": 45.503028869628906,
     "CarryDistance": 0.0
     },
     "ClubData": {

@@ -1,36 +1,132 @@
-﻿# OpenFairway
+# OpenFairway Physics
 
-OpenFairway is an open source golf game built with Godot 4.5 (.NET/C#).
+Realistic golf ball physics engine for Godot 4.5+ (.NET/C#). Provides force, torque, bounce, and surface interaction calculations usable from both C# and GDScript.
 
-## Table of Contents
-- [Overview](#overview)
-- [Features](#features)
-- [Project Structure](#project-structure)
-- [Getting Started](#getting-started)
-- [Physics README](physics/README.md)
-
-## Overview
-OpenFairway focuses on realistic ball flight and rollout simulation with a range-style play loop. The core physics live in the `physics` folder and are shared by the in-game ball and the headless simulator. 
-This game will focus on stylized visuals versus photorealistic visuals (e.g. GSPro). 
+![](assets/images/logo.png)
 
 ## Features
-- Physics-based ball flight, bounce, and rollout
-- Aerodynamics with drag and lift coefficient models
-- Surface tuning for fairway, rough, soft, and firm conditions
-- Range scene with UI input and optional TCP launch monitor payloads
-- Phantom Camera integration for follow and reset behavior
 
-## Project Structure
-- `addons/` third-party plugins (including Phantom Camera)
-- `courses/` scenes and controllers for range/course content
-- `game/` gameplay nodes like the golf ball and shot tracker
-- `physics/` ball physics, aerodynamics, and surface models
-- `utils/` shared helpers, settings, and formatting
+- Aerodynamic drag and Magnus lift from wind-tunnel polynomial fits
+- Bounce model with spin-dependent COR and tangential retention (Penner)
+- Surface presets for fairway, rough, soft, and firm conditions
+- Spin-based ground friction with "check up" behavior for high-spin shots
+- Launch monitor spin parsing (BackSpin/SideSpin or TotalSpin/SpinAxis)
+- Headless shot simulation via `PhysicsAdapter` — no scene tree required
 
-## Getting Started
-1. Install Godot 4.5 with .NET support.
-2. Open the project folder in Godot.
-3. Run the main scene (already configured in `project.godot`).
+## Requirements
 
-## Physics Overview
-The physics implementation is documented in `physics/README.md`.
+- **Godot 4.5+** with **.NET support**
+- **.NET 8.0 SDK** (or later)
+
+GDScript projects can use this addon — Godot's cross-language scripting handles the interop automatically, but the .NET editor build is required.
+
+## Installation
+
+1. Copy `addons/openfairway/` into your project's `addons/` directory.
+2. **Ensure your project has a C# solution.** If you don't have a `.csproj`/`.sln` yet, generate them via **Project > Tools > C# > Create C# Solution** in the Godot editor. Alternatively, create any temporary C# script (Node > Attach Script > Language: C#) and Godot will generate both files automatically.
+3. Build your project: **Build > Build Project** in the editor (`Alt+B`), or `dotnet build YourProject.csproj` from the command line.
+4. Enable the plugin: **Project > Project Settings > Plugins > OpenFairway Physics**.
+
+## Quick Start
+
+### C#
+
+```csharp
+var bp = new BallPhysics();
+var aero = new Aerodynamics();
+
+var p = new PhysicsParams(
+    airDensity: aero.GetAirDensity(0f, 75f, PhysicsEnums.Units.Imperial),
+    airViscosity: aero.GetDynamicViscosity(75f, PhysicsEnums.Units.Imperial),
+    dragScale: 1f, liftScale: 1f,
+    kineticFriction: 0.30f, rollingFriction: 0.030f,
+    grassViscosity: 0.001f, criticalAngle: 0.25f,
+    floorNormal: Vector3.Up);
+
+Vector3 force = bp.CalculateForces(velocity, omega, onGround, p);
+Vector3 torque = bp.CalculateTorques(velocity, omega, onGround, p);
+```
+
+### GDScript
+
+```gdscript
+var physics = BallPhysics.new()
+var aero = Aerodynamics.new()
+
+var params = PhysicsParams.new()
+params.air_density = aero.get_air_density(0.0, 75.0, PhysicsEnums.Units.Imperial)
+params.air_viscosity = aero.get_dynamic_viscosity(75.0, PhysicsEnums.Units.Imperial)
+params.drag_scale = 1.0
+params.lift_scale = 1.0
+params.floor_normal = Vector3.UP
+
+var force = physics.calculate_forces(velocity, omega, false, params)
+```
+
+### Headless Simulation
+
+Run a full shot with no scene tree:
+
+```csharp
+var adapter = new PhysicsAdapter();
+var result = adapter.SimulateShotFromJson(new Godot.Collections.Dictionary
+{
+    ["BallData"] = new Godot.Collections.Dictionary
+    {
+        ["Speed"] = 150.0,       // mph
+        ["VLA"] = 12.5,          // degrees
+        ["HLA"] = 0.0,           // degrees
+        ["TotalSpin"] = 2800,    // RPM
+        ["SpinAxis"] = 0.0       // degrees
+    }
+});
+// result["carry_yd"], result["total_yd"]
+```
+
+## Addon Classes
+
+| Class | Base | Description |
+|-------|------|-------------|
+| `BallPhysics` | `RefCounted` | Force, torque, and bounce calculations |
+| `PhysicsParams` | `Resource` | Exported physics parameters |
+| `BounceResult` | `RefCounted` | Bounce calculation result |
+| `Aerodynamics` | `RefCounted` | Drag/lift coefficients, air density, viscosity |
+| `Surface` | `RefCounted` | Surface parameter presets |
+| `ShotSetup` | `RefCounted` | Spin parsing and launch vector utilities |
+| `PhysicsAdapter` | `RefCounted` | Headless shot simulator |
+
+All C# classes use `[GlobalClass]` for GDScript visibility. Enums are provided via `physics_enums.gd` (GDScript mirror of the C# `PhysicsEnums` definitions).
+
+## Addon Structure
+
+```
+addons/openfairway/
+├── plugin.cfg            Godot plugin metadata
+├── plugin.gd             Plugin entry point
+├── physics_enums.gd      GDScript enum mirror (BallState, Units, SurfaceType)
+├── LICENSE               MIT license
+├── README.md             Full GDScript API reference and examples
+└── physics/
+    ├── BallPhysics.cs    Force/torque/bounce calculations
+    ├── PhysicsParams.cs  Physics parameters (Resource, exported)
+    ├── BounceResult.cs   Bounce result data
+    ├── Aerodynamics.cs   Cd/Cl coefficients, air properties
+    ├── Surface.cs        Surface parameter presets
+    ├── ShotSetup.cs      Spin parsing & launch vector utilities
+    ├── PhysicsAdapter.cs Headless shot simulator
+    ├── PhysicsEnums.cs   C# enum definitions (static class)
+    └── README.md         Physics formulas and tuning guide
+```
+
+## Documentation
+
+- **[Addon README](addons/openfairway/README.md)** — full GDScript API reference, installation details, complete physics loop and headless simulation examples
+- **[Physics README](addons/openfairway/physics/README.md)** — force/torque formulas, bounce model, aerodynamic coefficients, unit conversions, tuning guide, and references
+
+## Units Convention
+
+The physics engine always uses SI internally (meters, m/s, rad/s). Launch monitor input uses Imperial (mph, degrees, RPM). Display conversion is the consumer's responsibility. See `ShotSetup.BuildLaunchVectors()` for the standard conversion path.
+
+## License
+
+MIT — see [LICENSE](addons/openfairway/LICENSE).
