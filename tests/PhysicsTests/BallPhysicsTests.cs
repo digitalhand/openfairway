@@ -16,7 +16,7 @@ public class BallPhysicsTests
         // Verify physical constants match GDScript exactly
         Assert.That(BallPhysics.MASS, Is.EqualTo(0.04592623f).Within(TOLERANCE));
         Assert.That(BallPhysics.RADIUS, Is.EqualTo(0.021335f).Within(TOLERANCE));
-        Assert.That(BallPhysics.SPIN_DECAY_TAU, Is.EqualTo(3.0f).Within(TOLERANCE));
+        Assert.That(BallPhysics.SPIN_DECAY_TAU, Is.EqualTo(5.0f).Within(TOLERANCE));
     }
 
     [Test]

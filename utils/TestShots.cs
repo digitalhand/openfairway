@@ -15,7 +15,8 @@ public static class TestShots
         { "Approach", "res://assets/data/approach_test_shot.json" },
         { "Topped", "res://assets/data/topped_test_shot.json" },
         { "Checked", "res://assets/data/checked_test_shot.json" },
-        { "Flop", "res://assets/data/flop_test_shot.json" }
+        { "Flop", "res://assets/data/flop_test_shot.json" },
+        { "Chip", "res://assets/data/chip_test_shot.json" },
     };
 
     public const string DefaultShot = "res://assets/data/drive_test_shot.json";
