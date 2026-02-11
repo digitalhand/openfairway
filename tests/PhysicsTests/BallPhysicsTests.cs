@@ -8,6 +8,8 @@ public class BallPhysicsTests
 {
     private const float TOLERANCE = 1e-6f;
 
+    private readonly BallPhysics _physics = new();
+
     [Test]
     public void Constants_HaveCorrectValues()
     {
@@ -34,8 +36,8 @@ public class BallPhysicsTests
     [Test]
     public void PhysicsParams_ClassExists()
     {
-        // PhysicsParams derives from RefCounted (Godot runtime), can't instantiate in NUnit
-        var type = typeof(BallPhysics).GetNestedType("PhysicsParams");
+        // PhysicsParams is now a top-level class (un-nested from BallPhysics)
+        var type = typeof(PhysicsParams);
         Assert.That(type, Is.Not.Null);
         Assert.That(type.IsClass, Is.True);
     }
@@ -43,8 +45,8 @@ public class BallPhysicsTests
     [Test]
     public void BounceResult_ClassExists()
     {
-        // BounceResult derives from RefCounted (Godot runtime), can't instantiate in NUnit
-        var type = typeof(BallPhysics).GetNestedType("BounceResult");
+        // BounceResult is now a top-level class (un-nested from BallPhysics)
+        var type = typeof(BounceResult);
         Assert.That(type, Is.Not.Null);
         Assert.That(type.IsClass, Is.True);
     }
@@ -52,21 +54,21 @@ public class BallPhysicsTests
     [Test]
     public void GetCoefficientOfRestitution_HighSpeed_Returns0Point25()
     {
-        float cor = BallPhysics.GetCoefficientOfRestitution(25.0f);
+        float cor = _physics.GetCoefficientOfRestitution(25.0f);
         Assert.That(cor, Is.EqualTo(0.25f));
     }
 
     [Test]
     public void GetCoefficientOfRestitution_LowSpeed_Returns0()
     {
-        float cor = BallPhysics.GetCoefficientOfRestitution(1.0f);
+        float cor = _physics.GetCoefficientOfRestitution(1.0f);
         Assert.That(cor, Is.EqualTo(0.0f));
     }
 
     [Test]
     public void GetCoefficientOfRestitution_MidSpeed_ReturnsPolynomial()
     {
-        float cor = BallPhysics.GetCoefficientOfRestitution(10.0f);
+        float cor = _physics.GetCoefficientOfRestitution(10.0f);
         float expected = 0.45f - 0.0100f * 10.0f + 0.0002f * 10.0f * 10.0f;
         Assert.That(cor, Is.EqualTo(expected).Within(TOLERANCE));
     }
@@ -76,7 +78,7 @@ public class BallPhysicsTests
     {
         var method = typeof(BallPhysics).GetMethod("CalculateForces");
         Assert.That(method, Is.Not.Null);
-        Assert.That(method.IsStatic, Is.True);
+        Assert.That(method.IsStatic, Is.False);
     }
 
     [Test]
@@ -84,7 +86,7 @@ public class BallPhysicsTests
     {
         var method = typeof(BallPhysics).GetMethod("CalculateTorques");
         Assert.That(method, Is.Not.Null);
-        Assert.That(method.IsStatic, Is.True);
+        Assert.That(method.IsStatic, Is.False);
     }
 
     [Test]
@@ -92,7 +94,7 @@ public class BallPhysicsTests
     {
         var method = typeof(BallPhysics).GetMethod("CalculateBounce");
         Assert.That(method, Is.Not.Null);
-        Assert.That(method.IsStatic, Is.True);
+        Assert.That(method.IsStatic, Is.False);
     }
 
     // NOTE: Full physics validation (forces, torques, bounces) requires Godot runtime

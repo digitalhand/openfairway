@@ -1,6 +1,6 @@
-﻿# Physics
+﻿# OpenFairway Physics
 
-This folder contains the ball flight and rollout simulation used by the game and the headless simulator.
+This is the physics engine from the OpenFairway golf simulator, packaged as a standalone Godot add-on. It models ball flight and rollout with realistic forces, torques, bounce response, and surface interactions.
 
 ## Table of Contents
 - [Overview](#overview)

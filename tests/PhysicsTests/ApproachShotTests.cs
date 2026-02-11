@@ -9,6 +9,8 @@ namespace OpenShotGolf.Tests
     {
         private const string SHOT_PATH = "res://assets/data/approach_test_shot.json";
 
+        private readonly PhysicsAdapter _adapter = new();
+
         private Dictionary LoadJson(string path)
         {
             Assert.That(FileAccess.FileExists(path), Is.True, $"Missing JSON file: {path}");
@@ -30,7 +32,7 @@ namespace OpenShotGolf.Tests
         {
             var shot = LoadJson(SHOT_PATH);
 
-            var result = PhysicsAdapter.SimulateShotFromJson(shot);
+            var result = _adapter.SimulateShotFromJson(shot);
 
             Assert.That(result.ContainsKey("carry_yd"), Is.True, "Result missing carry_yd");
             Assert.That(result.ContainsKey("total_yd"), Is.True, "Result missing total_yd");
@@ -50,7 +52,7 @@ namespace OpenShotGolf.Tests
             const string woodLowPath = "res://assets/data/wood_low_test_shot.json";
             var shot = LoadJson(woodLowPath);
 
-            var result = PhysicsAdapter.SimulateShotFromJson(shot);
+            var result = _adapter.SimulateShotFromJson(shot);
 
             Assert.That(result.ContainsKey("carry_yd"), Is.True, "Result missing carry_yd");
             Assert.That(result.ContainsKey("total_yd"), Is.True, "Result missing total_yd");

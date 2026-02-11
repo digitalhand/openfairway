@@ -12,6 +12,11 @@ public partial class GolfBall : CharacterBody3D
     [Signal]
     public delegate void BallAtRestEventHandler();
 
+    // Physics instances
+    private readonly BallPhysics _ballPhysics = new();
+    private readonly Aerodynamics _aerodynamics = new();
+    private readonly Surface _surfaceHelper = new();
+
     // State
     public const float START_HEIGHT = 0.02f;
     public PhysicsEnums.BallState State { get; set; } = PhysicsEnums.BallState.Rest;
@@ -61,12 +66,12 @@ public partial class GolfBall : CharacterBody3D
     {
         var settings = GetNode<GlobalSettings>("/root/GlobalSettings").RangeSettings;
         var units = (PhysicsEnums.Units)(int)settings.RangeUnits.Value;
-        _airDensity = Aerodynamics.GetAirDensity(
+        _airDensity = _aerodynamics.GetAirDensity(
             (float)settings.Altitude.Value,
             (float)settings.Temperature.Value,
             units
         );
-        _airViscosity = Aerodynamics.GetDynamicViscosity(
+        _airViscosity = _aerodynamics.GetDynamicViscosity(
             (float)settings.Temperature.Value,
             units
         );
@@ -98,7 +103,7 @@ public partial class GolfBall : CharacterBody3D
 
     private void ApplySurfaceParams()
     {
-        var parameters = Surface.GetParams(SurfaceType);
+        var parameters = _surfaceHelper.GetParams(SurfaceType);
         _kineticFriction = (float)parameters["u_k"];
         _rollingFriction = (float)parameters["u_kr"];
         _grassViscosity = (float)parameters["nu_g"];
@@ -125,8 +130,8 @@ public partial class GolfBall : CharacterBody3D
 
         // Calculate forces and torques using BallPhysics
         var parameters = CreatePhysicsParams();
-        Vector3 totalForce = BallPhysics.CalculateForces(Velocity, Omega, wasOnGround, parameters);
-        Vector3 totalTorque = BallPhysics.CalculateTorques(Velocity, Omega, wasOnGround, parameters);
+        Vector3 totalForce = _ballPhysics.CalculateForces(Velocity, Omega, wasOnGround, parameters);
+        Vector3 totalTorque = _ballPhysics.CalculateTorques(Velocity, Omega, wasOnGround, parameters);
 
         // Update velocity and angular velocity
         Velocity += (totalForce / BallPhysics.MASS) * (float)delta;
@@ -147,9 +152,9 @@ public partial class GolfBall : CharacterBody3D
         }
     }
 
-    private BallPhysics.PhysicsParams CreatePhysicsParams()
+    private PhysicsParams CreatePhysicsParams()
     {
-        return new BallPhysics.PhysicsParams(
+        return new PhysicsParams(
             _airDensity,
             _airViscosity,
             _dragScale,
@@ -207,7 +212,7 @@ public partial class GolfBall : CharacterBody3D
                     }
 
                     var parameters = CreatePhysicsParams();
-                    var bounceResult = BallPhysics.CalculateBounce(Velocity, Omega, normal, State, parameters);
+                    var bounceResult = _ballPhysics.CalculateBounce(Velocity, Omega, normal, State, parameters);
                     Velocity = bounceResult.NewVelocity;
                     Omega = bounceResult.NewOmega;
                     State = bounceResult.NewState;
@@ -408,7 +413,7 @@ public partial class GolfBall : CharacterBody3D
 
         float ReInitial = _airDensity * speedMps * BallPhysics.RADIUS * 2.0f / _airViscosity;
         float spinRatio = speedMps > 0.1f ? (spin * 0.10472f) * BallPhysics.RADIUS / speedMps : 0.0f;
-        float ClInitial = Aerodynamics.GetCl(ReInitial, spinRatio);
+        float ClInitial = _aerodynamics.GetCl(ReInitial, spinRatio);
         GD.Print($"Reynolds number: {ReInitial:F0}");
         GD.Print($"Spin ratio: {spinRatio:F3}");
         GD.Print($"Cl (before scale): {ClInitial:F3}, after: {ClInitial * _liftScale:F3}");

@@ -1,11 +1,75 @@
 using Godot;
 
 /// <summary>
+/// Physics parameters structure for golf ball simulation.
+/// Un-nested from BallPhysics for clean GDScript access (PhysicsParams.new()).
+/// </summary>
+public partial class PhysicsParams : Resource
+{
+    [Export] public float AirDensity { get; set; }
+    [Export] public float AirViscosity { get; set; }
+    [Export] public float DragScale { get; set; }
+    [Export] public float LiftScale { get; set; }
+    [Export] public float KineticFriction { get; set; }
+    [Export] public float RollingFriction { get; set; }
+    [Export] public float GrassViscosity { get; set; }
+    [Export] public float CriticalAngle { get; set; }
+    [Export] public Vector3 FloorNormal { get; set; }
+    [Export] public float RolloutImpactSpin { get; set; }  // Spin RPM when ball first landed for rollout
+
+    public PhysicsParams() { }
+
+    public PhysicsParams(
+        float airDensity,
+        float airViscosity,
+        float dragScale,
+        float liftScale,
+        float kineticFriction,
+        float rollingFriction,
+        float grassViscosity,
+        float criticalAngle,
+        Vector3 floorNormal,
+        float rolloutImpactSpin = 0.0f)
+    {
+        AirDensity = airDensity;
+        AirViscosity = airViscosity;
+        DragScale = dragScale;
+        LiftScale = liftScale;
+        KineticFriction = kineticFriction;
+        RollingFriction = rollingFriction;
+        GrassViscosity = grassViscosity;
+        CriticalAngle = criticalAngle;
+        FloorNormal = floorNormal;
+        RolloutImpactSpin = rolloutImpactSpin;
+    }
+}
+
+/// <summary>
+/// Bounce calculation result.
+/// Un-nested from BallPhysics for clean GDScript access (BounceResult.new()).
+/// </summary>
+public partial class BounceResult : RefCounted
+{
+    [Export] public Vector3 NewVelocity { get; set; }
+    [Export] public Vector3 NewOmega { get; set; }
+    [Export] public PhysicsEnums.BallState NewState { get; set; }
+
+    public BounceResult() { }
+
+    public BounceResult(Vector3 vel, Vector3 omg, PhysicsEnums.BallState st)
+    {
+        NewVelocity = vel;
+        NewOmega = omg;
+        NewState = st;
+    }
+}
+
+/// <summary>
 /// Pure physics calculations for golf ball motion.
 /// Contains all force, torque, and bounce calculations separated from
 /// the game object (CharacterBody3D) implementation.
 /// </summary>
-public static partial class BallPhysics
+public partial class BallPhysics : RefCounted
 {
     // Ball physical properties
     public const float MASS = 0.04592623f;  // kg (regulation golf ball)
@@ -14,68 +78,19 @@ public static partial class BallPhysics
     public const float MOMENT_OF_INERTIA = 0.4f * MASS * RADIUS * RADIUS;  // kg*m²
     public const float SPIN_DECAY_TAU = 3.0f;  // Spin decay time constant (seconds)
 
-    /// <summary>
-    /// Physics parameters structure
-    /// </summary>
-    public partial class PhysicsParams : RefCounted
-    {
-        public float AirDensity { get; set; }
-        public float AirViscosity { get; set; }
-        public float DragScale { get; set; }
-        public float LiftScale { get; set; }
-        public float KineticFriction { get; set; }
-        public float RollingFriction { get; set; }
-        public float GrassViscosity { get; set; }
-        public float CriticalAngle { get; set; }
-        public Vector3 FloorNormal { get; set; }
-        public float RolloutImpactSpin { get; set; }  // Spin RPM when ball first landed for rollout
+    // Read-only properties for GDScript access to constants (private set satisfies [Export] requirement)
+    [Export] public float BallMass { get => MASS; private set { } }
+    [Export] public float BallRadius { get => RADIUS; private set { } }
+    [Export] public float BallCrossSection { get => CROSS_SECTION; private set { } }
+    [Export] public float BallMomentOfInertia { get => MOMENT_OF_INERTIA; private set { } }
+    [Export] public float SpinDecayTau { get => SPIN_DECAY_TAU; private set { } }
 
-        public PhysicsParams(
-            float airDensity,
-            float airViscosity,
-            float dragScale,
-            float liftScale,
-            float kineticFriction,
-            float rollingFriction,
-            float grassViscosity,
-            float criticalAngle,
-            Vector3 floorNormal,
-            float rolloutImpactSpin = 0.0f)
-        {
-            AirDensity = airDensity;
-            AirViscosity = airViscosity;
-            DragScale = dragScale;
-            LiftScale = liftScale;
-            KineticFriction = kineticFriction;
-            RollingFriction = rollingFriction;
-            GrassViscosity = grassViscosity;
-            CriticalAngle = criticalAngle;
-            FloorNormal = floorNormal;
-            RolloutImpactSpin = rolloutImpactSpin;
-        }
-    }
-
-    /// <summary>
-    /// Bounce calculation result
-    /// </summary>
-    public partial class BounceResult : RefCounted
-    {
-        public Vector3 NewVelocity { get; set; }
-        public Vector3 NewOmega { get; set; }
-        public PhysicsEnums.BallState NewState { get; set; }
-
-        public BounceResult(Vector3 vel, Vector3 omg, PhysicsEnums.BallState st)
-        {
-            NewVelocity = vel;
-            NewOmega = omg;
-            NewState = st;
-        }
-    }
+    private readonly Aerodynamics _aero = new();
 
     /// <summary>
     /// Calculate total forces acting on the ball
     /// </summary>
-    public static Vector3 CalculateForces(
+    public Vector3 CalculateForces(
         Vector3 velocity,
         Vector3 omega,
         bool onGround,
@@ -103,7 +118,7 @@ public static partial class BallPhysics
     /// Uses the IMPACT spin (when ball first landed) to determine friction,
     /// as the "bite" happens at impact, not during rolling
     /// </summary>
-    private static float GetSpinFrictionMultiplier(Vector3 omega, float impactSpinRpm)
+    private float GetSpinFrictionMultiplier(Vector3 omega, float impactSpinRpm)
     {
         // Use the higher of current spin or impact spin
         // This preserves the "bite" effect even as spin decays during rollout
@@ -137,7 +152,7 @@ public static partial class BallPhysics
     /// <summary>
     /// Calculate ground friction and drag forces
     /// </summary>
-    public static Vector3 CalculateGroundForces(
+    public Vector3 CalculateGroundForces(
         Vector3 velocity,
         Vector3 omega,
         PhysicsParams parameters)
@@ -208,7 +223,7 @@ public static partial class BallPhysics
     /// <summary>
     /// Calculate aerodynamic drag and Magnus forces
     /// </summary>
-    public static Vector3 CalculateAirForces(
+    public Vector3 CalculateAirForces(
         Vector3 velocity,
         Vector3 omega,
         PhysicsParams parameters)
@@ -220,8 +235,8 @@ public static partial class BallPhysics
         float spinRatio = omega.Length() * RADIUS / speed;
         float reynolds = parameters.AirDensity * speed * RADIUS * 2.0f / parameters.AirViscosity;
 
-        float cd = Aerodynamics.GetCd(reynolds) * parameters.DragScale;
-        float cl = Aerodynamics.GetCl(reynolds, spinRatio) * parameters.LiftScale;
+        float cd = _aero.GetCd(reynolds) * parameters.DragScale;
+        float cl = _aero.GetCl(reynolds, spinRatio) * parameters.LiftScale;
 
         // Drag force (opposite to velocity)
         Vector3 drag = -0.5f * cd * parameters.AirDensity * CROSS_SECTION * velocity * speed;
@@ -241,7 +256,7 @@ public static partial class BallPhysics
     /// <summary>
     /// Calculate total torques acting on the ball
     /// </summary>
-    public static Vector3 CalculateTorques(
+    public Vector3 CalculateTorques(
         Vector3 velocity,
         Vector3 omega,
         bool onGround,
@@ -261,7 +276,7 @@ public static partial class BallPhysics
     /// <summary>
     /// Calculate ground friction torques
     /// </summary>
-    public static Vector3 CalculateGroundTorques(
+    public Vector3 CalculateGroundTorques(
         Vector3 velocity,
         Vector3 omega,
         PhysicsParams parameters)
@@ -321,7 +336,7 @@ public static partial class BallPhysics
     /// <summary>
     /// Calculate bounce physics when ball impacts surface
     /// </summary>
-    public static BounceResult CalculateBounce(
+    public BounceResult CalculateBounce(
         Vector3 vel,
         Vector3 omega,
         Vector3 normal,
@@ -536,7 +551,7 @@ public static partial class BallPhysics
     /// <summary>
     /// Get coefficient of restitution based on impact speed
     /// </summary>
-    public static float GetCoefficientOfRestitution(float speedNormal)
+    public float GetCoefficientOfRestitution(float speedNormal)
     {
         if (speedNormal > 20.0f)
             return 0.25f;  // High speed impacts

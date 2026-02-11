@@ -33,7 +33,7 @@ public partial class RangeUI : MarginContainer
 
         PopulateShotTypes();
         SetupPanelsMenu();
-        SetShotControlsVisible(false);
+        SetShotControlsVisible(true);
     }
 
     public override void _Input(InputEvent @event)

@@ -1,6 +1,6 @@
-[gd_scene load_steps=15 format=3 uid="uid://b1idtxfp7eoke"]
+[gd_scene format=3 uid="uid://b1idtxfp7eoke"]
 
-[ext_resource type="Script" uid="uid://c8t8p5orukafc" path="res://courses/Range/Range.cs" id="1_sunpe"]
+[ext_resource type="Script" uid="uid://c8t8p5orukafc" path="res://Courses/Range/Range.cs" id="1_sunpe"]
 [ext_resource type="Script" uid="uid://bmvo844oxfdgj" path="res://tcp/TcpServer.cs" id="2_d1a0v"]
 [ext_resource type="PackedScene" uid="uid://w55fmvo7ly8g" path="res://game/shot_tracker.tscn" id="3_4jr3s"]
 [ext_resource type="PackedScene" uid="uid://da1vsfwmbk8vw" path="res://ui/range_ui.tscn" id="4_d1a0v"]
@@ -37,35 +37,35 @@ size = Vector3(400, 0.1, 100)
 [sub_resource type="Resource" id="Resource_hbh3r"]
 script = ExtResource("18_gqfs3")
 
-[node name="Range" type="Node3D"]
+[node name="Range" type="Node3D" unique_id=2143757499]
 script = ExtResource("1_sunpe")
 
-[node name="TCPServer" type="Node" parent="."]
+[node name="TCPServer" type="Node" parent="." unique_id=1884760583]
 script = ExtResource("2_d1a0v")
 
-[node name="ShotTracker" parent="." instance=ExtResource("3_4jr3s")]
+[node name="ShotTracker" parent="." unique_id=1997838773 instance=ExtResource("3_4jr3s")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.04, 0)
 
-[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=265820066]
 transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 174.334, 165.881, 0)
 light_indirect_energy = 6.592
 shadow_enabled = true
 
-[node name="RangeUI" parent="." instance=ExtResource("4_d1a0v")]
+[node name="RangeUI" parent="." unique_id=2115412839 instance=ExtResource("4_d1a0v")]
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=187150003]
 environment = SubResource("Environment_basic")
 
-[node name="Ground" type="StaticBody3D" parent="."]
+[node name="Ground" type="StaticBody3D" parent="." unique_id=642673620]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 150, -0.05, 0)
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Ground"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Ground" unique_id=1512304317]
 shape = SubResource("BoxShape3D_ground")
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="Ground"]
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Ground" unique_id=2117315132]
 mesh = SubResource("BoxMesh_ground")
 
-[node name="PhantomCamera3D" type="Node3D" parent="."]
+[node name="PhantomCamera3D" type="Node3D" parent="." unique_id=120027362]
 transform = Transform3D(-0.17364818, -0.09952102, -0.9797662, 0, 0.99488074, -0.101056285, 0.98480767, -0.017548243, -0.17275923, -6.921, 3, 0)
 script = ExtResource("17_i3bow")
 tween_resource = SubResource("Resource_hbh3r")
@@ -75,37 +75,37 @@ follow_damping = true
 follow_damping_value = Vector3(0.4, 0.1, 0.1)
 dead_zone_height = 0.204
 
-[node name="Camera3D" type="Camera3D" parent="."]
+[node name="Camera3D" type="Camera3D" parent="." unique_id=1480788570]
 transform = Transform3D(-0.17364818, -0.09952102, -0.9797662, 0, 0.99488074, -0.101056285, 0.98480767, -0.017548243, -0.17275923, -6.921, 3, 0)
 
-[node name="PhantomCameraHost" type="Node" parent="Camera3D"]
+[node name="PhantomCameraHost" type="Node" parent="Camera3D" unique_id=2087986484]
 process_priority = 300
 process_physics_priority = 300
 script = ExtResource("19_gqfs3")
 
-[node name="YardMarkers" type="Node3D" parent="."]
+[node name="YardMarkers" type="Node3D" parent="." unique_id=685927039]
 
-[node name="50Yards" type="Label3D" parent="YardMarkers"]
+[node name="50Yards" type="Label3D" parent="YardMarkers" unique_id=1170002585]
 transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 45.72, 0.379, -0.5)
 pixel_size = 0.02
 text = "50"
 
-[node name="100Yards" type="Label3D" parent="YardMarkers"]
+[node name="100Yards" type="Label3D" parent="YardMarkers" unique_id=1001707317]
 transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 91.4, 0.379, -0.7)
 pixel_size = 0.02
 text = "100"
 
-[node name="150Yards" type="Label3D" parent="YardMarkers"]
+[node name="150Yards" type="Label3D" parent="YardMarkers" unique_id=1741900117]
 transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 137.16, 0.379, -0.7)
 pixel_size = 0.02
 text = "150"
 
-[node name="200" type="Label3D" parent="YardMarkers"]
+[node name="200" type="Label3D" parent="YardMarkers" unique_id=1462947500]
 transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 182.88, 0.379, -0.7)
 pixel_size = 0.02
 text = "200"
 
-[node name="250" type="Label3D" parent="YardMarkers"]
+[node name="250" type="Label3D" parent="YardMarkers" unique_id=190051679]
 transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 228.6, 0.379, -0.7)
 pixel_size = 0.02
 text = "250"

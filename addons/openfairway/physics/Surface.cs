@@ -1,3 +1,4 @@
+using Godot;
 using Godot.Collections;
 
 /// <summary>
@@ -6,7 +7,7 @@ using Godot.Collections;
 /// playing surfaces based on golf physics research.
 /// Reference: https://raypenner.com/golf-physics.pdf
 /// </summary>
-public static class Surface
+public partial class Surface : RefCounted
 {
     /// <summary>
     /// Returns ground interaction parameters for a given surface type.
@@ -16,7 +17,7 @@ public static class Surface
     /// - nu_g: Grass drag viscosity
     /// - theta_c: Critical bounce angle in radians (from Penner's golf physics)
     /// </summary>
-    public static Dictionary GetParams(PhysicsEnums.SurfaceType surface)
+    public Dictionary GetParams(PhysicsEnums.SurfaceType surface)
     {
         return surface switch
         {
