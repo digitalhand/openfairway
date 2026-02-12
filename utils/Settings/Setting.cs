@@ -29,6 +29,13 @@ public partial class Setting : RefCounted
 
     public void SetValue(Variant val)
     {
+        // M4: Type safety — reject values that don't match the setting's type
+        if (val.VariantType != Default.VariantType)
+        {
+            GD.PrintErr($"Setting.SetValue: type mismatch (expected {Default.VariantType}, got {val.VariantType})");
+            return;
+        }
+
         Variant newValue = val;
 
         if (MinValue.VariantType != Variant.Type.Nil && newValue.AsDouble() < MinValue.AsDouble())
@@ -39,6 +46,10 @@ public partial class Setting : RefCounted
         {
             newValue = MaxValue;
         }
+
+        // m6: Don't fire signal if value hasn't changed
+        if (Value.Equals(newValue))
+            return;
 
         Value = newValue;
         EmitSignal(SignalName.SettingChanged, Value);

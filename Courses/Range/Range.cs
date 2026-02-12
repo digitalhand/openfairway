@@ -40,6 +40,7 @@ public partial class Range : Node3D
     private Node3D _phantomCamera;
     private Camera3D _camera3D;
     private GolfBall _ball;
+    private RangeSettings _rangeSettings;
 
     public override void _Ready()
     {
@@ -60,11 +61,11 @@ public partial class Range : Node3D
             tcpServer.HitBall += OnTcpClientHitBall;
         }
 
-        var settings = GetNode<GlobalSettings>("/root/GlobalSettings").RangeSettings;
-        settings.CameraFollowMode.SettingChanged += OnCameraFollowChanged;
-        settings.SurfaceType.SettingChanged += OnSurfaceChanged;
+        _rangeSettings = GetNode<GlobalSettings>("/root/GlobalSettings").RangeSettings;
+        _rangeSettings.CameraFollowMode.SettingChanged += OnCameraFollowChanged;
+        _rangeSettings.SurfaceType.SettingChanged += OnSurfaceChanged;
 
-        bool followEnabled = (bool)settings.CameraFollowMode.Value;
+        bool followEnabled = (bool)_rangeSettings.CameraFollowMode.Value;
         if (followEnabled)
         {
             SetCameraToStartImmediate();
@@ -73,8 +74,21 @@ public partial class Range : Node3D
         {
             TweenCameraFromCloseToStart();
         }
-        OnCameraFollowChanged(settings.CameraFollowMode.Value);
+        OnCameraFollowChanged(_rangeSettings.CameraFollowMode.Value);
         ApplySurfaceToBall();
+    }
+
+    public override void _ExitTree()
+    {
+        if (_ball != null)
+            _ball.BallAtRest -= OnGolfBallRest;
+        if (_rangeUi != null)
+            _rangeUi.HitShot -= OnRangeUiHitShot;
+        if (_rangeSettings != null)
+        {
+            _rangeSettings.CameraFollowMode.SettingChanged -= OnCameraFollowChanged;
+            _rangeSettings.SurfaceType.SettingChanged -= OnSurfaceChanged;
+        }
     }
 
     public override void _UnhandledInput(InputEvent @event)

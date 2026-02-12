@@ -99,6 +99,13 @@ public partial class ShotInjector : VBoxContainer
             GD.Print("Shot injector: no data provided and default payload missing; using zeros");
         }
 
+        // C2/C3: Validate and clamp shot data before emitting
+        if (!ShotValidator.ValidateAndClamp(data))
+        {
+            GD.PrintErr("Shot injector: invalid shot data, rejecting");
+            return;
+        }
+
         if (loaded)
         {
             GD.Print($"Shot injector: loaded default payload from {DefaultPayloadPath}");

@@ -16,12 +16,25 @@ public partial class TcpServer : Node
     private readonly Dictionary _resp201 = new() { { "Code", 201 }, { "Message", "Player Information" } };
     private readonly Dictionary _resp50x = new() { { "Code", 501 }, { "Message", "Failure Occured" } };
 
+    // C1: Maximum payload size to prevent memory exhaustion (64 KB)
+    private const int MAX_PAYLOAD_BYTES = 65536;
+
+    // M1: Minimum interval between accepted shots (milliseconds)
+    private const double SHOT_COOLDOWN_MS = 500.0;
+    private ulong _lastShotTimeMs;
+
+    // M2: Connection idle timeout (milliseconds)
+    private const double CONNECTION_TIMEOUT_MS = 60000.0;
+    private ulong _lastActivityTimeMs;
+
+    [Export] public int Port { get; set; } = 49152;
+
     [Signal]
     public delegate void HitBallEventHandler(Dictionary data);
 
     public override void _Ready()
     {
-        _tcpServer.Listen(49152);
+        _tcpServer.Listen((ushort)Port);
     }
 
     public override void _Process(double delta)
@@ -34,6 +47,7 @@ public partial class TcpServer : Node
             {
                 GD.Print($"We have a tcp connection at {_tcpConnection.GetConnectedHost()}");
                 _tcpConnected = true;
+                _lastActivityTimeMs = Time.GetTicksMsec();
             }
             return;
         }
@@ -54,9 +68,32 @@ public partial class TcpServer : Node
         if (status != StreamPeerTcp.Status.Connected)
             return;
 
+        // M2: Check for idle timeout
+        if (Time.GetTicksMsec() - _lastActivityTimeMs > CONNECTION_TIMEOUT_MS)
+        {
+            GD.Print("tcp connection timed out after inactivity");
+            _tcpConnection.DisconnectFromHost();
+            _tcpConnected = false;
+            _tcpConnection = null;
+            _shotData.Clear();
+            return;
+        }
+
         var bytesAvailable = (int)_tcpConnection.GetAvailableBytes();
         if (bytesAvailable <= 0)
             return;
+
+        _lastActivityTimeMs = Time.GetTicksMsec();
+
+        // C1: Reject oversized payloads
+        if (bytesAvailable > MAX_PAYLOAD_BYTES)
+        {
+            GD.PrintErr($"TCP payload too large ({bytesAvailable} bytes > {MAX_PAYLOAD_BYTES}), rejecting");
+            // Drain the oversized data to clear the buffer
+            _tcpConnection.GetUtf8String(bytesAvailable);
+            RespondError(501, "Payload too large");
+            return;
+        }
 
         _tcpString = _tcpConnection.GetUtf8String(bytesAvailable);
 
@@ -77,7 +114,11 @@ public partial class TcpServer : Node
 
         var dict = data.AsGodotDictionary();
         _shotData = dict;
-        GD.Print($"Launch monitor payload: {_tcpString}");
+
+        // M3: Log truncated payload after validation
+        string logPayload = _tcpString.Length > 200 ? _tcpString[..200] + "..." : _tcpString;
+        GD.Print($"Launch monitor payload: {logPayload}");
+
         TryEmitHitBall(dict);
     }
 
@@ -106,28 +147,7 @@ public partial class TcpServer : Node
         _tcpConnection.PutData(payload);
     }
 
-    private void TryEmitHitBall(Dictionary data)
-    {
-        if (!data.TryGetValue("ShotDataOptions", out Variant optionsVar) || optionsVar.VariantType != Variant.Type.Dictionary)
-            return;
-
-        var options = optionsVar.AsGodotDictionary();
-
-        if (!options.TryGetValue("ContainsBallData", out Variant containsVar) || containsVar.VariantType != Variant.Type.Bool)
-            return;
-
-        var containsBall = (bool)containsVar;
-        if (!containsBall)
-            return;
-
-        if (!data.TryGetValue("BallData", out Variant ballVar) || ballVar.VariantType != Variant.Type.Dictionary)
-            return;
-
-        var ballData = ballVar.AsGodotDictionary();
-        EmitSignal(SignalName.HitBall, ballData);
-    }
-
-    private void _on_golf_ball_good_data()
+    private void RespondSuccess()
     {
         if (_tcpConnection == null)
             return;
@@ -149,8 +169,46 @@ public partial class TcpServer : Node
         }
     }
 
-    private void _on_player_bad_data()
+    private void TryEmitHitBall(Dictionary data)
     {
-        RespondError(501, "Bad Ball Data");
+        // M1: Rate limiting — reject shots fired too quickly
+        ulong now = Time.GetTicksMsec();
+        if (now - _lastShotTimeMs < SHOT_COOLDOWN_MS)
+        {
+            GD.Print("TCP shot rejected: rate limited");
+            RespondError(429, "Too many requests");
+            return;
+        }
+
+        if (!data.TryGetValue("ShotDataOptions", out Variant optionsVar) || optionsVar.VariantType != Variant.Type.Dictionary)
+            return;
+
+        var options = optionsVar.AsGodotDictionary();
+
+        if (!options.TryGetValue("ContainsBallData", out Variant containsVar) || containsVar.VariantType != Variant.Type.Bool)
+            return;
+
+        var containsBall = (bool)containsVar;
+        if (!containsBall)
+            return;
+
+        if (!data.TryGetValue("BallData", out Variant ballVar) || ballVar.VariantType != Variant.Type.Dictionary)
+            return;
+
+        var ballData = ballVar.AsGodotDictionary();
+
+        // C2: Validate shot data before emitting
+        if (!ShotValidator.ValidateAndClamp(ballData))
+        {
+            GD.PrintErr("TCP shot rejected: invalid ball data");
+            RespondError(501, "Invalid ball data values");
+            return;
+        }
+
+        _lastShotTimeMs = now;
+        EmitSignal(SignalName.HitBall, ballData);
+
+        // C4: Send success response to launch monitor
+        RespondSuccess();
     }
 }

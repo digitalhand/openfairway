@@ -52,6 +52,12 @@ public static class ShotLoader
             return new Dictionary();
         }
 
+        if (dict["BallData"].VariantType != Variant.Type.Dictionary)
+        {
+            GD.PrintErr($"ShotLoader: 'BallData' is not a Dictionary in {path}");
+            return new Dictionary();
+        }
+
         return ((Dictionary)dict["BallData"]).Duplicate();
     }
 }

@@ -14,11 +14,26 @@ public partial class RangeUI : MarginContainer
     private Button _hitShotButton;
     private bool _shotControlsVisible;
     private readonly System.Collections.Generic.Dictionary<int, string> _panelMenuIndexToName = new();
+    private Setting _shotInjectorSetting;
+
+    // Cached DataPanel references (m8)
+    private DataPanel _panelDistance;
+    private DataPanel _panelCarry;
+    private DataPanel _panelSide;
+    private DataPanel _panelApex;
+    private DataPanel _panelSpeed;
+    private DataPanel _panelBackSpin;
+    private DataPanel _panelSideSpin;
+    private DataPanel _panelTotalSpin;
+    private DataPanel _panelSpinAxis;
+    private DataPanel _panelVLA;
+    private DataPanel _panelHLA;
 
     public override void _Ready()
     {
         _gridCanvas = GetNode<GridCanvas>("GridCanvas");
-        GetNode<GlobalSettings>("/root/GlobalSettings").RangeSettings.ShotInjectorEnabled.SettingChanged += ToggleShotInjector;
+        _shotInjectorSetting = GetNode<GlobalSettings>("/root/GlobalSettings").RangeSettings.ShotInjectorEnabled;
+        _shotInjectorSetting.SettingChanged += ToggleShotInjector;
 
         // Connect ShotInjector signal
         var shotInjector = GetNode<ShotInjector>("ShotInjector");
@@ -31,9 +46,28 @@ public partial class RangeUI : MarginContainer
         _shotTypeOption = GetNode<OptionButton>("HBoxContainer/ShotTypeOption");
         _shotTypeOption.ItemSelected += OnShotTypeSelected;
 
+        // Cache DataPanel references
+        _panelDistance = GetNode<DataPanel>("GridCanvas/Distance");
+        _panelCarry = GetNode<DataPanel>("GridCanvas/Carry");
+        _panelSide = GetNode<DataPanel>("GridCanvas/Side");
+        _panelApex = GetNode<DataPanel>("GridCanvas/Apex");
+        _panelSpeed = GetNode<DataPanel>("GridCanvas/Speed");
+        _panelBackSpin = GetNode<DataPanel>("GridCanvas/BackSpin");
+        _panelSideSpin = GetNode<DataPanel>("GridCanvas/SideSpin");
+        _panelTotalSpin = GetNode<DataPanel>("GridCanvas/TotalSpin");
+        _panelSpinAxis = GetNode<DataPanel>("GridCanvas/SpinAxis");
+        _panelVLA = GetNode<DataPanel>("GridCanvas/VLA");
+        _panelHLA = GetNode<DataPanel>("GridCanvas/HLA");
+
         PopulateShotTypes();
         SetupPanelsMenu();
         SetShotControlsVisible(true);
+    }
+
+    public override void _ExitTree()
+    {
+        if (_shotInjectorSetting != null)
+            _shotInjectorSetting.SettingChanged -= ToggleShotInjector;
     }
 
     public override void _Input(InputEvent @event)
@@ -52,22 +86,22 @@ public partial class RangeUI : MarginContainer
         var units = (PhysicsEnums.Units)(int)GetNode<GlobalSettings>("/root/GlobalSettings").RangeSettings.RangeUnits.Value;
         string speedUnit = (units == PhysicsEnums.Units.Imperial) ? "mph" : "m/s";
 
-        GetNode<DataPanel>("GridCanvas/Distance").SetData(data["Distance"].ToString());
-        GetNode<DataPanel>("GridCanvas/Carry").SetData(data["Carry"].ToString());
-        GetNode<DataPanel>("GridCanvas/Side").SetData(data["Offline"].ToString());
-        GetNode<DataPanel>("GridCanvas/Apex").SetData(data["Apex"].ToString());
-        GetNode<DataPanel>("GridCanvas/Speed").SetUnits(speedUnit);
-        GetNode<DataPanel>("GridCanvas/Speed").SetData(data["Speed"].ToString());
-        GetNode<DataPanel>("GridCanvas/BackSpin").SetUnits("rpm");
-        GetNode<DataPanel>("GridCanvas/BackSpin").SetData(data["BackSpin"].ToString());
-        GetNode<DataPanel>("GridCanvas/SideSpin").SetUnits("rpm");
-        GetNode<DataPanel>("GridCanvas/SideSpin").SetData(data["SideSpin"].ToString());
-        GetNode<DataPanel>("GridCanvas/TotalSpin").SetUnits("rpm");
-        GetNode<DataPanel>("GridCanvas/TotalSpin").SetData(data["TotalSpin"].ToString());
-        GetNode<DataPanel>("GridCanvas/SpinAxis").SetUnits("deg");
-        GetNode<DataPanel>("GridCanvas/SpinAxis").SetData(data["SpinAxis"].ToString());
-        GetNode<DataPanel>("GridCanvas/VLA").SetData(FormatAngle(data.ContainsKey("VLA") ? data["VLA"] : 0.0f));
-        GetNode<DataPanel>("GridCanvas/HLA").SetData(FormatAngle(data.ContainsKey("HLA") ? data["HLA"] : 0.0f));
+        _panelDistance.SetData(data["Distance"].ToString());
+        _panelCarry.SetData(data["Carry"].ToString());
+        _panelSide.SetData(data["Offline"].ToString());
+        _panelApex.SetData(data["Apex"].ToString());
+        _panelSpeed.SetUnits(speedUnit);
+        _panelSpeed.SetData(data["Speed"].ToString());
+        _panelBackSpin.SetUnits("rpm");
+        _panelBackSpin.SetData(data["BackSpin"].ToString());
+        _panelSideSpin.SetUnits("rpm");
+        _panelSideSpin.SetData(data["SideSpin"].ToString());
+        _panelTotalSpin.SetUnits("rpm");
+        _panelTotalSpin.SetData(data["TotalSpin"].ToString());
+        _panelSpinAxis.SetUnits("deg");
+        _panelSpinAxis.SetData(data["SpinAxis"].ToString());
+        _panelVLA.SetData(FormatAngle(data.ContainsKey("VLA") ? data["VLA"] : 0.0f));
+        _panelHLA.SetData(FormatAngle(data.ContainsKey("HLA") ? data["HLA"] : 0.0f));
     }
 
     private string FormatAngle(Variant val)
