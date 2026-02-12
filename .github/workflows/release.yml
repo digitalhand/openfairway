@@ -1,9 +1,12 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - 'v*.*.*'  # Trigger on version tags (e.g., v1.0.0)
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g. v1.0.0)'
+        required: true
+        type: string
 
 jobs:
   create-release:
@@ -13,6 +16,14 @@ jobs:
       contents: write
 
     steps:
+    - name: Validate tag format
+      run: |
+        TAG="${{ inputs.tag }}"
+        if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "Error: Tag must match format v#.#.# (e.g. v1.0.0)"
+          exit 1
+        fi
+
     - name: Checkout repository
       uses: actions/checkout@v4
 
@@ -22,47 +33,27 @@ jobs:
         dotnet-version: '8.0.x'
 
     - name: Build solution
-      run: dotnet build OpenShotGolf.sln --configuration Release
+      run: dotnet build OpenShotGolf.csproj --configuration Release
 
-    - name: Run all tests
-      run: dotnet test OpenShotGolf.sln --configuration Release --no-build
+    - name: Run CI tests
+      run: |
+        cd tests/PhysicsTests
+        dotnet test --filter "Category=RolloutPhysics" --configuration Release
 
     - name: Package addon
       run: |
-        mkdir -p release
-        cp -r addons/openfairway release/
-        cd release
-        zip -r openfairway-addon.zip openfairway/
-        cd ..
+        cd addons
+        zip -r "../OpenFairway_${{ inputs.tag }}.zip" openfairway/
 
-    - name: Generate release notes
-      id: release_notes
+    - name: Create tag
       run: |
-        echo "## OpenFairway Physics Engine" > release_notes.md
-        echo "" >> release_notes.md
-        echo "Release ${GITHUB_REF#refs/tags/}" >> release_notes.md
-        echo "" >> release_notes.md
-        echo "### Installation" >> release_notes.md
-        echo "1. Download \`openfairway-addon.zip\`" >> release_notes.md
-        echo "2. Extract to your Godot project's \`addons/\` directory" >> release_notes.md
-        echo "3. Enable the plugin in Project Settings > Plugins" >> release_notes.md
-        echo "" >> release_notes.md
-        echo "### Validated Shot Distances (as of this release)" >> release_notes.md
-        echo "- **Chip**: 7.6/13.1 yd (target 13.0, error +0.8%)" >> release_notes.md
-        echo "- **Bump**: 38.1/89.7 yd (target 85, error +5.5%)" >> release_notes.md
-        echo "- **Wood**: 121.7/194.7 yd (target 198, error -1.7%)" >> release_notes.md
-        echo "- **Approach**: 105.6/108.3 yd (target 108, error +0.3%)" >> release_notes.md
-        echo "" >> release_notes.md
-        echo "### Requirements" >> release_notes.md
-        echo "- Godot 4.5+ (.NET build)" >> release_notes.md
-        echo "- .NET 8.0 SDK" >> release_notes.md
+        git tag "${{ inputs.tag }}"
+        git push origin "${{ inputs.tag }}"
 
     - name: Create GitHub Release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
-        files: release/openfairway-addon.zip
-        body_path: release_notes.md
-        draft: false
-        prerelease: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        tag_name: ${{ inputs.tag }}
+        name: OpenFairway ${{ inputs.tag }}
+        files: OpenFairway_${{ inputs.tag }}.zip
+        generate_release_notes: true
