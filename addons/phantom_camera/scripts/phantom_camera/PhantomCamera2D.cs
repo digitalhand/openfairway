@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using Godot;
 using Godot.Collections;
 using PhantomCamera.Noise;
@@ -128,7 +128,7 @@ public class PhantomCamera2D : PhantomCamera
     public bool RotationDamping
     {
         get => (bool)Node2D.Call(MethodName.GetRotationDamping);
-        set  => Node2D.Call(MethodName.SetRotationDamping, value);
+        set => Node2D.Call(MethodName.SetRotationDamping, value);
     }
 
     public float RotationDampingValue

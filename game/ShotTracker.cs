@@ -1,6 +1,6 @@
+using System.Linq;
 using Godot;
 using Godot.Collections;
-using System.Linq;
 
 /// <summary>
 /// Tracks shot statistics and manages ball tracers.

@@ -1,6 +1,6 @@
-using NUnit.Framework;
 using Godot;
 using Godot.Collections;
+using NUnit.Framework;
 
 namespace OpenShotGolf.Tests
 {

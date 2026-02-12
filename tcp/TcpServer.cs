@@ -1,6 +1,6 @@
+using System.Text;
 using Godot;
 using Godot.Collections;
-using System.Text;
 using TcpClientPeer = Godot.StreamPeerTcp;
 using TcpServerPeer = Godot.TcpServer;
 
