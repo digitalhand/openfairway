@@ -4,11 +4,13 @@ This directory contains unit tests for validating the OpenFairway physics engine
 
 ## Test Categories
 
-### 1. Formula Validation Tests (`Category=RolloutPhysics`)
+### 1. Formula Validation Tests (`Category=RolloutPhysics`) ✅ CI-Compatible
 
 These tests validate the **rollout physics formulas** (friction multipliers, velocity scaling) that control chip/bump/driver behavior. They run **without Godot runtime** and can be executed in CI/CD.
 
-**Run these tests after any physics code changes:**
+**✅ These tests run automatically in GitHub Actions CI**
+
+**Run locally after any physics code changes:**
 
 ```bash
 dotnet test --filter "Category=RolloutPhysics"
@@ -38,13 +40,23 @@ These tests **document validated baseline distances** for each shot type. They a
 - **Approach** (approach_test_shot.json): 105.6/108.3 yd (target 108, error +0.3%)
 - **Flop** (flop_test_shot.json): 66.2/66.7 yd (minimal rollout)
 
-### 3. Core Physics Tests
+### 3. Core Physics Tests ⚠️ Requires Godot Runtime (Local Only)
 
-Other test files in this directory:
+Other test files in this directory require Godot runtime and **cannot run in CI**:
 - `AerodynamicsTests.cs` - Drag/lift coefficient calculations
 - `SurfaceTests.cs` - Friction parameter validation
 - `BallPhysicsTests.cs` - Force/torque calculations
 - `EnumsTests.cs` - Enum value consistency
+- `ApproachShotTests.cs` - Full shot simulation tests
+- `DistanceBenchmarkTests.cs` - Headless distance benchmarks
+
+**These tests must be run locally:**
+```bash
+# Open project in Godot first, then run:
+dotnet test OpenShotGolf.sln
+```
+
+**Why?** These tests instantiate Godot classes like `BallPhysics`, `Aerodynamics`, `PhysicsAdapter` which require the Godot runtime.
 
 ## Workflow for Physics Changes
 
