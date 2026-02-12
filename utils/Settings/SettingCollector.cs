@@ -33,13 +33,23 @@ public partial class SettingCollector : RefCounted
 
     public void SetValue(string settingName, Variant settingValue)
     {
-        Settings[settingName].SetValue(settingValue);
+        if (!Settings.TryGetValue(settingName, out var setting))
+        {
+            GD.PrintErr($"SettingCollector.SetValue: unknown setting '{settingName}'");
+            return;
+        }
+        setting.SetValue(settingValue);
         EmitSignal(SignalName.SettingsChanged);
     }
 
     public void SetDefault(string settingName, Variant settingDefault)
     {
-        Settings[settingName].SetDefault(settingDefault);
+        if (!Settings.TryGetValue(settingName, out var setting))
+        {
+            GD.PrintErr($"SettingCollector.SetDefault: unknown setting '{settingName}'");
+            return;
+        }
+        setting.SetDefault(settingDefault);
         EmitSignal(SignalName.SettingsChanged);
     }
 }

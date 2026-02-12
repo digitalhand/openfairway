@@ -143,47 +143,21 @@ public static class ShotFormatter
         return direction + $"{Mathf.Abs(distance):F1}";
     }
 
+    private static readonly ShotSetup _shotSetup = new();
+
+    /// <summary>
+    /// Delegates to ShotSetup.ParseSpin() as the single source of truth,
+    /// remapping keys for display compatibility.
+    /// </summary>
     private static Dictionary ParseSpin(Dictionary rawData)
     {
-        bool hasBackspin = rawData.ContainsKey("BackSpin");
-        bool hasSidespin = rawData.ContainsKey("SideSpin");
-        bool hasTotal = rawData.ContainsKey("TotalSpin");
-        bool hasAxis = rawData.ContainsKey("SpinAxis");
-
-        float backspin = (float)(rawData.ContainsKey("BackSpin") ? rawData["BackSpin"] : 0.0f);
-        float sidespin = (float)(rawData.ContainsKey("SideSpin") ? rawData["SideSpin"] : 0.0f);
-        float totalSpin = (float)(rawData.ContainsKey("TotalSpin") ? rawData["TotalSpin"] : 0.0f);
-        float spinAxis = (float)(rawData.ContainsKey("SpinAxis") ? rawData["SpinAxis"] : 0.0f);
-
-        // Calculate missing values
-        if (totalSpin == 0.0f && (hasBackspin || hasSidespin))
-        {
-            totalSpin = Mathf.Sqrt(backspin * backspin + sidespin * sidespin);
-        }
-
-        if (!hasAxis && (hasBackspin || hasSidespin))
-        {
-            spinAxis = Mathf.RadToDeg(Mathf.Atan2(sidespin, backspin));
-        }
-
-        if (hasTotal && hasAxis)
-        {
-            if (!hasBackspin)
-            {
-                backspin = totalSpin * Mathf.Cos(Mathf.DegToRad(spinAxis));
-            }
-            if (!hasSidespin)
-            {
-                sidespin = totalSpin * Mathf.Sin(Mathf.DegToRad(spinAxis));
-            }
-        }
-
+        var result = _shotSetup.ParseSpin(rawData);
         return new Dictionary
         {
-            { "back", backspin },
-            { "side", sidespin },
-            { "total", totalSpin },
-            { "axis", spinAxis }
+            { "back", result["backspin"] },
+            { "side", result["sidespin"] },
+            { "total", result["total"] },
+            { "axis", result["axis"] }
         };
     }
 }
