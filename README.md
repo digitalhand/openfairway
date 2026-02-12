@@ -9,6 +9,10 @@ Realistic golf ball physics engine for Godot 4.5+ (.NET/C#). Provides force, tor
 [![.NET 8.0](https://img.shields.io/badge/.NET-8.0-512BD4)](https://dotnet.microsoft.com/)
 [![Godot 4.5+](https://img.shields.io/badge/Godot-4.5+-478CBF)](https://godotengine.org/)
 
+
+## Github
+- Do not ever commit code. 
+
 ## Features
 
 - Aerodynamic drag and Magnus lift from wind-tunnel polynomial fits
