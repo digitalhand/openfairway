@@ -1,5 +1,5 @@
-using NUnit.Framework;
 using Godot;
+using NUnit.Framework;
 
 namespace OpenShotGolf.Tests
 {
