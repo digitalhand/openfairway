@@ -65,16 +65,18 @@ public partial class BallPhysics : RefCounted
         // Calculate velocity scaling factor
         // The "bite" effect from spin depends on impact energy, not just spin rate
         // Low-speed chip shots shouldn't bite as hard as high-speed wedge shots
+        // After b62afa3 fixed grass viscosity, less aggressive scaling needed
         float velocityScale;
         if (ballSpeed < 20.0f)
         {
-            // Chip shots: Minimal spin friction (30% to 70%)
-            velocityScale = Mathf.Lerp(0.30f, 0.70f, ballSpeed / 20.0f);
+            // Chip/bump shots: Moderate spin friction (60% to 87%)
+            // Prevents rollback while providing enough friction to limit rollout
+            velocityScale = Mathf.Lerp(0.60f, 0.87f, ballSpeed / 20.0f);
         }
         else if (ballSpeed < 35.0f)
         {
-            // Transition zone: Pitch shots (70% to 100%)
-            velocityScale = Mathf.Lerp(0.70f, 1.0f, (ballSpeed - 20.0f) / 15.0f);
+            // Transition zone: Pitch shots (87% to 100%)
+            velocityScale = Mathf.Lerp(0.87f, 1.0f, (ballSpeed - 20.0f) / 15.0f);
         }
         else
         {
@@ -83,23 +85,28 @@ public partial class BallPhysics : RefCounted
         }
 
         // Non-linear with threshold: Grooves don't really "bite" until >1250 rpm
-        // Below 1250 rpm: Minimal effect (drivers/woods should roll)
-        // Above 1250 rpm: Strong increase (wedges should check up)
+        // Steeper curve for bump/pitch shots (1250-1750 rpm) to prevent excessive rollout
         float spinMultiplier;
 
         if (effectiveSpinRpm < 1250.0f)
         {
-            // Low spin (drivers/woods): Minimal friction increase (1.0x to 1.15x)
-            spinMultiplier = 1.0f + (effectiveSpinRpm / 1250.0f) * 0.15f;
+            // Low spin (drivers/woods): Minimal friction increase (1.0x to 1.30x)
+            spinMultiplier = 1.0f + (effectiveSpinRpm / 1250.0f) * 0.30f;
+        }
+        else if (effectiveSpinRpm < 1750.0f)
+        {
+            // Bump/pitch shots: Steep increase (1.30x to 2.25x over 500 rpm)
+            // At 1250 rpm: 1.30x, at 1750 rpm: 2.25x
+            float excessSpin = effectiveSpinRpm - 1250.0f;
+            spinMultiplier = 1.30f + (excessSpin / 500.0f) * 0.95f;
         }
         else
         {
-            // High spin (wedges): Strong friction increase (1.15x to 2.5x)
-            // At 1250 rpm: 1.15x
-            // At 2750+ rpm: 2.5x (maximum)
-            float excessSpin = effectiveSpinRpm - 1250.0f;
-            float spinFactor = Mathf.Min(excessSpin / 1500.0f, 1.0f);
-            spinMultiplier = 1.15f + spinFactor * 1.35f;
+            // High spin (wedges): Gradual increase to maximum (2.25x to 2.5x)
+            // At 1750 rpm: 2.25x, at 2750+ rpm: 2.5x (maximum)
+            float excessSpin = effectiveSpinRpm - 1750.0f;
+            float spinFactor = Mathf.Min(excessSpin / 1000.0f, 1.0f);
+            spinMultiplier = 2.25f + spinFactor * 0.25f;
         }
 
         // Apply velocity scaling to reduce spin effect for low-speed shots
