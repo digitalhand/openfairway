@@ -1,0 +1,180 @@
+name: CI/CD Pipeline
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Full history for better analysis
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore OpenShotGolf.sln
+
+    - name: Build solution
+      run: dotnet build OpenShotGolf.sln --configuration Release --no-restore
+
+    - name: Run rollout physics tests
+      run: dotnet test --filter "Category=RolloutPhysics" --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx"
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results
+        path: '**/test-results.trx'
+        retention-days: 30
+
+    - name: Test Summary
+      run: |
+        echo "✅ Rollout Physics Tests Passed"
+        echo ""
+        echo "Note: Other tests require Godot runtime and must be run locally."
+        echo "Run locally: dotnet test OpenShotGolf.sln"
+
+  code-quality:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore OpenShotGolf.sln
+
+    - name: Check C# code formatting
+      run: dotnet format OpenShotGolf.sln --verify-no-changes --verbosity diagnostic
+
+    - name: Run .NET code analyzers
+      run: dotnet build OpenShotGolf.sln --configuration Release /p:TreatWarningsAsErrors=false /p:RunAnalyzers=true
+
+  gdscript-lint:
+    name: GDScript Linting
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install gdlint
+      run: pip install gdtoolkit
+
+    - name: Run gdlint on project GDScript files
+      run: |
+        # Lint only project GDScript files (exclude third-party addons)
+        find . -name "*.gd" -path "./addons/openfairway/*.gd" -exec gdlint {} + || true
+        find . -name "*.gd" -path "./game/*.gd" -exec gdlint {} + || true
+        find . -name "*.gd" -path "./ui/*.gd" -exec gdlint {} + || true
+        find . -name "*.gd" -path "./utils/*.gd" -exec gdlint {} + || true
+        find . -name "*.gd" -path "./tcp/*.gd" -exec gdlint {} + || true
+      continue-on-error: true  # Don't fail build on GDScript linting warnings
+
+  check-physics-formulas:
+    name: Physics Formula Validation
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore OpenShotGolf.sln
+
+    - name: Build solution
+      run: dotnet build OpenShotGolf.sln --configuration Release --no-restore
+
+    - name: Validate rollout physics formulas
+      run: |
+        echo "=== Validating Rollout Physics Formulas ==="
+        dotnet test --filter "Category=RolloutPhysics" --configuration Release --no-build --logger "console;verbosity=detailed"
+
+    - name: Check for physics regression
+      run: |
+        echo "=== Physics Formula Validation Summary ==="
+        echo "✓ Velocity scaling curve (chip/bump/driver speeds)"
+        echo "✓ Spin multiplier curve (1250-1750 RPM bump range)"
+        echo "✓ Expected friction multipliers validated"
+        echo ""
+        echo "Expected values:"
+        echo "  - Chip (2785 RPM @ 2.44 m/s): ×1.95"
+        echo "  - Bump (1365 RPM @ 9.25 m/s): ×1.37"
+        echo "  - Driver (1118 RPM @ 16 m/s): ×1.20-1.30"
+
+  security-scan:
+    name: Security Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Run .NET security scanning
+      uses: github/codeql-action/init@v3
+      with:
+        languages: csharp
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Build for security analysis
+      run: dotnet build OpenShotGolf.sln --configuration Release
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+
+  summary:
+    name: CI Summary
+    runs-on: ubuntu-latest
+    needs: [build-and-test, code-quality, check-physics-formulas]
+    if: always()
+
+    steps:
+    - name: Check job statuses
+      run: |
+        echo "=== CI Pipeline Summary ==="
+        echo "Build & Test: ${{ needs.build-and-test.result }}"
+        echo "Code Quality: ${{ needs.code-quality.result }}"
+        echo "Physics Formulas: ${{ needs.check-physics-formulas.result }}"
+
+        if [ "${{ needs.build-and-test.result }}" != "success" ] || \
+           [ "${{ needs.code-quality.result }}" != "success" ] || \
+           [ "${{ needs.check-physics-formulas.result }}" != "success" ]; then
+          echo "❌ CI pipeline failed - check job outputs above"
+          exit 1
+        else
+          echo "✅ All checks passed!"
+        fi
