@@ -10,7 +10,7 @@ public partial class BallTrail : MeshInstance3D
     [Export] public Color Color { get; set; } = new Color(0.153f, 0.408f, 0.663f, 0.6f);  // Trail color (light blue default)
     [Export] public float LineWidth { get; set; } = 0.08f;  // Width of the trail ribbon
 
-    private Vector3[] _points = System.Array.Empty<Vector3>();
+    private System.Collections.Generic.List<Vector3> _points = new();
     private StandardMaterial3D _material;
 
     public override void _Ready()
@@ -56,10 +56,7 @@ public partial class BallTrail : MeshInstance3D
     /// </summary>
     public void AddPoint(Vector3 point)
     {
-        var newPoints = new Vector3[_points.Length + 1];
-        _points.CopyTo(newPoints, 0);
-        newPoints[_points.Length] = point;
-        _points = newPoints;
+        _points.Add(point);
     }
 
     /// <summary>
@@ -67,7 +64,7 @@ public partial class BallTrail : MeshInstance3D
     /// </summary>
     public void ClearPoints()
     {
-        _points = System.Array.Empty<Vector3>();
+        _points.Clear();
         if (Mesh != null)
         {
             ((ArrayMesh)Mesh).ClearSurfaces();
@@ -79,7 +76,7 @@ public partial class BallTrail : MeshInstance3D
         var arrayMesh = (ArrayMesh)Mesh;
         arrayMesh.ClearSurfaces();
 
-        if (_points.Length < 2)
+        if (_points.Count < 2)
             return;
 
         CreateRibbonMesh(arrayMesh);
@@ -96,7 +93,7 @@ public partial class BallTrail : MeshInstance3D
         if (camera == null)
             return;
 
-        for (int i = 0; i < _points.Length; i++)
+        for (int i = 0; i < _points.Count; i++)
         {
             Vector3 point = _points[i];
 
@@ -120,7 +117,7 @@ public partial class BallTrail : MeshInstance3D
             vertices.Add(point + right * halfWidth);
 
             // UVs
-            float t = (float)i / (_points.Length - 1);
+            float t = (float)i / (_points.Count - 1);
             uvs.Add(new Vector2(0, t));
             uvs.Add(new Vector2(1, t));
 
@@ -158,7 +155,7 @@ public partial class BallTrail : MeshInstance3D
 
     private Vector3 GetForwardDirection(int index)
     {
-        if (index < _points.Length - 1)
+        if (index < _points.Count - 1)
         {
             return (_points[index + 1] - _points[index]).Normalized();
         }
@@ -174,7 +171,7 @@ public partial class BallTrail : MeshInstance3D
 
     private float CalculateAlpha(int index)
     {
-        int pointsFromEnd = _points.Length - 1 - index;
+        int pointsFromEnd = _points.Count - 1 - index;
         if (pointsFromEnd < 3)
         {
             return (float)(pointsFromEnd + 1) / 4.0f;

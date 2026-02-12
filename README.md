@@ -92,6 +92,16 @@ var result = adapter.SimulateShotFromJson(new Godot.Collections.Dictionary
 // result["carry_yd"], result["total_yd"]
 ```
 
+### Distance Benchmarks
+
+Run all 9 test shots headlessly and produce a carry/total/rollout distance table:
+
+```bash
+godot --headless --script run_benchmarks.gd
+```
+
+This is the standard way to validate physics changes. See `tests/PhysicsTests/README.md` for baseline distances and the full testing workflow.
+
 ## Addon Classes
 
 | Class | Base | Description |

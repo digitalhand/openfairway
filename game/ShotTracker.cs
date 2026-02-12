@@ -34,13 +34,23 @@ public partial class ShotTracker : Node3D
     private Node3D _currentTracer = null;
 
     private GolfBall _ball;
+    private Setting _shotTracerCountSetting;
 
     public override void _Ready()
     {
         _ball = GetNode<GolfBall>("Ball");
         _ball.BallAtRest += OnBallRest;
-        MaxTracers = (int)GetNode<GlobalSettings>("/root/GlobalSettings").RangeSettings.ShotTracerCount.Value;
-        GetNode<GlobalSettings>("/root/GlobalSettings").RangeSettings.ShotTracerCount.SettingChanged += OnTracerCountChanged;
+        _shotTracerCountSetting = GetNode<GlobalSettings>("/root/GlobalSettings").RangeSettings.ShotTracerCount;
+        MaxTracers = (int)_shotTracerCountSetting.Value;
+        _shotTracerCountSetting.SettingChanged += OnTracerCountChanged;
+    }
+
+    public override void _ExitTree()
+    {
+        if (_ball != null)
+            _ball.BallAtRest -= OnBallRest;
+        if (_shotTracerCountSetting != null)
+            _shotTracerCountSetting.SettingChanged -= OnTracerCountChanged;
     }
 
     private void OnTracerCountChanged(Variant value)
@@ -79,7 +89,7 @@ public partial class ShotTracker : Node3D
 
         if (_ball.State == PhysicsEnums.BallState.Flight)
         {
-            float newCarry = _ball.GetDownrangeYards() / 1.09361f;  // Convert to meters
+            float newCarry = _ball.GetDownrangeMeters();
             if (newCarry > Carry)
                 Carry = newCarry;
         }
@@ -175,7 +185,7 @@ public partial class ShotTracker : Node3D
     /// </summary>
     public int GetDistance()
     {
-        return (int)(_ball.GetDownrangeYards() / 1.09361f);
+        return (int)_ball.GetDownrangeMeters();
     }
 
     /// <summary>
@@ -199,14 +209,13 @@ public partial class ShotTracker : Node3D
     /// </summary>
     public bool ValidateData(Dictionary data)
     {
-        // TODO: Implement proper validation
-        return data != null && data.Count > 0;
+        return ShotValidator.ValidateAndClamp(data);
     }
 
     private void OnBallRest()
     {
         _trackPoints = false;
-        ShotData["TotalDistance"] = (int)(_ball.GetDownrangeYards() / 1.09361f);
+        ShotData["TotalDistance"] = (int)_ball.GetDownrangeMeters();
         ShotData["CarryDistance"] = (int)Carry;
         ShotData["Apex"] = (int)Apex;
         ShotData["SideDistance"] = (int)SideDistance;
@@ -241,8 +250,4 @@ public partial class ShotTracker : Node3D
         _ball.CallDeferred(GolfBall.MethodName.HitFromData, data);
     }
 
-    private void OnRangeUiSetEnv(Variant data)
-    {
-        _ball.CallDeferred("SetEnv", data);
-    }
 }
