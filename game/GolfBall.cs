@@ -25,6 +25,9 @@ public partial class GolfBall : CharacterBody3D
     public bool OnGround { get; set; } = false;
     public Vector3 FloorNormal { get; set; } = Vector3.Up;
 
+    // Settings reference for signal cleanup
+    private RangeSettings _rangeSettings;
+
     // Surface parameters
     public PhysicsEnums.SurfaceType SurfaceType { get; set; } = PhysicsEnums.SurfaceType.Fairway;
     private float _kineticFriction = 0.42f;
@@ -53,14 +56,26 @@ public partial class GolfBall : CharacterBody3D
 
     private void ConnectSettings()
     {
-        var settings = GetNode<GlobalSettings>("/root/GlobalSettings").RangeSettings;
-        settings.Temperature.SettingChanged += OnEnvironmentChanged;
-        settings.Altitude.SettingChanged += OnEnvironmentChanged;
-        settings.RangeUnits.SettingChanged += OnEnvironmentChanged;
-        settings.DragScale.SettingChanged += OnDragScaleChanged;
-        settings.LiftScale.SettingChanged += OnLiftScaleChanged;
-        _dragScale = (float)settings.DragScale.Value;
-        _liftScale = (float)settings.LiftScale.Value;
+        _rangeSettings = GetNode<GlobalSettings>("/root/GlobalSettings").RangeSettings;
+        _rangeSettings.Temperature.SettingChanged += OnEnvironmentChanged;
+        _rangeSettings.Altitude.SettingChanged += OnEnvironmentChanged;
+        _rangeSettings.RangeUnits.SettingChanged += OnEnvironmentChanged;
+        _rangeSettings.DragScale.SettingChanged += OnDragScaleChanged;
+        _rangeSettings.LiftScale.SettingChanged += OnLiftScaleChanged;
+        _dragScale = (float)_rangeSettings.DragScale.Value;
+        _liftScale = (float)_rangeSettings.LiftScale.Value;
+    }
+
+    public override void _ExitTree()
+    {
+        if (_rangeSettings != null)
+        {
+            _rangeSettings.Temperature.SettingChanged -= OnEnvironmentChanged;
+            _rangeSettings.Altitude.SettingChanged -= OnEnvironmentChanged;
+            _rangeSettings.RangeUnits.SettingChanged -= OnEnvironmentChanged;
+            _rangeSettings.DragScale.SettingChanged -= OnDragScaleChanged;
+            _rangeSettings.LiftScale.SettingChanged -= OnLiftScaleChanged;
+        }
     }
 
     private void UpdateEnvironment()
@@ -112,13 +127,12 @@ public partial class GolfBall : CharacterBody3D
     }
 
     /// <summary>
-    /// Get downrange distance in yards (along initial shot direction)
+    /// Get downrange distance in meters (along initial shot direction)
     /// </summary>
-    public float GetDownrangeYards()
+    public float GetDownrangeMeters()
     {
         Vector3 delta = Position - ShotStartPos;
-        float meters = delta.Dot(ShotDirection);
-        return meters * 1.09361f;
+        return delta.Dot(ShotDirection);
     }
 
     public override void _PhysicsProcess(double delta)
@@ -276,7 +290,7 @@ public partial class GolfBall : CharacterBody3D
 
     private void PrintImpactDebug()
     {
-        GD.Print($"FIRST IMPACT at pos: {Position}, downrange: {GetDownrangeYards():F2} yds");
+        GD.Print($"FIRST IMPACT at pos: {Position}, downrange: {GetDownrangeMeters() * 1.09361f:F2} yds");
         GD.Print($"  Velocity at impact: {Velocity} ({Velocity.Length():F2} m/s)");
         GD.Print($"  Spin at impact: {Omega} ({Omega.Length() / 0.10472f:F0} rpm)");
         GD.Print($"  Normal: {FloorNormal}");

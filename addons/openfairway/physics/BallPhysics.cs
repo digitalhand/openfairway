@@ -22,6 +22,20 @@ public partial class BallPhysics : RefCounted
     [Export] public float BallMomentOfInertia { get => MOMENT_OF_INERTIA; private set { } }
     [Export] public float SpinDecayTau { get => SPIN_DECAY_TAU; private set { } }
 
+    // Spin friction tuning constants
+    private const float CHIP_SPEED_THRESHOLD = 20.0f;     // m/s — below this, reduced spin friction
+    private const float PITCH_SPEED_THRESHOLD = 35.0f;    // m/s — transition to full spin friction
+    private const float CHIP_VELOCITY_SCALE_MIN = 0.60f;  // Minimum velocity scale for chip shots
+    private const float CHIP_VELOCITY_SCALE_MAX = 0.87f;  // Maximum velocity scale for chip shots
+    private const float LOW_SPIN_THRESHOLD = 1250.0f;     // RPM — grooves don't "bite" below this
+    private const float MID_SPIN_THRESHOLD = 1750.0f;     // RPM — bump/pitch transition
+    private const float LOW_SPIN_MULTIPLIER_MAX = 1.30f;  // Friction multiplier at LOW_SPIN_THRESHOLD
+    private const float MID_SPIN_MULTIPLIER_MAX = 2.25f;  // Friction multiplier at MID_SPIN_THRESHOLD
+    private const float HIGH_SPIN_MULTIPLIER_MAX = 2.50f;  // Maximum friction multiplier (high spin wedges)
+
+    // Friction blending
+    private const float FRICTION_BLEND_SPEED = 15.0f;     // m/s — blending threshold for rolling/kinetic friction
+
     private readonly Aerodynamics _aero = new();
 
     /// <summary>
@@ -65,18 +79,18 @@ public partial class BallPhysics : RefCounted
         // Calculate velocity scaling factor
         // The "bite" effect from spin depends on impact energy, not just spin rate
         // Low-speed chip shots shouldn't bite as hard as high-speed wedge shots
-        // After b62afa3 fixed grass viscosity, less aggressive scaling needed
         float velocityScale;
-        if (ballSpeed < 20.0f)
+        if (ballSpeed < CHIP_SPEED_THRESHOLD)
         {
-            // Chip/bump shots: Moderate spin friction (60% to 87%)
-            // Prevents rollback while providing enough friction to limit rollout
-            velocityScale = Mathf.Lerp(0.60f, 0.87f, ballSpeed / 20.0f);
+            // Chip/bump shots: Moderate spin friction
+            velocityScale = Mathf.Lerp(CHIP_VELOCITY_SCALE_MIN, CHIP_VELOCITY_SCALE_MAX,
+                ballSpeed / CHIP_SPEED_THRESHOLD);
         }
-        else if (ballSpeed < 35.0f)
+        else if (ballSpeed < PITCH_SPEED_THRESHOLD)
         {
-            // Transition zone: Pitch shots (87% to 100%)
-            velocityScale = Mathf.Lerp(0.87f, 1.0f, (ballSpeed - 20.0f) / 15.0f);
+            // Transition zone: Pitch shots
+            velocityScale = Mathf.Lerp(CHIP_VELOCITY_SCALE_MAX, 1.0f,
+                (ballSpeed - CHIP_SPEED_THRESHOLD) / (PITCH_SPEED_THRESHOLD - CHIP_SPEED_THRESHOLD));
         }
         else
         {
@@ -84,29 +98,29 @@ public partial class BallPhysics : RefCounted
             velocityScale = 1.0f;
         }
 
-        // Non-linear with threshold: Grooves don't really "bite" until >1250 rpm
-        // Steeper curve for bump/pitch shots (1250-1750 rpm) to prevent excessive rollout
+        // Non-linear with threshold: Grooves don't really "bite" until >LOW_SPIN_THRESHOLD rpm
         float spinMultiplier;
 
-        if (effectiveSpinRpm < 1250.0f)
+        if (effectiveSpinRpm < LOW_SPIN_THRESHOLD)
         {
-            // Low spin (drivers/woods): Minimal friction increase (1.0x to 1.30x)
-            spinMultiplier = 1.0f + (effectiveSpinRpm / 1250.0f) * 0.30f;
+            // Low spin (drivers/woods): Minimal friction increase (1.0x to LOW_SPIN_MULTIPLIER_MAX)
+            spinMultiplier = 1.0f + (effectiveSpinRpm / LOW_SPIN_THRESHOLD) * (LOW_SPIN_MULTIPLIER_MAX - 1.0f);
         }
-        else if (effectiveSpinRpm < 1750.0f)
+        else if (effectiveSpinRpm < MID_SPIN_THRESHOLD)
         {
-            // Bump/pitch shots: Steep increase (1.30x to 2.25x over 500 rpm)
-            // At 1250 rpm: 1.30x, at 1750 rpm: 2.25x
-            float excessSpin = effectiveSpinRpm - 1250.0f;
-            spinMultiplier = 1.30f + (excessSpin / 500.0f) * 0.95f;
+            // Bump/pitch shots: Steep increase (LOW_SPIN_MULTIPLIER_MAX to MID_SPIN_MULTIPLIER_MAX)
+            float excessSpin = effectiveSpinRpm - LOW_SPIN_THRESHOLD;
+            float midRange = MID_SPIN_THRESHOLD - LOW_SPIN_THRESHOLD;
+            spinMultiplier = LOW_SPIN_MULTIPLIER_MAX +
+                (excessSpin / midRange) * (MID_SPIN_MULTIPLIER_MAX - LOW_SPIN_MULTIPLIER_MAX);
         }
         else
         {
-            // High spin (wedges): Gradual increase to maximum (2.25x to 2.5x)
-            // At 1750 rpm: 2.25x, at 2750+ rpm: 2.5x (maximum)
-            float excessSpin = effectiveSpinRpm - 1750.0f;
+            // High spin (wedges): Gradual increase to maximum
+            float excessSpin = effectiveSpinRpm - MID_SPIN_THRESHOLD;
             float spinFactor = Mathf.Min(excessSpin / 1000.0f, 1.0f);
-            spinMultiplier = 2.25f + spinFactor * 0.25f;
+            spinMultiplier = MID_SPIN_MULTIPLIER_MAX +
+                spinFactor * (HIGH_SPIN_MULTIPLIER_MAX - MID_SPIN_MULTIPLIER_MAX);
         }
 
         // Apply velocity scaling to reduce spin effect for low-speed shots
@@ -159,12 +173,12 @@ public partial class BallPhysics : RefCounted
             float velocityMag = velocity.Length();
             float baseFriction;
 
-            if (velocityMag < 15.0f)
+            if (velocityMag < FRICTION_BLEND_SPEED)
             {
                 // Blend between rolling resistance and kinetic friction based on velocity
-                // At v=0: use rolling resistance, at v=15: use kinetic friction
+                // At v=0: use rolling resistance, at v=FRICTION_BLEND_SPEED: use kinetic friction
                 // Use exponential curve for gentler low-speed friction
-                float blendFactor = Mathf.Clamp(velocityMag / 15.0f, 0.0f, 1.0f);
+                float blendFactor = Mathf.Clamp(velocityMag / FRICTION_BLEND_SPEED, 0.0f, 1.0f);
                 blendFactor = blendFactor * blendFactor;  // Square for gentler low-speed friction
                 baseFriction = Mathf.Lerp(parameters.RollingFriction, parameters.KineticFriction, blendFactor);
             }

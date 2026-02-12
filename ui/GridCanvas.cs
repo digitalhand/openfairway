@@ -34,10 +34,13 @@ public partial class GridCanvas : Control
         }
     }
 
+    private Setting _rangeUnitsSetting;
+
     public override void _Ready()
     {
         LoadLayout();
-        GetNode<GlobalSettings>("/root/GlobalSettings").RangeSettings.RangeUnits.SettingChanged += SetUnits;
+        _rangeUnitsSetting = GetNode<GlobalSettings>("/root/GlobalSettings").RangeSettings.RangeUnits;
+        _rangeUnitsSetting.SettingChanged += SetUnits;
 
         // Connect DataPanel drag signals
         ConnectPanelSignals("Distance");
@@ -102,11 +105,32 @@ public partial class GridCanvas : Control
         {
             if (config.HasSectionKey("positions", panel.Name))
             {
-                panel.Position = (Vector2)config.GetValue("positions", panel.Name);
+                var posValue = config.GetValue("positions", panel.Name);
+                if (posValue.VariantType == Variant.Type.Vector2)
+                {
+                    var pos = (Vector2)posValue;
+                    var viewport = GetViewportRect().Size;
+                    // Validate position is within reasonable bounds
+                    pos.X = Mathf.Clamp(pos.X, -panel.Size.X, viewport.X);
+                    pos.Y = Mathf.Clamp(pos.Y, -panel.Size.Y, viewport.Y);
+                    panel.Position = pos;
+                }
+                else
+                {
+                    GD.PrintErr($"GridCanvas: invalid position type for panel '{panel.Name}'");
+                }
             }
             if (config.HasSectionKey("visibility", panel.Name))
             {
-                panel.Visible = (bool)config.GetValue("visibility", panel.Name);
+                var visValue = config.GetValue("visibility", panel.Name);
+                if (visValue.VariantType == Variant.Type.Bool)
+                {
+                    panel.Visible = (bool)visValue;
+                }
+                else
+                {
+                    GD.PrintErr($"GridCanvas: invalid visibility type for panel '{panel.Name}'");
+                }
             }
         }
     }
@@ -122,6 +146,12 @@ public partial class GridCanvas : Control
         _showGrid = false;
         QueueRedraw();
         SnapToGrid(panel);
+    }
+
+    public override void _ExitTree()
+    {
+        if (_rangeUnitsSetting != null)
+            _rangeUnitsSetting.SettingChanged -= SetUnits;
     }
 
     public override void _Notification(int what)

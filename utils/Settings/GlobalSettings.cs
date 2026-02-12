@@ -16,7 +16,7 @@ public partial class GlobalSettings : Node
         RangeSettings = new RangeSettings();
     }
 
-    public void ResettDefaults()
+    public void ResetDefaults()
     {
         RangeSettings.ResetDefaults();
         EmitSignal(SignalName.SettingsChanged);
