@@ -63,7 +63,7 @@ jobs:
       run: dotnet restore OpenFairway.sln
 
     - name: Check C# code formatting
-      run: dotnet format OpenFairway.sln --verify-no-changes --verbosity diagnostic
+      run: dotnet format OpenFairway.sln --verify-no-changes --verbosity diagnostic --exclude addons
 
     - name: Run .NET code analyzers
       run: dotnet build OpenFairway.sln --configuration Release /p:TreatWarningsAsErrors=false /p:RunAnalyzers=true
@@ -144,6 +144,7 @@ jobs:
       uses: github/codeql-action/init@v3
       with:
         languages: csharp
+        config-file: ./.github/codeql/codeql-config.yml
 
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
