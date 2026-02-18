@@ -16,6 +16,8 @@ public partial class ShotTracker : Node3D
 	public delegate void BadDataEventHandler();
 	[Signal]
 	public delegate void ShotCompleteEventHandler(Dictionary data);
+	[Signal]
+	public delegate void TestHitRequestedEventHandler();
 
 	// Tracer settings
 	[Export] public int MaxTracers { get; set; } = 4;
@@ -69,8 +71,7 @@ public partial class ShotTracker : Node3D
 	{
 		if (Input.IsActionJustPressed("hit"))
 		{
-			StartShot();
-			_ball.CallDeferred("Hit");
+			EmitSignal(SignalName.TestHitRequested);
 		}
 
 		if (Input.IsActionJustPressed("reset"))

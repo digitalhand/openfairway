@@ -44,6 +44,7 @@ public partial class GolfBall : CharacterBody3D
     // Shot tracking
     public Vector3 ShotStartPos { get; set; } = Vector3.Zero;
     public Vector3 ShotDirection { get; set; } = new Vector3(1.0f, 0.0f, 0.0f);  // Normalized horizontal direction
+    public float AimYawOffsetDeg { get; set; } = 0.0f;  // Camera/world rotation offset applied at launch
     public float LaunchSpinRpm { get; set; } = 0.0f;  // Stored for bounce calculations
     public float RolloutImpactSpinRpm { get; set; } = 0.0f;  // Spin when first landing (for friction calculation)
 
@@ -312,6 +313,7 @@ public partial class GolfBall : CharacterBody3D
         Position = new Vector3(0.0f, START_HEIGHT, 0.0f);
         Velocity = Vector3.Zero;
         Omega = Vector3.Zero;
+        AimYawOffsetDeg = 0.0f;
         LaunchSpinRpm = 0.0f;
         RolloutImpactSpinRpm = 0.0f;
         State = PhysicsEnums.BallState.Rest;
@@ -350,6 +352,24 @@ public partial class GolfBall : CharacterBody3D
 
         // Build launch vectors from monitor data
         var launch = _shotSetup.BuildLaunchVectors(speedMph, vlaDeg, hlaDeg, totalSpin, spinAxis);
+        Vector3 launchVelocity = (Vector3)launch["velocity"];
+        Vector3 launchOmega = (Vector3)launch["omega"];
+        Vector3 launchDirection = (Vector3)launch["shot_direction"];
+
+        // Apply camera/world yaw without mutating launch monitor data.
+        if (Mathf.Abs(AimYawOffsetDeg) > 0.0001f)
+        {
+            float aimYawRad = Mathf.DegToRad(AimYawOffsetDeg);
+            launchVelocity = launchVelocity.Rotated(Vector3.Up, aimYawRad);
+            launchOmega = launchOmega.Rotated(Vector3.Up, aimYawRad);
+            launchDirection = launchDirection.Rotated(Vector3.Up, aimYawRad);
+        }
+        launchDirection.Y = 0.0f;
+        if (launchDirection.LengthSquared() < 0.000001f)
+        {
+            launchDirection = Vector3.Right;
+        }
+        launchDirection = launchDirection.Normalized();
 
         // Set state
         State = PhysicsEnums.BallState.Flight;
@@ -357,10 +377,10 @@ public partial class GolfBall : CharacterBody3D
         RolloutImpactSpinRpm = 0.0f;
         Position = new Vector3(0.0f, START_HEIGHT, 0.0f);
 
-        Velocity = (Vector3)launch["velocity"];
-        Omega = (Vector3)launch["omega"];
+        Velocity = launchVelocity;
+        Omega = launchOmega;
         ShotStartPos = Position;
-        ShotDirection = (Vector3)launch["shot_direction"];
+        ShotDirection = launchDirection;
         LaunchSpinRpm = totalSpin;
 
         PrintLaunchDebug(data, speedMph * 0.44704f, vlaDeg, hlaDeg, totalSpin, spinAxis);
@@ -371,6 +391,7 @@ public partial class GolfBall : CharacterBody3D
         PhysicsLogger.Info("=== SHOT DEBUG ===");
         PhysicsLogger.Info($"Speed: {(data.ContainsKey("Speed") ? data["Speed"] : 0.0f):F2} mph ({speedMps:F2} m/s)");
         PhysicsLogger.Info($"VLA: {vla:F2}°, HLA: {hla:F2}°");
+        PhysicsLogger.Info($"Aim yaw offset: {AimYawOffsetDeg:F2}°");
         PhysicsLogger.Info($"Spin: {spin:F0} rpm, Axis: {axis:F2}°");
         PhysicsLogger.Info($"drag_cf: {_dragScale:F2}, lift_cf: {_liftScale:F2}");
         PhysicsLogger.Info($"Air density: {_airDensity:F4} kg/m³");

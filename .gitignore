@@ -31,3 +31,5 @@ tests/PhysicsTests/obj/*
 *.claude
 CLAUDE.md
 AGENT.md
+
+*.tmp
