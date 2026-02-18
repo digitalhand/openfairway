@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Existing release tag (e.g. game-v1.0.0)'
+        description: 'Release tag (e.g. game-v1.0.0)'
         required: true
         type: string
 
@@ -28,8 +28,6 @@ jobs:
       run: |
         if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
           TAG="${{ inputs.tag }}"
-          git fetch --tags --force
-          git checkout "refs/tags/${TAG}"
         else
           TAG="${GITHUB_REF_NAME}"
         fi
@@ -39,7 +37,18 @@ jobs:
           exit 1
         fi
 
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          git fetch --tags --force
+          if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+            git checkout "refs/tags/${TAG}"
+            echo "Using existing tag ${TAG}."
+          else
+            echo "Tag ${TAG} does not exist yet; release will target current commit."
+          fi
+        fi
+
         echo "RELEASE_TAG=${TAG}" >> "$GITHUB_ENV"
+        echo "RELEASE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
 
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
@@ -75,6 +84,7 @@ jobs:
       uses: softprops/action-gh-release@v2
       with:
         tag_name: ${{ env.RELEASE_TAG }}
+        target_commitish: ${{ env.RELEASE_SHA }}
         name: OpenFairway Game ${{ env.RELEASE_TAG }}
         files: |
           ${{ steps.export.outputs.archive_directory }}/*
