@@ -117,7 +117,7 @@ public partial class GridCanvas : Control
                 }
                 else
                 {
-                    GD.PrintErr($"GridCanvas: invalid position type for panel '{panel.Name}'");
+                    PhysicsLogger.Error($"GridCanvas: invalid position type for panel '{panel.Name}'");
                 }
             }
             if (config.HasSectionKey("visibility", panel.Name))
@@ -129,7 +129,7 @@ public partial class GridCanvas : Control
                 }
                 else
                 {
-                    GD.PrintErr($"GridCanvas: invalid visibility type for panel '{panel.Name}'");
+                    PhysicsLogger.Error($"GridCanvas: invalid visibility type for panel '{panel.Name}'");
                 }
             }
         }

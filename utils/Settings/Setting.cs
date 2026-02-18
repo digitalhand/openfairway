@@ -32,7 +32,7 @@ public partial class Setting : RefCounted
         // M4: Type safety — reject values that don't match the setting's type
         if (val.VariantType != Default.VariantType)
         {
-            GD.PrintErr($"Setting.SetValue: type mismatch (expected {Default.VariantType}, got {val.VariantType})");
+            PhysicsLogger.Error($"Setting.SetValue: type mismatch (expected {Default.VariantType}, got {val.VariantType})");
             return;
         }
 

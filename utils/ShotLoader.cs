@@ -17,14 +17,14 @@ public static class ShotLoader
     {
         if (string.IsNullOrEmpty(path))
         {
-            GD.PrintErr($"ShotLoader: Path is null or empty");
+            PhysicsLogger.Error($"ShotLoader: Path is null or empty");
             return new Dictionary();
         }
 
         var file = FileAccess.Open(path, FileAccess.ModeFlags.Read);
         if (file == null)
         {
-            GD.PrintErr($"ShotLoader: Failed to open file: {path}");
+            PhysicsLogger.Error($"ShotLoader: Failed to open file: {path}");
             return new Dictionary();
         }
 
@@ -34,27 +34,27 @@ public static class ShotLoader
         var json = new Json();
         if (json.Parse(jsonText) != Error.Ok)
         {
-            GD.PrintErr($"ShotLoader: Failed to parse JSON from {path}");
+            PhysicsLogger.Error($"ShotLoader: Failed to parse JSON from {path}");
             return new Dictionary();
         }
 
         var parsed = json.Data;
         if (parsed.VariantType != Variant.Type.Dictionary)
         {
-            GD.PrintErr($"ShotLoader: JSON root is not a Dictionary in {path}");
+            PhysicsLogger.Error($"ShotLoader: JSON root is not a Dictionary in {path}");
             return new Dictionary();
         }
 
         var dict = (Dictionary)parsed;
         if (!dict.ContainsKey("BallData"))
         {
-            GD.PrintErr($"ShotLoader: JSON missing 'BallData' key in {path}");
+            PhysicsLogger.Error($"ShotLoader: JSON missing 'BallData' key in {path}");
             return new Dictionary();
         }
 
         if (dict["BallData"].VariantType != Variant.Type.Dictionary)
         {
-            GD.PrintErr($"ShotLoader: 'BallData' is not a Dictionary in {path}");
+            PhysicsLogger.Error($"ShotLoader: 'BallData' is not a Dictionary in {path}");
             return new Dictionary();
         }
 

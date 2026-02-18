@@ -35,7 +35,7 @@ public partial class SettingCollector : RefCounted
     {
         if (!Settings.TryGetValue(settingName, out var setting))
         {
-            GD.PrintErr($"SettingCollector.SetValue: unknown setting '{settingName}'");
+            PhysicsLogger.Error($"SettingCollector.SetValue: unknown setting '{settingName}'");
             return;
         }
         setting.SetValue(settingValue);
@@ -46,7 +46,7 @@ public partial class SettingCollector : RefCounted
     {
         if (!Settings.TryGetValue(settingName, out var setting))
         {
-            GD.PrintErr($"SettingCollector.SetDefault: unknown setting '{settingName}'");
+            PhysicsLogger.Error($"SettingCollector.SetDefault: unknown setting '{settingName}'");
             return;
         }
         setting.SetDefault(settingDefault);

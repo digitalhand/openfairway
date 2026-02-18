@@ -112,7 +112,7 @@ public partial class Range : Node3D
 
     private void OnTcpClientHitBall(Dictionary data)
     {
-        GD.Print($"Launch monitor payload: {Json.Stringify(data)}");
+        PhysicsLogger.Info($"Launch monitor payload: {Json.Stringify(data)}");
         _rawBallData = data.Duplicate();
         UpdateBallDisplay();
 
