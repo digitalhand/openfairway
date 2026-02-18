@@ -68,7 +68,7 @@ Other test files in this directory require Godot runtime and **cannot run in CI*
 **These tests must be run locally:**
 ```bash
 # Open project in Godot first, then run:
-dotnet test OpenShotGolf.sln
+dotnet test OpenFairway.sln
 ```
 
 **Why?** These tests instantiate Godot classes like `BallPhysics`, `Aerodynamics`, `PhysicsAdapter` which require the Godot runtime.

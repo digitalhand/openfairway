@@ -1,7 +1,7 @@
 using Godot;
 using NUnit.Framework;
 
-namespace OpenShotGolf.Tests
+namespace OpenFairway.Tests
 {
     /// <summary>
     /// Tests for rollout physics formulas (friction multipliers, velocity scaling).

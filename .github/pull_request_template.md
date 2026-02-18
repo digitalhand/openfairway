@@ -38,9 +38,9 @@ Approach shot: X.X / X.X yd  (baseline: 105.6/108.3 yd, target: 108 yd)
 ## Testing Checklist
 <!-- Mark completed items with an "x" -->
 
-- [ ] All tests pass locally: `dotnet test OpenShotGolf.sln`
+- [ ] All tests pass locally: `dotnet test OpenFairway.sln`
 - [ ] Rollout physics formula tests pass: `dotnet test --filter "Category=RolloutPhysics"`
-- [ ] Code builds without errors: `dotnet build OpenShotGolf.sln`
+- [ ] Code builds without errors: `dotnet build OpenFairway.sln`
 - [ ] Tested in Godot editor (if applicable)
 - [ ] Manual testing performed (describe in comments below)
 

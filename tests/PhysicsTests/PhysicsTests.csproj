@@ -13,6 +13,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\OpenShotGolf.csproj" />
+    <ProjectReference Include="..\..\OpenFairway.csproj" />
   </ItemGroup>
 </Project>

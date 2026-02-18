@@ -2,7 +2,7 @@ using Godot;
 using Godot.Collections;
 using NUnit.Framework;
 
-namespace OpenShotGolf.Tests
+namespace OpenFairway.Tests
 {
     [TestFixture]
     public class ApproachShotTests

@@ -3,8 +3,8 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://baxclu6ichs2t"
-path.s3tc="res://.godot/imported/golf_ball_OSG_golf_ball_pro.png-f0c6295fd1b57b6d131256f2c57d5fb1.s3tc.ctex"
-path.etc2="res://.godot/imported/golf_ball_OSG_golf_ball_pro.png-f0c6295fd1b57b6d131256f2c57d5fb1.etc2.ctex"
+path.s3tc="res://.godot/imported/golf_ball_openfairway_golf_ball_pro.png-00989103c2f2d9a045ad990598ffeca7.s3tc.ctex"
+path.etc2="res://.godot/imported/golf_ball_openfairway_golf_ball_pro.png-00989103c2f2d9a045ad990598ffeca7.etc2.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
@@ -15,8 +15,8 @@ generator_parameters={
 
 [deps]
 
-source_file="res://assets/models/balls/golf_ball_OSG_golf_ball_pro.png"
-dest_files=["res://.godot/imported/golf_ball_OSG_golf_ball_pro.png-f0c6295fd1b57b6d131256f2c57d5fb1.s3tc.ctex", "res://.godot/imported/golf_ball_OSG_golf_ball_pro.png-f0c6295fd1b57b6d131256f2c57d5fb1.etc2.ctex"]
+source_file="res://assets/models/balls/golf_ball_openfairway_golf_ball_pro.png"
+dest_files=["res://.godot/imported/golf_ball_openfairway_golf_ball_pro.png-00989103c2f2d9a045ad990598ffeca7.s3tc.ctex", "res://.godot/imported/golf_ball_openfairway_golf_ball_pro.png-00989103c2f2d9a045ad990598ffeca7.etc2.ctex"]
 
 [params]
 
