@@ -46,8 +46,20 @@ jobs:
       with:
         dotnet-version: '8.0.x'
 
+    - name: Resolve project file
+      run: |
+        if [[ -f "OpenFairway.csproj" ]]; then
+          echo "PROJECT_FILE=OpenFairway.csproj" >> "$GITHUB_ENV"
+        elif [[ -f "OpenShotGolf.csproj" ]]; then
+          echo "PROJECT_FILE=OpenShotGolf.csproj" >> "$GITHUB_ENV"
+        else
+          echo "Error: No root project file found (expected OpenFairway.csproj or OpenShotGolf.csproj)."
+          ls -la
+          exit 1
+        fi
+
     - name: Build solution
-      run: dotnet build OpenFairway.csproj --configuration Release
+      run: dotnet build "${{ env.PROJECT_FILE }}" --configuration Release
 
     - name: Export Godot build
       id: export
