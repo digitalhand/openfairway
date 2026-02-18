@@ -3,11 +3,11 @@ name: Release Game
 on:
   push:
     tags:
-      - 'v*'
+      - 'game-v*'
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Existing release tag (e.g. v1.0.0)'
+        description: 'Existing release tag (e.g. game-v1.0.0)'
         required: true
         type: string
 
@@ -34,8 +34,8 @@ jobs:
           TAG="${GITHUB_REF_NAME}"
         fi
 
-        if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-          echo "Error: Tag must match format v#.#.# (e.g. v1.0.0)"
+        if [[ ! "$TAG" =~ ^game-v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "Error: Tag must match format game-v#.#.# (e.g. game-v1.0.0)"
           exit 1
         fi
 
@@ -75,7 +75,7 @@ jobs:
       uses: softprops/action-gh-release@v2
       with:
         tag_name: ${{ env.RELEASE_TAG }}
-        name: OpenFairway ${{ env.RELEASE_TAG }}
+        name: OpenFairway Game ${{ env.RELEASE_TAG }}
         files: |
           ${{ steps.export.outputs.archive_directory }}/*
         generate_release_notes: true

@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag (e.g. v1.0.0)'
+        description: 'Release tag (e.g. addon-v1.0.0)'
         required: true
         type: string
 
@@ -19,8 +19,8 @@ jobs:
     - name: Validate tag format
       run: |
         TAG="${{ inputs.tag }}"
-        if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-          echo "Error: Tag must match format v#.#.# (e.g. v1.0.0)"
+        if [[ ! "$TAG" =~ ^addon-v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          echo "Error: Tag must match format addon-v#.#.# (e.g. addon-v1.0.0)"
           exit 1
         fi
 
@@ -54,6 +54,6 @@ jobs:
       uses: softprops/action-gh-release@v2
       with:
         tag_name: ${{ inputs.tag }}
-        name: OpenFairway ${{ inputs.tag }}
+        name: OpenFairway Addon ${{ inputs.tag }}
         files: OpenFairway_${{ inputs.tag }}.zip
         generate_release_notes: true
