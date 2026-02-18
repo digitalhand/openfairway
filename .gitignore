@@ -31,6 +31,3 @@ tests/PhysicsTests/obj/*
 *.claude
 CLAUDE.md
 AGENT.md
-
-# Normalize line endings for all files that Git considers text files.
-* text=auto eol=lf
