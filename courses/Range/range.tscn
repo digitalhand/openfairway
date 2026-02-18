@@ -1,0 +1,222 @@
+[gd_scene format=3 uid="uid://b1idtxfp7eoke"]
+
+[ext_resource type="Script" uid="uid://c8t8p5orukafc" path="res://courses/Range/Range.cs" id="1_sunpe"]
+[ext_resource type="Script" uid="uid://bmvo844oxfdgj" path="res://tcp/TcpServer.cs" id="2_d1a0v"]
+[ext_resource type="PackedScene" uid="uid://w55fmvo7ly8g" path="res://game/shot_tracker.tscn" id="3_4jr3s"]
+[ext_resource type="PackedScene" uid="uid://da1vsfwmbk8vw" path="res://ui/range_ui.tscn" id="4_d1a0v"]
+[ext_resource type="Script" uid="uid://csjccrhj5wnx7" path="res://addons/phantom_camera/scripts/phantom_camera/phantom_camera_3d.gd" id="17_i3bow"]
+[ext_resource type="Script" uid="uid://8umksf8e80fw" path="res://addons/phantom_camera/scripts/resources/tween_resource.gd" id="18_gqfs3"]
+[ext_resource type="Script" uid="uid://bd046eokvcnu2" path="res://addons/phantom_camera/scripts/phantom_camera_host/phantom_camera_host.gd" id="19_gqfs3"]
+[ext_resource type="Script" uid="uid://duwe0d256s70j" path="res://game/SurfaceZone.cs" id="20_rough_zone"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_basic"]
+sky_top_color = Color(0.4, 0.6, 0.8, 1)
+sky_horizon_color = Color(0.7, 0.8, 0.9, 1)
+ground_bottom_color = Color(0.2, 0.3, 0.2, 1)
+ground_horizon_color = Color(0.4, 0.5, 0.4, 1)
+
+[sub_resource type="Sky" id="Sky_basic"]
+sky_material = SubResource("ProceduralSkyMaterial_basic")
+
+[sub_resource type="Environment" id="Environment_basic"]
+background_mode = 2
+sky = SubResource("Sky_basic")
+ambient_light_source = 3
+ambient_light_color = Color(0.9, 0.9, 0.9, 1)
+tonemap_mode = 3
+
+[sub_resource type="Resource" id="Resource_hbh3r"]
+script = ExtResource("18_gqfs3")
+; TODO some improvements needed here. Crosshair/marker is a mess. 
+; I asked AI for help, and it sucked. 
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_aim_marker"]
+cull_mode = 2
+shading_mode = 0
+albedo_color = Color(1, 0.4, 0.08, 1)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_aim_disc"]
+top_radius = 0.9
+bottom_radius = 0.9
+height = 0.04
+
+[sub_resource type="BoxMesh" id="BoxMesh_aim_cross_x"]
+size = Vector3(1.9, 0.03, 0.24)
+
+[sub_resource type="BoxMesh" id="BoxMesh_aim_cross_z"]
+size = Vector3(0.24, 0.03, 1.9)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_rough_zone"]
+size = Vector3(20, 1.5, 10)
+
+[sub_resource type="Gradient" id="Gradient_c2xig"]
+offsets = PackedFloat32Array(0.2, 1)
+colors = PackedColorArray(1, 1, 1, 1, 0, 0, 0, 1)
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_kbwdj"]
+noise_type = 2
+frequency = 0.03
+cellular_jitter = 3.0
+cellular_return_type = 0
+domain_warp_enabled = true
+domain_warp_type = 1
+domain_warp_amplitude = 50.0
+domain_warp_fractal_type = 2
+domain_warp_fractal_lacunarity = 1.5
+domain_warp_fractal_gain = 1.0
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_s7b25"]
+noise = SubResource("FastNoiseLite_kbwdj")
+color_ramp = SubResource("Gradient_c2xig")
+seamless = true
+
+[sub_resource type="Terrain3DMaterial" id="Terrain3DMaterial_736u6"]
+_shader_parameters = {
+&"bias_distance": 512.0,
+&"blend_sharpness": 0.5,
+&"depth_blur": 0.0,
+&"enable_macro_variation": true,
+&"enable_projection": true,
+&"flat_terrain_normals": false,
+&"macro_variation1": Color(1, 1, 1, 1),
+&"macro_variation2": Color(1, 1, 1, 1),
+&"macro_variation_slope": 0.333,
+&"mipmap_bias": 1.0,
+&"noise1_angle": 0.0,
+&"noise1_offset": Vector2(0.5, 0.5),
+&"noise1_scale": 0.04,
+&"noise2_scale": 0.076,
+&"noise_texture": SubResource("NoiseTexture2D_s7b25"),
+&"projection_threshold": 0.8
+}
+show_checkered = true
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_xj0r7"]
+transparency = 4
+cull_mode = 2
+vertex_color_use_as_albedo = true
+backlight_enabled = true
+backlight = Color(0.5, 0.5, 0.5, 1)
+distance_fade_mode = 1
+distance_fade_min_distance = 128.0
+distance_fade_max_distance = 96.0
+
+[sub_resource type="Terrain3DMeshAsset" id="Terrain3DMeshAsset_mwif0"]
+generated_type = 1
+height_offset = 0.5
+material_override = SubResource("StandardMaterial3D_xj0r7")
+last_lod = 0
+last_shadow_lod = 0
+lod0_range = 128.0
+
+[sub_resource type="Terrain3DAssets" id="Terrain3DAssets_ffeua"]
+mesh_list = Array[Terrain3DMeshAsset]([SubResource("Terrain3DMeshAsset_mwif0")])
+
+[node name="Range" type="Node3D" unique_id=2143757499]
+script = ExtResource("1_sunpe")
+
+[node name="TCPServer" type="Node" parent="." unique_id=1884760583]
+script = ExtResource("2_d1a0v")
+
+[node name="ShotTracker" parent="." unique_id=1997838773 instance=ExtResource("3_4jr3s")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.04, 0)
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=265820066]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 174.334, 165.881, 0)
+light_indirect_energy = 6.592
+shadow_enabled = true
+
+[node name="RangeUI" parent="." unique_id=2115412839 instance=ExtResource("4_d1a0v")]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=187150003]
+environment = SubResource("Environment_basic")
+
+[node name="PhantomCamera3D" type="Node3D" parent="." unique_id=120027362]
+transform = Transform3D(-0.17364818, -0.09952102, -0.9797662, 0, 0.99488074, -0.101056285, 0.98480767, -0.017548243, -0.17275923, -6.921, 3, 0)
+script = ExtResource("17_i3bow")
+tween_resource = SubResource("Resource_hbh3r")
+tween_on_load = false
+follow_offset = Vector3(-2.5, 1.5, 0)
+follow_damping = true
+follow_damping_value = Vector3(0.4, 0.1, 0.1)
+dead_zone_height = 0.204
+
+[node name="Camera3D" type="Camera3D" parent="." unique_id=1480788570]
+transform = Transform3D(-0.17364818, -0.09952102, -0.9797662, 0, 0.99488074, -0.101056285, 0.98480767, -0.017548243, -0.17275923, -6.921, 3, 0)
+top_level = true
+
+[node name="PhantomCameraHost" type="Node" parent="Camera3D" unique_id=2087986484]
+process_priority = 300
+process_physics_priority = 300
+script = ExtResource("19_gqfs3")
+
+[node name="AimMarker" type="Node3D" parent="." unique_id=301140439]
+top_level = true
+visible = false
+
+[node name="Disc" type="MeshInstance3D" parent="AimMarker" unique_id=830750386]
+material_override = SubResource("StandardMaterial3D_aim_marker")
+cast_shadow = 0
+mesh = SubResource("CylinderMesh_aim_disc")
+
+[node name="CrossX" type="MeshInstance3D" parent="AimMarker" unique_id=208343245]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.03, 0)
+material_override = SubResource("StandardMaterial3D_aim_marker")
+cast_shadow = 0
+mesh = SubResource("BoxMesh_aim_cross_x")
+
+[node name="CrossZ" type="MeshInstance3D" parent="AimMarker" unique_id=1093060119]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.03, 0)
+material_override = SubResource("StandardMaterial3D_aim_marker")
+cast_shadow = 0
+mesh = SubResource("BoxMesh_aim_cross_z")
+
+[node name="SurfaceRoughZone" type="Area3D" parent="." unique_id=185200654]
+transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5, 111.93109, 0.75, -6.0201306)
+script = ExtResource("20_rough_zone")
+SurfaceType = 2
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="SurfaceRoughZone" unique_id=1718115040]
+transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5, 0, 0, -4.71279)
+shape = SubResource("BoxShape3D_rough_zone")
+
+[node name="YardMarkers" type="Node3D" parent="." unique_id=685927039]
+
+[node name="50Yards" type="Label3D" parent="YardMarkers" unique_id=1170002585]
+transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 45.72, 1.2, 0)
+pixel_size = 0.05
+text = "50"
+
+[node name="100Yards" type="Label3D" parent="YardMarkers" unique_id=1001707317]
+transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 91.4, 1.2, 0)
+pixel_size = 0.05
+text = "100"
+
+[node name="150Yards" type="Label3D" parent="YardMarkers" unique_id=1741900117]
+transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 137.16, 1.2, 0)
+pixel_size = 0.05
+text = "150"
+
+[node name="200" type="Label3D" parent="YardMarkers" unique_id=1462947500]
+transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 182.88, 1.2, 0)
+pixel_size = 0.05
+text = "200"
+
+[node name="250" type="Label3D" parent="YardMarkers" unique_id=190051679]
+transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 228.6, 1.2, 0)
+pixel_size = 0.05
+text = "250"
+
+[node name="300" type="Label3D" parent="YardMarkers" unique_id=1770700685]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 274.32, 1.2, 0)
+pixel_size = 0.05
+text = "300
+"
+
+[node name="Terrain3D" type="Terrain3D" parent="." unique_id=394964337]
+data_directory = "res://utils/terrain/"
+material = SubResource("Terrain3DMaterial_736u6")
+assets = SubResource("Terrain3DAssets_ffeua")
+show_checkered = true
+top_level = true
+metadata/_edit_lock_ = true

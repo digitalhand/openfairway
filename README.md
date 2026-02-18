@@ -9,12 +9,27 @@ Realistic golf ball physics engine for Godot 4.5+ (.NET/C#). Provides force, tor
 [![.NET 8.0](https://img.shields.io/badge/.NET-8.0-512BD4)](https://dotnet.microsoft.com/)
 [![Godot 4.5+](https://img.shields.io/badge/Godot-4.5+-478CBF)](https://godotengine.org/)
 
+## Table of Contents
+
+- [Features](#features)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Camera Updates (Range Scene)](#camera-updates-range-scene)
+- [Surface Zones (Local Terrain Overrides)](#surface-zones-local-terrain-overrides)
+- [Distance Benchmarks](#distance-benchmarks)
+- [Addon Classes](#addon-classes)
+- [Addon Structure](#addon-structure)
+- [Documentation](#documentation)
+- [Units Convention](#units-convention)
+- [License](#license)
 
 ## Features
 
 - Aerodynamic drag and Magnus lift from wind-tunnel polynomial fits
 - Bounce model with spin-dependent COR and tangential retention (Penner)
 - Surface presets for fairway, rough, soft, and firm conditions
+- Area-based surface zone overrides (`SurfaceZone`) for local terrain patches
 - Spin-based ground friction with "check up" behavior for high-spin shots
 - Launch monitor spin parsing (BackSpin/SideSpin or TotalSpin/SpinAxis)
 - Headless shot simulation via `PhysicsAdapter` — no scene tree required
@@ -89,7 +104,44 @@ var result = adapter.SimulateShotFromJson(new Godot.Collections.Dictionary
 // result["carry_yd"], result["total_yd"]
 ```
 
-### Distance Benchmarks
+## Camera Updates (Range Scene)
+
+The default range scene now uses an orbit + follow workflow:
+
+- At rest, use `ui_left` / `ui_right` (left/right arrows by default) to orbit the camera around the ball.
+- A temporary ground aim marker appears while orbiting to show the current launch direction.
+- Shot launch direction is derived from camera aim and applied as world yaw to the ball launch vector.
+- On shot start, camera follow snaps immediately to the follow offset before enabling follow mode to avoid drift/swing.
+- On ball rest, camera follow is frozen, then reset to tee/start after the configured reset delay.
+
+Quick controls:
+
+- `H` (`hit`) injects a local test shot.
+- `R` (`reset`) resets the shot display/camera/ball state.
+
+## Surface Zones (Local Terrain Overrides)
+
+Use `SurfaceZone` to apply local surface physics to patches like tall grass, cart paths, or special lies.
+
+1. Add an `Area3D` where you want the surface override.
+2. Add a `CollisionShape3D` under that `Area3D` to define the patch volume.
+3. Attach `res://game/SurfaceZone.cs` to the `Area3D`.
+4. In the Inspector, set `SurfaceType` (for tall grass use `Rough`).
+5. Ensure collision layers/masks allow the ball (`ShotTracker/Ball`) to enter/exit the area.
+
+Behavior details:
+
+- Entering a zone applies that zone's `SurfaceType` immediately.
+- Exiting restores the previous active zone surface (stacked overlap support).
+- If no zone is active, the ball falls back to the global range `SurfaceType` setting.
+
+Current surface tuning intent:
+
+- `Fairway` is slowed vs prior baseline to reduce excessive rollout.
+- `Firm` is configured as a hard pavement/concrete style lie and matches the prior fast fairway baseline.
+- `FairwaySoft` and `Rough` are progressively slower than `Fairway`.
+
+## Distance Benchmarks
 
 Run all 9 test shots headlessly and produce a carry/total/rollout distance table:
 

@@ -151,7 +151,9 @@ public static class ShotFormatter
     /// </summary>
     private static Dictionary ParseSpin(Dictionary rawData)
     {
-        var result = _shotSetup.ParseSpin(rawData);
+        // UI refresh happens every frame while the ball is moving; suppress
+        // consistency warning spam from ParseSpin in this display-only path.
+        var result = _shotSetup.ParseSpin(rawData, false);
         return new Dictionary
         {
             { "back", result["backspin"] },

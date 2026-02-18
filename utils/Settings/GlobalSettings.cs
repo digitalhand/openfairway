@@ -13,7 +13,7 @@ public partial class GlobalSettings : Node
 
     public override void _Ready()
     {
-        PhysicsLogger.LogLevel = PhysicsLogger.Level.Verbose;
+        PhysicsLogger.LogLevel = PhysicsLogger.Level.Info;
         RangeSettings = new RangeSettings();
     }
 

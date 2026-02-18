@@ -15,7 +15,7 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 [application]
 
 config/name="OpenFairway"
-config/version="1.0.1"  
+config/version="1.0.2"
 run/main_scene="uid://b1idtxfp7eoke"
 config/features=PackedStringArray("4.6", "C#", "Mobile")
 
@@ -36,7 +36,7 @@ project/assembly_name="OpenFairway"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/phantom_camera/plugin.cfg", "res://addons/openfairway/plugin.cfg")
+enabled=PackedStringArray("res://addons/openfairway/plugin.cfg", "res://addons/phantom_camera/plugin.cfg", "res://addons/terrain_3d/plugin.cfg")
 
 [input]
 
@@ -53,7 +53,8 @@ reset={
 
 [physics]
 
-common/physics_interpolation=true
+3d/physics_engine="JoltPhysics3D"
+common/physics_interpolation=true ; need it for phantom camera movement smoothness.
 
 [rendering]
 
