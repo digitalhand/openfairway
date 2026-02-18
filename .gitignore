@@ -34,16 +34,3 @@ AGENT.md
 
 # Normalize line endings for all files that Git considers text files.
 * text=auto eol=lf
-
-# Ignore everything
-/*
-
-# Allow addons folder
-!/addons
-!/addons/**
-
-# Keep git metadata
-!.gitignore
-!.gitattributes
-!README.md
-!LICENSE
