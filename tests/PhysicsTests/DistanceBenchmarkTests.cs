@@ -4,7 +4,7 @@ using Godot;
 using Godot.Collections;
 using NUnit.Framework;
 
-namespace OpenShotGolf.Tests
+namespace OpenFairway.Tests
 {
     /// <summary>
     /// Benchmark tests to measure actual shot distances and compare to target values.

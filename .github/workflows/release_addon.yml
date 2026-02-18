@@ -33,7 +33,7 @@ jobs:
         dotnet-version: '8.0.x'
 
     - name: Build solution
-      run: dotnet build OpenShotGolf.csproj --configuration Release
+      run: dotnet build OpenFairway.csproj --configuration Release
 
     - name: Run CI tests
       run: |

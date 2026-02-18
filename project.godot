@@ -31,7 +31,7 @@ window/stretch/mode="canvas_items"
 
 [dotnet]
 
-project/assembly_name="OpenShotGolf"
+project/assembly_name="OpenFairway"
 
 [editor_plugins]
 

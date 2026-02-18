@@ -23,10 +23,10 @@ jobs:
         dotnet-version: '8.0.x'
 
     - name: Restore dependencies
-      run: dotnet restore OpenShotGolf.sln
+      run: dotnet restore OpenFairway.sln
 
     - name: Build solution
-      run: dotnet build OpenShotGolf.sln --configuration Release --no-restore
+      run: dotnet build OpenFairway.sln --configuration Release --no-restore
 
     - name: Run rollout physics tests
       run: dotnet test --filter "Category=RolloutPhysics" --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx"
@@ -44,7 +44,7 @@ jobs:
         echo "✅ Rollout Physics Tests Passed"
         echo ""
         echo "Note: Other tests require Godot runtime and must be run locally."
-        echo "Run locally: dotnet test OpenShotGolf.sln"
+        echo "Run locally: dotnet test OpenFairway.sln"
 
   code-quality:
     name: Code Quality Checks
@@ -60,13 +60,13 @@ jobs:
         dotnet-version: '8.0.x'
 
     - name: Restore dependencies
-      run: dotnet restore OpenShotGolf.sln
+      run: dotnet restore OpenFairway.sln
 
     - name: Check C# code formatting
-      run: dotnet format OpenShotGolf.sln --verify-no-changes --verbosity diagnostic
+      run: dotnet format OpenFairway.sln --verify-no-changes --verbosity diagnostic
 
     - name: Run .NET code analyzers
-      run: dotnet build OpenShotGolf.sln --configuration Release /p:TreatWarningsAsErrors=false /p:RunAnalyzers=true
+      run: dotnet build OpenFairway.sln --configuration Release /p:TreatWarningsAsErrors=false /p:RunAnalyzers=true
 
   gdscript-lint:
     name: GDScript Linting
@@ -108,10 +108,10 @@ jobs:
         dotnet-version: '8.0.x'
 
     - name: Restore dependencies
-      run: dotnet restore OpenShotGolf.sln
+      run: dotnet restore OpenFairway.sln
 
     - name: Build solution
-      run: dotnet build OpenShotGolf.sln --configuration Release --no-restore
+      run: dotnet build OpenFairway.sln --configuration Release --no-restore
 
     - name: Validate rollout physics formulas
       run: |
@@ -151,7 +151,7 @@ jobs:
         dotnet-version: '8.0.x'
 
     - name: Build for security analysis
-      run: dotnet build OpenShotGolf.sln --configuration Release
+      run: dotnet build OpenFairway.sln --configuration Release
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
