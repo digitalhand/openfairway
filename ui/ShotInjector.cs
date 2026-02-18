@@ -96,21 +96,21 @@ public partial class ShotInjector : VBoxContainer
 
         if (data.Count == 0)
         {
-            GD.Print("Shot injector: no data provided and default payload missing; using zeros");
+            PhysicsLogger.Info("Shot injector: no data provided and default payload missing; using zeros");
         }
 
         // C2/C3: Validate and clamp shot data before emitting
         if (!ShotValidator.ValidateAndClamp(data))
         {
-            GD.PrintErr("Shot injector: invalid shot data, rejecting");
+            PhysicsLogger.Error("Shot injector: invalid shot data, rejecting");
             return;
         }
 
         if (loaded)
         {
-            GD.Print($"Shot injector: loaded default payload from {DefaultPayloadPath}");
+            PhysicsLogger.Info($"Shot injector: loaded default payload from {DefaultPayloadPath}");
         }
-        GD.Print($"Local shot injection payload: {Json.Stringify(data)}");
+        PhysicsLogger.Info($"Local shot injection payload: {Json.Stringify(data)}");
 
         EmitSignal(SignalName.Inject, data);
     }

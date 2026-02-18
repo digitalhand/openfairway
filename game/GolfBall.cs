@@ -187,14 +187,14 @@ public partial class GolfBall : CharacterBody3D
     {
         if (Mathf.Abs(Position.X) > 1000.0f || Mathf.Abs(Position.Z) > 1000.0f)
         {
-            GD.Print($"WARNING: Ball out of bounds at: {Position}");
+            PhysicsLogger.Info($"WARNING: Ball out of bounds at: {Position}");
             EnterRestState();
             return true;
         }
 
         if (Position.Y < -0.5f)
         {
-            GD.Print($"WARNING: Ball fell through ground at: {Position}");
+            PhysicsLogger.Info($"WARNING: Ball fell through ground at: {Position}");
             var pos = Position;
             pos.Y = 0.0f;
             Position = pos;
@@ -232,7 +232,7 @@ public partial class GolfBall : CharacterBody3D
                     Omega = bounceResult.NewOmega;
                     State = bounceResult.NewState;
 
-                    GD.Print($"  Velocity after bounce: {Velocity} ({Velocity.Length():F2} m/s)");
+                    PhysicsLogger.Verbose($"  Velocity after bounce: {Velocity} ({Velocity.Length():F2} m/s)");
 
                     // If the bounce resulted in very low vertical velocity (damped bounce),
                     // keep the ball on the ground instead of letting it bounce again
@@ -242,7 +242,7 @@ public partial class GolfBall : CharacterBody3D
                         var vel = Velocity;
                         vel.Y = 0;
                         Velocity = vel;
-                        GD.Print($"  -> Ball grounded, continuing roll at {vel.Length():F2} m/s");
+                        PhysicsLogger.Verbose($"  -> Ball grounded, continuing roll at {vel.Length():F2} m/s");
                     }
                     else
                     {
@@ -290,10 +290,10 @@ public partial class GolfBall : CharacterBody3D
 
     private void PrintImpactDebug()
     {
-        GD.Print($"FIRST IMPACT at pos: {Position}, downrange: {GetDownrangeMeters() * 1.09361f:F2} yds");
-        GD.Print($"  Velocity at impact: {Velocity} ({Velocity.Length():F2} m/s)");
-        GD.Print($"  Spin at impact: {Omega} ({Omega.Length() / 0.10472f:F0} rpm)");
-        GD.Print($"  Normal: {FloorNormal}");
+        PhysicsLogger.Info($"FIRST IMPACT at pos: {Position}, downrange: {GetDownrangeMeters() * 1.09361f:F2} yds");
+        PhysicsLogger.Info($"  Velocity at impact: {Velocity} ({Velocity.Length():F2} m/s)");
+        PhysicsLogger.Info($"  Spin at impact: {Omega} ({Omega.Length() / 0.10472f:F0} rpm)");
+        PhysicsLogger.Info($"  Normal: {FloorNormal}");
     }
 
     private void EnterRestState()
@@ -368,23 +368,23 @@ public partial class GolfBall : CharacterBody3D
 
     private void PrintLaunchDebug(Dictionary data, float speedMps, float vla, float hla, float spin, float axis)
     {
-        GD.Print("=== SHOT DEBUG ===");
-        GD.Print($"Speed: {(data.ContainsKey("Speed") ? data["Speed"] : 0.0f):F2} mph ({speedMps:F2} m/s)");
-        GD.Print($"VLA: {vla:F2}°, HLA: {hla:F2}°");
-        GD.Print($"Spin: {spin:F0} rpm, Axis: {axis:F2}°");
-        GD.Print($"drag_cf: {_dragScale:F2}, lift_cf: {_liftScale:F2}");
-        GD.Print($"Air density: {_airDensity:F4} kg/m³");
-        GD.Print($"Dynamic viscosity: {_airViscosity:F11}");
+        PhysicsLogger.Info("=== SHOT DEBUG ===");
+        PhysicsLogger.Info($"Speed: {(data.ContainsKey("Speed") ? data["Speed"] : 0.0f):F2} mph ({speedMps:F2} m/s)");
+        PhysicsLogger.Info($"VLA: {vla:F2}°, HLA: {hla:F2}°");
+        PhysicsLogger.Info($"Spin: {spin:F0} rpm, Axis: {axis:F2}°");
+        PhysicsLogger.Info($"drag_cf: {_dragScale:F2}, lift_cf: {_liftScale:F2}");
+        PhysicsLogger.Info($"Air density: {_airDensity:F4} kg/m³");
+        PhysicsLogger.Info($"Dynamic viscosity: {_airViscosity:F11}");
 
         float ReInitial = _airDensity * speedMps * BallPhysics.RADIUS * 2.0f / _airViscosity;
         float spinRatio = speedMps > 0.1f ? (spin * 0.10472f) * BallPhysics.RADIUS / speedMps : 0.0f;
         float ClInitial = _aerodynamics.GetCl(ReInitial, spinRatio);
-        GD.Print($"Reynolds number: {ReInitial:F0}");
-        GD.Print($"Spin ratio: {spinRatio:F3}");
-        GD.Print($"Cl (before scale): {ClInitial:F3}, after: {ClInitial * _liftScale:F3}");
-        GD.Print($"Initial velocity: {Velocity}");
-        GD.Print($"Initial omega: {Omega} ({Omega.Length() / 0.10472f:F0} rpm)");
-        GD.Print($"Shot direction: {ShotDirection}");
-        GD.Print("===================");
+        PhysicsLogger.Info($"Reynolds number: {ReInitial:F0}");
+        PhysicsLogger.Info($"Spin ratio: {spinRatio:F3}");
+        PhysicsLogger.Info($"Cl (before scale): {ClInitial:F3}, after: {ClInitial * _liftScale:F3}");
+        PhysicsLogger.Info($"Initial velocity: {Velocity}");
+        PhysicsLogger.Info($"Initial omega: {Omega} ({Omega.Length() / 0.10472f:F0} rpm)");
+        PhysicsLogger.Info($"Shot direction: {ShotDirection}");
+        PhysicsLogger.Info("===================");
     }
 }

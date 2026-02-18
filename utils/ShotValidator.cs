@@ -46,7 +46,7 @@ public static class ShotValidator
             float speed = (float)data["Speed"];
             if (float.IsNaN(speed) || float.IsInfinity(speed))
             {
-                GD.PrintErr("ShotValidator: Speed is NaN or Infinity, rejecting shot");
+                PhysicsLogger.Error("ShotValidator: Speed is NaN or Infinity, rejecting shot");
                 return false;
             }
             data["Speed"] = Mathf.Clamp(speed, MIN_SPEED, MAX_SPEED);
@@ -57,7 +57,7 @@ public static class ShotValidator
             float vla = (float)data["VLA"];
             if (float.IsNaN(vla) || float.IsInfinity(vla))
             {
-                GD.PrintErr("ShotValidator: VLA is NaN or Infinity, rejecting shot");
+                PhysicsLogger.Error("ShotValidator: VLA is NaN or Infinity, rejecting shot");
                 return false;
             }
             data["VLA"] = Mathf.Clamp(vla, MIN_VLA, MAX_VLA);
@@ -68,7 +68,7 @@ public static class ShotValidator
             float hla = (float)data["HLA"];
             if (float.IsNaN(hla) || float.IsInfinity(hla))
             {
-                GD.PrintErr("ShotValidator: HLA is NaN or Infinity, rejecting shot");
+                PhysicsLogger.Error("ShotValidator: HLA is NaN or Infinity, rejecting shot");
                 return false;
             }
             data["HLA"] = Mathf.Clamp(hla, MIN_HLA, MAX_HLA);
@@ -79,7 +79,7 @@ public static class ShotValidator
             float spin = (float)data["TotalSpin"];
             if (float.IsNaN(spin) || float.IsInfinity(spin))
             {
-                GD.PrintErr("ShotValidator: TotalSpin is NaN or Infinity, rejecting shot");
+                PhysicsLogger.Error("ShotValidator: TotalSpin is NaN or Infinity, rejecting shot");
                 return false;
             }
             data["TotalSpin"] = Mathf.Clamp(spin, MIN_SPIN, MAX_SPIN);
@@ -90,7 +90,7 @@ public static class ShotValidator
             float axis = (float)data["SpinAxis"];
             if (float.IsNaN(axis) || float.IsInfinity(axis))
             {
-                GD.PrintErr("ShotValidator: SpinAxis is NaN or Infinity, rejecting shot");
+                PhysicsLogger.Error("ShotValidator: SpinAxis is NaN or Infinity, rejecting shot");
                 return false;
             }
             data["SpinAxis"] = Mathf.Clamp(axis, MIN_SPIN_AXIS, MAX_SPIN_AXIS);
@@ -101,7 +101,7 @@ public static class ShotValidator
             float back = (float)data["BackSpin"];
             if (float.IsNaN(back) || float.IsInfinity(back))
             {
-                GD.PrintErr("ShotValidator: BackSpin is NaN or Infinity, rejecting shot");
+                PhysicsLogger.Error("ShotValidator: BackSpin is NaN or Infinity, rejecting shot");
                 return false;
             }
             data["BackSpin"] = Mathf.Clamp(back, -MAX_COMPONENT_SPIN, MAX_COMPONENT_SPIN);
@@ -112,7 +112,7 @@ public static class ShotValidator
             float side = (float)data["SideSpin"];
             if (float.IsNaN(side) || float.IsInfinity(side))
             {
-                GD.PrintErr("ShotValidator: SideSpin is NaN or Infinity, rejecting shot");
+                PhysicsLogger.Error("ShotValidator: SideSpin is NaN or Infinity, rejecting shot");
                 return false;
             }
             data["SideSpin"] = Mathf.Clamp(side, -MAX_COMPONENT_SPIN, MAX_COMPONENT_SPIN);

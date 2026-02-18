@@ -45,7 +45,7 @@ public partial class TcpServer : Node
             _tcpConnection = _tcpServer.TakeConnection();
             if (_tcpConnection != null)
             {
-                GD.Print($"We have a tcp connection at {_tcpConnection.GetConnectedHost()}");
+                PhysicsLogger.Info($"We have a tcp connection at {_tcpConnection.GetConnectedHost()}");
                 _tcpConnected = true;
                 _lastActivityTimeMs = Time.GetTicksMsec();
             }
@@ -61,7 +61,7 @@ public partial class TcpServer : Node
             _tcpConnected = false;
             _tcpConnection = null;
             _shotData.Clear();
-            GD.Print("tcp disconnected");
+            PhysicsLogger.Info("tcp disconnected");
             return;
         }
 
@@ -71,7 +71,7 @@ public partial class TcpServer : Node
         // M2: Check for idle timeout
         if (Time.GetTicksMsec() - _lastActivityTimeMs > CONNECTION_TIMEOUT_MS)
         {
-            GD.Print("tcp connection timed out after inactivity");
+            PhysicsLogger.Info("tcp connection timed out after inactivity");
             _tcpConnection.DisconnectFromHost();
             _tcpConnected = false;
             _tcpConnection = null;
@@ -88,7 +88,7 @@ public partial class TcpServer : Node
         // C1: Reject oversized payloads
         if (bytesAvailable > MAX_PAYLOAD_BYTES)
         {
-            GD.PrintErr($"TCP payload too large ({bytesAvailable} bytes > {MAX_PAYLOAD_BYTES}), rejecting");
+            PhysicsLogger.Error($"TCP payload too large ({bytesAvailable} bytes > {MAX_PAYLOAD_BYTES}), rejecting");
             // Drain the oversized data to clear the buffer
             _tcpConnection.GetUtf8String(bytesAvailable);
             RespondError(501, "Payload too large");
@@ -117,7 +117,7 @@ public partial class TcpServer : Node
 
         // M3: Log truncated payload after validation
         string logPayload = _tcpString.Length > 200 ? _tcpString[..200] + "..." : _tcpString;
-        GD.Print($"Launch monitor payload: {logPayload}");
+        PhysicsLogger.Info($"Launch monitor payload: {logPayload}");
 
         TryEmitHitBall(dict);
     }
@@ -175,7 +175,7 @@ public partial class TcpServer : Node
         ulong now = Time.GetTicksMsec();
         if (now - _lastShotTimeMs < SHOT_COOLDOWN_MS)
         {
-            GD.Print("TCP shot rejected: rate limited");
+            PhysicsLogger.Info("TCP shot rejected: rate limited");
             RespondError(429, "Too many requests");
             return;
         }
@@ -200,7 +200,7 @@ public partial class TcpServer : Node
         // C2: Validate shot data before emitting
         if (!ShotValidator.ValidateAndClamp(ballData))
         {
-            GD.PrintErr("TCP shot rejected: invalid ball data");
+            PhysicsLogger.Error("TCP shot rejected: invalid ball data");
             RespondError(501, "Invalid ball data values");
             return;
         }

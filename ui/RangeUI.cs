@@ -163,11 +163,11 @@ public partial class RangeUI : MarginContainer
 
         if (data.Count == 0)
         {
-            GD.Print($"Hit Shot: Failed to load shot data from {_selectedShotPath}");
+            PhysicsLogger.Info($"Hit Shot: Failed to load shot data from {_selectedShotPath}");
             return;
         }
 
-        GD.Print($"Hit Shot: Loaded from {_selectedShotPath}");
+        PhysicsLogger.Info($"Hit Shot: Loaded from {_selectedShotPath}");
         EmitSignal(SignalName.HitShot, data);
     }
 

@@ -245,7 +245,7 @@ public partial class ShotTracker : Node3D
 	public void OnRangeUiHitShot(Variant data)
 	{
 		ShotData = ((Dictionary)data).Duplicate();
-		GD.Print($"Local shot injection payload: {Json.Stringify(ShotData)}");
+		PhysicsLogger.Info($"Local shot injection payload: {Json.Stringify(ShotData)}");
 		StartShot();
 		_ball.CallDeferred(GolfBall.MethodName.HitFromData, data);
 	}
