@@ -6,8 +6,11 @@
 [ext_resource type="PackedScene" uid="uid://byy76pu4x6rnq" path="res://assets/models/balls/golf_ball.glb" id="4_golf_ball"]
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_ball"]
-margin = 0.06
-radius = 0.043
+; 1.68in if a golf ball size or 42.67mm. 
+; Conversion of 1 unit = 1 meter in Godot 3D, radius should be 0.021335
+; I think margin was messing with ball physics "floating" effect.
+margin = 0.00
+radius = 0.021335
 
 [sub_resource type="ImmediateMesh" id="ImmediateMesh_trail"]
 

@@ -37,19 +37,19 @@ godot --headless --script run_benchmarks.gd
 
 Produces a table with carry/total/rollout for every shot. Compare output against these baselines:
 
-**Baselines (as of 2026-02-11, via `run_benchmarks.gd`):**
+**Baselines (as of 2026-02-18, via `run_benchmarks.gd`):**
 
 | Shot | Speed | VLA | Spin | Carry (yd) | Total (yd) | Rollout (yd) |
 |------|-------|-----|------|-----------|-----------|-------------|
-| Drive | 150.0 mph | 12.50° | 2335 rpm | 250.8 | 267.3 | 16.5 |
-| Wood Low | 114.5 mph | 6.95° | 1933 rpm | 122.5 | 196.1 | 73.6 |
-| Wedge | 81.1 mph | 30.50° | 7851 rpm | 104.9 | 118.1 | 13.2 |
-| Bump | 78.3 mph | 5.57° | 1850 rpm | 39.0 | 109.0 | 70.0 |
-| Approach | 81.1 mph | 30.50° | 10490 rpm | 106.4 | 110.3 | 4.0 |
-| Topped | 91.8 mph | 1.66° | 2195 rpm | 25.6 | 115.4 | 89.8 |
-| Checked | 75.1 mph | 38.50° | 10701 rpm | 85.7 | 90.0 | 4.3 |
-| Flop | 68.1 mph | 45.50° | 12551 rpm | 66.7 | 67.5 | 0.8 |
-| Chip | 24.7 mph | 17.94° | 3204 rpm | 7.8 | 19.4 | 11.6 |
+| Drive | 150.0 mph | 12.50° | 2335 rpm | 250.8 | 262.9 | 12.1 |
+| Wood Low | 114.5 mph | 6.95° | 1933 rpm | 122.5 | 180.1 | 57.6 |
+| Wedge | 81.1 mph | 30.50° | 7851 rpm | 104.9 | 113.6 | 8.7 |
+| Bump | 78.3 mph | 5.57° | 1850 rpm | 39.0 | 88.6 | 49.7 |
+| Approach | 81.1 mph | 30.50° | 10490 rpm | 106.4 | 108.9 | 2.6 |
+| Topped | 91.8 mph | 1.66° | 2195 rpm | 25.6 | 87.4 | 61.8 |
+| Checked | 75.1 mph | 38.50° | 10701 rpm | 85.7 | 88.6 | 2.9 |
+| Flop | 68.1 mph | 45.50° | 12551 rpm | 66.7 | 67.1 | 0.5 |
+| Chip | 24.7 mph | 17.94° | 3204 rpm | 7.8 | 16.5 | 8.7 |
 
 ### 3. Distance Regression Tests (`Category=DistanceBenchmark`)
 
