@@ -11,4 +11,4 @@ enum SurfaceType {
     FAIRWAY_SOFT, # Medium rollout 
     ROUGH, # Slow rollout
     FIRM # Green (fastest) rollout
-    }
+}
