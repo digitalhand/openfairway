@@ -32,6 +32,7 @@ public partial class GolfBall : CharacterBody3D
 
     // State
     public const float START_HEIGHT = 0.02f;
+    public static readonly Vector3 START_POSITION = new Vector3(1.0f, START_HEIGHT, 0.0f);
     public PhysicsEnums.BallState State { get; set; } = PhysicsEnums.BallState.Rest;
     public Vector3 Omega { get; set; } = Vector3.Zero;  // Angular velocity (rad/s)
     public bool OnGround { get; set; } = false;
@@ -439,7 +440,7 @@ public partial class GolfBall : CharacterBody3D
     /// </summary>
     public void Reset()
     {
-        Position = new Vector3(0.0f, START_HEIGHT, 0.0f);
+        Position = START_POSITION;
         Velocity = Vector3.Zero;
         Omega = Vector3.Zero;
         AimYawOffsetDeg = 0.0f;
@@ -508,7 +509,7 @@ public partial class GolfBall : CharacterBody3D
         RolloutImpactSpinRpm = 0.0f;
         _surfaceZoneStack.Clear();
         SetSurface(GetConfiguredSurfaceType());
-        Position = new Vector3(0.0f, START_HEIGHT, 0.0f);
+        Position = START_POSITION;
 
         Velocity = launchVelocity;
         Omega = launchOmega;

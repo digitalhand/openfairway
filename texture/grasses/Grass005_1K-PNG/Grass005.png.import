@@ -2,28 +2,30 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cd6f4ctmlwtgn"
-path="res://.godot/imported/Poliigon_GrassPatchyGround_4585_Preview1.png-4375b5678d410c01e694ea4cac630b36.ctex"
+uid="uid://cyuwap562xnva"
+path.s3tc="res://.godot/imported/Grass005.png-ce3c72f45257bb8e923f9d1a83eb8e7a.s3tc.ctex"
+path.etc2="res://.godot/imported/Grass005.png-ce3c72f45257bb8e923f9d1a83eb8e7a.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 
 [deps]
 
-source_file="res://texture/grasses/Poliigon_GrassPatchyGround_4585/Poliigon_GrassPatchyGround_4585_Preview1.png"
-dest_files=["res://.godot/imported/Poliigon_GrassPatchyGround_4585_Preview1.png-4375b5678d410c01e694ea4cac630b36.ctex"]
+source_file="res://texture/grasses/Grass005_1K-PNG/Grass005.png"
+dest_files=["res://.godot/imported/Grass005.png-ce3c72f45257bb8e923f9d1a83eb8e7a.s3tc.ctex", "res://.godot/imported/Grass005.png-ce3c72f45257bb8e923f9d1a83eb8e7a.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
 compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
-compress/normal_map=0
+compress/normal_map=2
 compress/channel_pack=0
-mipmaps/generate=false
+mipmaps/generate=true
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

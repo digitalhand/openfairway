@@ -38,6 +38,10 @@ project/assembly_name="OpenFairway"
 
 enabled=PackedStringArray("res://addons/openfairway/plugin.cfg", "res://addons/phantom_camera/plugin.cfg", "res://addons/terrain_3d/plugin.cfg")
 
+[filesystem]
+
+import/blender/enabled=false
+
 [input]
 
 hit={
