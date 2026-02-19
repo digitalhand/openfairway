@@ -39,17 +39,6 @@ public partial class BallPhysics : RefCounted
     private readonly Aerodynamics _aero = new();
 
     /// <summary>
-    /// Returns a safe, normalized floor normal from parameters.
-    /// Falls back to Vector3.Up when FloorNormal is zero-length (e.g. in-flight or uninitialized).
-    /// </summary>
-    private static Vector3 GetSafeFloorNormal(PhysicsParams parameters)
-    {
-        return parameters.FloorNormal.LengthSquared() > 0.000001f
-            ? parameters.FloorNormal.Normalized()
-            : Vector3.Up;
-    }
-
-    /// <summary>
     /// Calculate total forces acting on the ball
     /// </summary>
     public Vector3 CalculateForces(
@@ -62,17 +51,11 @@ public partial class BallPhysics : RefCounted
 
         if (onGround)
         {
-            // Grounded motion should still feel gravity along slope tangents.
-            // This was making the ball float like a "God" ball :D 
-            Vector3 floorNormal = GetSafeFloorNormal(parameters);
-
-            // Project gravity onto the surface tangent plane: g_tangent = g - n*(g·n)
-            // On flat ground this is zero; on slopes the ball accelerates downhill.
-            // May need some adjustments, looks "normal" for now. 
-            Vector3 slopeGravity = gravity - floorNormal * gravity.Dot(floorNormal);
+            // When on ground, normal force cancels gravity vertically
+            // Only apply horizontal friction/drag forces
             Vector3 groundForces = CalculateGroundForces(velocity, omega, parameters);
-            Vector3 tangentGroundForces = groundForces - floorNormal * groundForces.Dot(floorNormal);
-            return slopeGravity + tangentGroundForces;
+            groundForces.Y = 0.0f;  // Zero out any vertical component
+            return groundForces;
         }
         else
         {
@@ -147,24 +130,19 @@ public partial class BallPhysics : RefCounted
 
     /// <summary>
     /// Calculate ground friction and drag forces
-    /// TODO: This whole section needs some improvements. 
-    /// 1. Ball doesn't roll back with high rpm spin. 
-    /// 2. Some issue related to surface friction.
     /// </summary>
     public Vector3 CalculateGroundForces(
         Vector3 velocity,
         Vector3 omega,
         PhysicsParams parameters)
     {
-        Vector3 floorNormal = GetSafeFloorNormal(parameters);
-
         // Grass drag
         Vector3 grassDrag = velocity * (-6.0f * Mathf.Pi * RADIUS * parameters.GrassViscosity);
-        grassDrag = grassDrag - floorNormal * grassDrag.Dot(floorNormal);
+        grassDrag.Y = 0.0f;
 
         // Contact point velocity for friction calculation
-        Vector3 contactVelocity = velocity + omega.Cross(-floorNormal * RADIUS);
-        Vector3 tangentVelocity = contactVelocity - floorNormal * contactVelocity.Dot(floorNormal);
+        Vector3 contactVelocity = velocity + omega.Cross(-parameters.FloorNormal * RADIUS);
+        Vector3 tangentVelocity = contactVelocity - parameters.FloorNormal * contactVelocity.Dot(parameters.FloorNormal);
 
         // Spin-based friction multiplier (high spin = more grip)
         // Uses impact spin to preserve "bite" effect even as spin decays
@@ -179,13 +157,12 @@ public partial class BallPhysics : RefCounted
         if (tangentVelMag < 0.05f)
         {
             // Pure rolling - use rolling resistance from surface parameters
-            Vector3 flatVelocity = velocity - floorNormal * velocity.Dot(floorNormal);
+            Vector3 flatVelocity = velocity - parameters.FloorNormal * velocity.Dot(parameters.FloorNormal);
             Vector3 frictionDir = flatVelocity.Length() > 0.01f ? flatVelocity.Normalized() : Vector3.Zero;
             float effectiveRollingFriction = parameters.RollingFriction * spinMultiplier;
             friction = frictionDir * (-effectiveRollingFriction * MASS * 9.81f);
             if (shouldDebug)
-            {   
-                // This is very noisy, but useful to make sense of all this mess. 
+            {
                 PhysicsLogger.Verbose($"  ROLLING: vel={velocity.Length():F2} m/s, spin={omega.Length() / 0.10472f:F0} rpm, c_rr={effectiveRollingFriction:F3} (×{spinMultiplier:F2})");
             }
         }
@@ -213,7 +190,7 @@ public partial class BallPhysics : RefCounted
             // Apply spin multiplier to increase friction for high-spin shots
             float effectiveFriction = baseFriction * spinMultiplier;
 
-            Vector3 slipDir = tangentVelocity.Normalized();
+            Vector3 slipDir = tangentVelMag > 0.01f ? tangentVelocity.Normalized() : Vector3.Zero;
             friction = slipDir * (-effectiveFriction * MASS * 9.81f);
             if (shouldDebug)
             {
@@ -285,14 +262,12 @@ public partial class BallPhysics : RefCounted
         Vector3 omega,
         PhysicsParams parameters)
     {
-        Vector3 floorNormal = GetSafeFloorNormal(parameters);
-
         Vector3 frictionTorque = Vector3.Zero;
         Vector3 grassTorque = -6.0f * Mathf.Pi * parameters.GrassViscosity * RADIUS * omega;
 
         // Calculate friction for torque
-        Vector3 contactVelocity = velocity + omega.Cross(-floorNormal * RADIUS);
-        Vector3 tangentVelocity = contactVelocity - floorNormal * contactVelocity.Dot(floorNormal);
+        Vector3 contactVelocity = velocity + omega.Cross(-parameters.FloorNormal * RADIUS);
+        Vector3 tangentVelocity = contactVelocity - parameters.FloorNormal * contactVelocity.Dot(parameters.FloorNormal);
 
         // Spin-based friction multiplier (same as in CalculateGroundForces)
         float spinMultiplier = GetSpinFrictionMultiplier(omega, parameters.RolloutImpactSpin, velocity.Length());
@@ -303,7 +278,7 @@ public partial class BallPhysics : RefCounted
         if (tangentVelMag < 0.05f)
         {
             // Pure rolling - use rolling resistance from surface parameters
-            Vector3 flatVelocity = velocity - floorNormal * velocity.Dot(floorNormal);
+            Vector3 flatVelocity = velocity - parameters.FloorNormal * velocity.Dot(parameters.FloorNormal);
             Vector3 frictionDir = flatVelocity.Length() > 0.01f ? flatVelocity.Normalized() : Vector3.Zero;
             float effectiveRollingFriction = parameters.RollingFriction * spinMultiplier;
             frictionForce = frictionDir * (-effectiveRollingFriction * MASS * 9.81f);
@@ -311,7 +286,6 @@ public partial class BallPhysics : RefCounted
         else
         {
             // Slipping - use blended friction (same as in CalculateGroundForces)
-            // TODO: Some of this may go away with jolt physics. 
             float velocityMag = velocity.Length();
             float baseFriction;
 
@@ -328,13 +302,13 @@ public partial class BallPhysics : RefCounted
             // Apply spin multiplier to increase friction for high-spin shots
             float effectiveFriction = baseFriction * spinMultiplier;
 
-            Vector3 slipDir = tangentVelocity.Normalized();
+            Vector3 slipDir = tangentVelMag > 0.01f ? tangentVelocity.Normalized() : Vector3.Zero;
             frictionForce = slipDir * (-effectiveFriction * MASS * 9.81f);
         }
 
         if (frictionForce.Length() > 0.001f)
         {
-            frictionTorque = (-floorNormal * RADIUS).Cross(frictionForce);
+            frictionTorque = (-parameters.FloorNormal * RADIUS).Cross(frictionForce);
         }
 
         return frictionTorque + grassTorque;
