@@ -54,7 +54,7 @@ reset={
 [physics]
 
 3d/physics_engine="JoltPhysics3D"
-common/physics_interpolation=true ; need it for phantom camera movement smoothness.
+common/physics_interpolation=true
 
 [rendering]
 

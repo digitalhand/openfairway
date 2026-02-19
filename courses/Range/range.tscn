@@ -27,8 +27,6 @@ tonemap_mode = 3
 
 [sub_resource type="Resource" id="Resource_hbh3r"]
 script = ExtResource("18_gqfs3")
-; TODO some improvements needed here. Crosshair/marker is a mess. 
-; I asked AI for help, and it sucked. 
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_aim_marker"]
 cull_mode = 2
@@ -172,13 +170,14 @@ cast_shadow = 0
 mesh = SubResource("BoxMesh_aim_cross_z")
 
 [node name="SurfaceRoughZone" type="Area3D" parent="." unique_id=185200654]
-transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5, 111.93109, 0.75, -6.0201306)
+transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5, 111.93109, 0.75, -6.098225)
 script = ExtResource("20_rough_zone")
 SurfaceType = 2
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="SurfaceRoughZone" unique_id=1718115040]
-transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5, 0, 0, -4.71279)
+transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5, 0, 0, -0.09809685)
 shape = SubResource("BoxShape3D_rough_zone")
+debug_color = Color(0.29898453, 0.6287998, 0, 0.41960785)
 
 [node name="YardMarkers" type="Node3D" parent="." unique_id=685927039]
 
