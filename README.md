@@ -1,6 +1,6 @@
 # OpenFairway Physics
 
-Realistic golf ball physics engine for Godot 4.5+ (.NET/C#). Provides force, torque, bounce, and surface interaction calculations usable from both C# and GDScript.
+Realistic golf ball physics engine for Godot 4.5+ (.NET/C#). Provides force, torque, bounce, and surface interaction calculations usable from both C# and GDScript. YouTube Video [Demo of OpenFairway v1.0.2](https://youtu.be/IYSF5w6ROzo)
 
  <img src="assets/images/logo.png" width="50%">
 
