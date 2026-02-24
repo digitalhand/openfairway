@@ -114,7 +114,9 @@ public partial class Range : Node3D
         _rangeSettings.SurfaceType.SettingChanged += OnSurfaceChanged;
         CreateAimMarker();
         ConnectGoalZones();
-        LoadRoundProgress();
+        // Always start fresh at the tee on scene load.
+        // Saved progress can be restored later through an explicit resume flow.
+        SetStrokeCount(0);
         _rangeUi.SetStrokeCount(_strokeCount);
         UpdateTargetYardageDisplay();
 
