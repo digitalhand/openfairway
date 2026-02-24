@@ -5,12 +5,12 @@ using System.IO;
 public static class CourseCatalog
 {
     public const int DefaultPar = 3;
-    public static readonly CourseCardInfo DefaultCourseCard = new("Airways", 1, DefaultPar, 203);
+    public static readonly CourseCardInfo DefaultCourseCard = new("Airways", 1, DefaultPar, 203, 7);
 
     private static readonly Dictionary<string, CourseCardInfo> CourseCardByKey = new(StringComparer.OrdinalIgnoreCase)
     {
-        { "res://courses/Range/range.tscn", new CourseCardInfo("Airways", 1, 3, 203) },
-        { "range", new CourseCardInfo("Airways", 1, 3, 203) }
+        { "res://courses/Range/range.tscn", new CourseCardInfo("Airways", 1, 3, 203, 7) },
+        { "range", new CourseCardInfo("Airways", 1, 3, 203, 7) }
     };
 
     public static bool TryGetPar(string sceneId, out int par)
@@ -69,23 +69,26 @@ public static class CourseCatalog
             card.CourseName,
             Math.Max(1, card.HoleNumber),
             Math.Max(1, card.Par),
-            Math.Max(0, card.Yardage)
+            Math.Max(0, card.Yardage),
+            card.TargetElevationFeet
         );
     }
 }
 
 public readonly struct CourseCardInfo
 {
-    public CourseCardInfo(string courseName, int holeNumber, int par, int yardage)
+    public CourseCardInfo(string courseName, int holeNumber, int par, int yardage, int targetElevationFeet = 7)
     {
         CourseName = string.IsNullOrWhiteSpace(courseName) ? "Course" : courseName.Trim();
         HoleNumber = Math.Max(1, holeNumber);
         Par = Math.Max(1, par);
         Yardage = Math.Max(0, yardage);
+        TargetElevationFeet = targetElevationFeet;
     }
 
     public string CourseName { get; }
     public int HoleNumber { get; }
     public int Par { get; }
     public int Yardage { get; }
+    public int TargetElevationFeet { get; }
 }

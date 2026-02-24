@@ -4,12 +4,33 @@ public partial class GridCanvas : Control
 {
     private bool _showGrid = false;
     private bool _editMode = true;
-    private const float CELL_SIZE_X = 120f;
-    private const float CELL_SIZE_Y = 93f;
-    private const float GRID_SPACING_X = 10f;
-    private const float GRID_SPACING_Y = 10f;
+    private const float PANEL_WIDTH = 84f;
+    private const float PANEL_HEIGHT = 65f;
+    private const float GRID_SPACING_X = 2f;
+    private const float GRID_SPACING_Y = 2f;
+    private const float DEFAULT_RIGHT_MARGIN = 20f;
+    private const float DEFAULT_BOTTOM_MARGIN = 20f;
+    private const float DEFAULT_TOP_MIN = 120f;
+    private const float DEFAULT_TOP_RATIO = 0.36f;
+    private const int DEFAULT_PANEL_COLUMNS = 2;
     private readonly Vector2 GRID_SIZE = new Vector2(CELL_SIZE_X + GRID_SPACING_X, CELL_SIZE_Y + GRID_SPACING_Y);
     private static readonly Vector2 GRID_ORIGIN = new Vector2(15f, 15f);
+    private static readonly string[] DefaultPanelOrder =
+    {
+        "Distance",
+        "Carry",
+        "HLA",
+        "VLA",
+        "Speed",
+        "Apex",
+        "TotalSpin",
+        "BackSpin",
+        "SpinAxis",
+        "SideSpin"
+    };
+
+    private const float CELL_SIZE_X = PANEL_WIDTH;
+    private const float CELL_SIZE_Y = PANEL_HEIGHT;
 
     public override void _Draw()
     {
@@ -95,12 +116,19 @@ public partial class GridCanvas : Control
 
     public void LoadLayout()
     {
-        var config = new ConfigFile();
-        if (config.Load("user://layout.cfg") != Error.Ok)
+        var userConfig = new ConfigFile();
+        if (userConfig.Load("user://layout.cfg") == Error.Ok)
         {
-            config.Load("res://ui/default_layout.cfg");
+            ApplyLayoutFromConfig(userConfig);
+            return;
         }
 
+        ApplyFirstRunDefaultLayout();
+        SaveLayout();
+    }
+
+    private void ApplyLayoutFromConfig(ConfigFile config)
+    {
         foreach (Control panel in GetChildren())
         {
             if (config.HasSectionKey("positions", panel.Name))
@@ -132,6 +160,42 @@ public partial class GridCanvas : Control
                     PhysicsLogger.Error($"GridCanvas: invalid visibility type for panel '{panel.Name}'");
                 }
             }
+        }
+    }
+
+    private void ApplyFirstRunDefaultLayout()
+    {
+        Vector2 viewport = GetViewportRect().Size;
+
+        foreach (Control panel in GetChildren())
+        {
+            panel.Size = new Vector2(PANEL_WIDTH, PANEL_HEIGHT);
+            panel.Visible = false;
+        }
+
+        float totalWidth = PANEL_WIDTH * DEFAULT_PANEL_COLUMNS + GRID_SPACING_X * (DEFAULT_PANEL_COLUMNS - 1);
+        float startX = Mathf.Max(10.0f, viewport.X - DEFAULT_RIGHT_MARGIN - totalWidth);
+
+        int rows = Mathf.CeilToInt((float)DefaultPanelOrder.Length / DEFAULT_PANEL_COLUMNS);
+        float totalHeight = rows * PANEL_HEIGHT + GRID_SPACING_Y * (rows - 1);
+        float maxTop = Mathf.Max(10.0f, viewport.Y - totalHeight - DEFAULT_BOTTOM_MARGIN);
+        float minTop = Mathf.Min(DEFAULT_TOP_MIN, maxTop);
+        float startY = Mathf.Clamp(viewport.Y * DEFAULT_TOP_RATIO, minTop, maxTop);
+
+        for (int i = 0; i < DefaultPanelOrder.Length; i++)
+        {
+            string panelName = DefaultPanelOrder[i];
+            if (!HasNode(panelName))
+                continue;
+
+            var panel = GetNode<Control>(panelName);
+            int row = i / DEFAULT_PANEL_COLUMNS;
+            int col = i % DEFAULT_PANEL_COLUMNS;
+            panel.Position = new Vector2(
+                startX + col * (PANEL_WIDTH + GRID_SPACING_X),
+                startY + row * (PANEL_HEIGHT + GRID_SPACING_Y)
+            );
+            panel.Visible = true;
         }
     }
 

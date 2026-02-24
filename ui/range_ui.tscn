@@ -5,6 +5,18 @@
 [ext_resource type="Script" uid="uid://kehfldgysi44" path="res://ui/GridCanvas.cs" id="5_rfb4h"]
 [ext_resource type="Script" uid="uid://by5qgm64uh0v8" path="res://ui/ShotInjector.cs" id="6_j5yvw"]
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_world_click_marker"]
+bg_color = Color(0.0431373, 0.180392, 0.309804, 0.8)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(1, 1, 1, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
 [node name="RangeUI" type="MarginContainer" unique_id=1754073492]
 anchors_preset = 15
 anchor_right = 1.0
@@ -12,6 +24,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 size_flags_vertical = 3
+mouse_filter = 2
 theme_override_constants/margin_left = 15
 theme_override_constants/margin_top = 15
 theme_override_constants/margin_right = 15
@@ -19,6 +32,113 @@ theme_override_constants/margin_bottom = 15
 script = ExtResource("1_kur1t")
 
 [node name="OverlayLayer" type="CanvasLayer" parent="." unique_id=1270438998]
+
+[node name="RoundEndScoreOverlay" type="Label" parent="OverlayLayer"]
+visible = false
+layout_mode = 0
+anchor_left = 0.5
+anchor_top = 0.4
+anchor_right = 0.5
+anchor_bottom = 0.4
+offset_left = -260.0
+offset_top = -74.0
+offset_right = 260.0
+offset_bottom = 74.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 0.95)
+theme_override_constants/outline_size = 8
+theme_override_font_sizes/font_size = 96
+text = "PAR"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="WorldClickMarker" type="Control" parent="OverlayLayer"]
+visible = false
+layout_mode = 0
+mouse_filter = 2
+offset_right = 86.0
+offset_bottom = 124.0
+
+[node name="Card" type="Panel" parent="OverlayLayer/WorldClickMarker"]
+layout_mode = 0
+mouse_filter = 2
+offset_right = 86.0
+offset_bottom = 98.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_world_click_marker")
+
+[node name="MarkerContent" type="VBoxContainer" parent="OverlayLayer/WorldClickMarker/Card"]
+layout_mode = 0
+mouse_filter = 2
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 6.0
+offset_top = 4.0
+offset_right = -6.0
+offset_bottom = -6.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 2
+
+[node name="DistanceLabel" type="Label" parent="OverlayLayer/WorldClickMarker/Card/MarkerContent"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+theme_override_font_sizes/font_size = 34
+text = "---"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Divider" type="ColorRect" parent="OverlayLayer/WorldClickMarker/Card/MarkerContent"]
+custom_minimum_size = Vector2(0, 2)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.75)
+
+[node name="ElevationRow" type="HBoxContainer" parent="OverlayLayer/WorldClickMarker/Card/MarkerContent"]
+custom_minimum_size = Vector2(0, 18)
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="LeftSpacer" type="Control" parent="OverlayLayer/WorldClickMarker/Card/MarkerContent/ElevationRow"]
+layout_mode = 2
+mouse_filter = 2
+size_flags_horizontal = 3
+
+[node name="ArrowLabel" type="Label" parent="OverlayLayer/WorldClickMarker/Card/MarkerContent/ElevationRow"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+theme_override_font_sizes/font_size = 14
+text = "▼"
+vertical_alignment = 1
+
+[node name="ElevationLabel" type="Label" parent="OverlayLayer/WorldClickMarker/Card/MarkerContent/ElevationRow"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+theme_override_font_sizes/font_size = 14
+text = "0FT"
+vertical_alignment = 1
+
+[node name="RightSpacer" type="Control" parent="OverlayLayer/WorldClickMarker/Card/MarkerContent/ElevationRow"]
+layout_mode = 2
+mouse_filter = 2
+size_flags_horizontal = 3
+
+[node name="PointerBorder" type="Polygon2D" parent="OverlayLayer/WorldClickMarker"]
+position = Vector2(43, 96)
+color = Color(1, 1, 1, 1)
+polygon = PackedVector2Array(-11, 0, 11, 0, 0, 24)
+
+[node name="PointerFill" type="Polygon2D" parent="OverlayLayer/WorldClickMarker"]
+position = Vector2(43, 98)
+color = Color(0.0431373, 0.180392, 0.309804, 0.8)
+polygon = PackedVector2Array(-8, 0, 8, 0, 0, 18)
 
 [node name="PlayerShotCard" type="VBoxContainer" parent="OverlayLayer" unique_id=1816653839]
 layout_mode = 0
@@ -260,88 +380,88 @@ script = ExtResource("5_rfb4h")
 [node name="Distance" parent="GridCanvas" unique_id=928722756 instance=ExtResource("1_q72xt")]
 layout_mode = 0
 offset_top = 70.0
-offset_right = 120.0
-offset_bottom = 163.0
+offset_right = 84.0
+offset_bottom = 135.0
 Label = "Distance"
 Units = "yd"
 
 [node name="Carry" parent="GridCanvas" unique_id=31144674 instance=ExtResource("1_q72xt")]
 layout_mode = 0
 offset_top = 118.0
-offset_right = 120.0
-offset_bottom = 211.0
+offset_right = 84.0
+offset_bottom = 183.0
 Label = "Carry"
 Units = "yd"
 
 [node name="Side" parent="GridCanvas" unique_id=2021554997 instance=ExtResource("1_q72xt")]
 layout_mode = 0
 offset_top = 167.0
-offset_right = 120.0
-offset_bottom = 260.0
+offset_right = 84.0
+offset_bottom = 232.0
 Label = "Side"
 Units = "yd"
 
 [node name="Apex" parent="GridCanvas" unique_id=783310596 instance=ExtResource("1_q72xt")]
 layout_mode = 0
 offset_top = 215.0
-offset_right = 120.0
-offset_bottom = 308.0
+offset_right = 84.0
+offset_bottom = 280.0
 Label = "Apex"
 Units = "ft"
 
 [node name="VLA" parent="GridCanvas" unique_id=720737871 instance=ExtResource("1_q72xt")]
 layout_mode = 0
 offset_top = 264.0
-offset_right = 120.0
-offset_bottom = 357.0
+offset_right = 84.0
+offset_bottom = 329.0
 Label = "VLA"
 Units = "deg"
 
 [node name="HLA" parent="GridCanvas" unique_id=473222270 instance=ExtResource("1_q72xt")]
 layout_mode = 0
 offset_top = 312.0
-offset_right = 120.0
-offset_bottom = 405.0
+offset_right = 84.0
+offset_bottom = 377.0
 Label = "HLA"
 Units = "deg"
 
 [node name="Speed" parent="GridCanvas" unique_id=1046874515 instance=ExtResource("1_q72xt")]
 layout_mode = 0
 offset_top = 360.0
-offset_right = 120.0
-offset_bottom = 453.0
+offset_right = 84.0
+offset_bottom = 425.0
 Label = "Speed"
 Units = "mph"
 
 [node name="BackSpin" parent="GridCanvas" unique_id=1568522208 instance=ExtResource("1_q72xt")]
 layout_mode = 0
 offset_top = 408.0
-offset_right = 120.0
-offset_bottom = 501.0
+offset_right = 84.0
+offset_bottom = 473.0
 Label = "BackSpin"
 Units = "rpm"
 
 [node name="SideSpin" parent="GridCanvas" unique_id=980224028 instance=ExtResource("1_q72xt")]
 layout_mode = 0
 offset_top = 456.0
-offset_right = 120.0
-offset_bottom = 549.0
+offset_right = 84.0
+offset_bottom = 521.0
 Label = "SideSpin"
 Units = "rpm"
 
 [node name="TotalSpin" parent="GridCanvas" unique_id=2086269771 instance=ExtResource("1_q72xt")]
 layout_mode = 0
 offset_top = 504.0
-offset_right = 120.0
-offset_bottom = 597.0
+offset_right = 84.0
+offset_bottom = 569.0
 Label = "TotalSpin"
 Units = "rpm"
 
 [node name="SpinAxis" parent="GridCanvas" unique_id=1955013112 instance=ExtResource("1_q72xt")]
 layout_mode = 0
 offset_top = 552.0
-offset_right = 120.0
-offset_bottom = 645.0
+offset_right = 84.0
+offset_bottom = 617.0
 Label = "SpinAxis"
 Units = "deg"
 

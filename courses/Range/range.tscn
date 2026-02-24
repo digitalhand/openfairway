@@ -238,6 +238,8 @@ albedo_texture = ExtResource("9_rgr1e")
 normal_texture = ExtResource("10_redvt")
 roughness = 1.0
 uv_scale = 0.6
+detiling_rotation = 0.065
+detiling_shift = 0.065
 
 [sub_resource type="Terrain3DTextureAsset" id="Terrain3DTextureAsset_khikb"]
 name = "rock049_alb_ht"
@@ -266,6 +268,8 @@ albedo_color = Color(0.45184118, 0.4423438, 0.15053928, 1)
 albedo_texture = ExtResource("9_rgr1e")
 normal_texture = ExtResource("10_redvt")
 uv_scale = 0.6
+detiling_rotation = 0.103
+detiling_shift = 0.158
 
 [sub_resource type="Terrain3DTextureAsset" id="Terrain3DTextureAsset_mxct8"]
 name = "rgba-compose_alb_hgt"
@@ -641,39 +645,6 @@ material_override = SubResource("StandardMaterial3D_aim_marker")
 cast_shadow = 0
 mesh = SubResource("BoxMesh_aim_cross_z")
 
-[node name="YardMarkers" type="Node3D" parent="." unique_id=685927039]
-
-[node name="50Yards" type="Label3D" parent="YardMarkers" unique_id=1170002585]
-transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 45.72, 1.2, 0)
-pixel_size = 0.05
-text = "50"
-
-[node name="100Yards" type="Label3D" parent="YardMarkers" unique_id=1001707317]
-transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 91.4, 1.2, 0)
-pixel_size = 0.05
-text = "100"
-
-[node name="150Yards" type="Label3D" parent="YardMarkers" unique_id=1741900117]
-transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 137.16, 1.2, 0)
-pixel_size = 0.05
-text = "150"
-
-[node name="200" type="Label3D" parent="YardMarkers" unique_id=1462947500]
-transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 182.88, 1.2, 0)
-pixel_size = 0.05
-text = "200"
-
-[node name="250" type="Label3D" parent="YardMarkers" unique_id=190051679]
-transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 228.6, 1.2, 0)
-pixel_size = 0.05
-text = "250"
-
-[node name="300" type="Label3D" parent="YardMarkers" unique_id=1770700685]
-transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 274.32, 1.2, 0)
-pixel_size = 0.05
-text = "300
-"
-
 [node name="Terrain3D" type="Terrain3D" parent="." unique_id=394964337]
 data_directory = "res://utils/terrain/"
 material = SubResource("Terrain3DMaterial_736u6")
@@ -834,4 +805,4 @@ stream = ExtResource("41_auytd")
 stream = ExtResource("42_kvf51")
 
 [node name="BasicGreen" parent="." unique_id=1788780328 instance=ExtResource("44_kvf51")]
-transform = Transform3D(8, 0, 0, 0, 8, 0, 0, 0, 8, 182.88017, -1.1935701, -34.68867)
+transform = Transform3D(6, 0, 0, 0, 6, 0, 0, 0, 6, 184.33914, -0.14291286, -26.257303)
