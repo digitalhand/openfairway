@@ -12,13 +12,6 @@ public partial class RangeUI : MarginContainer
     private const int DefaultHoleNumber = 1;
     private const int DefaultPar = 3;
     private const int DefaultYardage = 203;
-    private const int DefaultTargetElevationFeet = 7;
-    private static readonly Color PositiveElevationColor = new Color(0.683984f, 0.859376f, 0.307523f, 1.0f);
-    private static readonly Color NegativeElevationColor = new Color(0.92f, 0.33f, 0.33f, 1.0f);
-    private static readonly Color NeutralElevationColor = new Color(0.96f, 0.98f, 1.0f, 1.0f);
-    private const string ElevationArrowUp = "▲";
-    private const string ElevationArrowDown = "▼";
-    private const string ElevationArrowFlat = "→";
 
     private string _selectedShotPath = TestShots.DefaultShot;
     private GridCanvas _gridCanvas;
@@ -95,7 +88,7 @@ public partial class RangeUI : MarginContainer
         SetStrokeCount(0);
         SetScoreUnknown();
         SetTargetYardageUnknown();
-        SetTargetElevationFeet(DefaultTargetElevationFeet);
+        SetTargetElevationUnknown();
         HideRoundEndScore();
         HideWorldClickMarker();
 
@@ -125,13 +118,17 @@ public partial class RangeUI : MarginContainer
 
     public override void _Input(InputEvent @event)
     {
-        if (@event is InputEventKey keyEvent && keyEvent.Pressed && !keyEvent.Echo)
+        if (@event is not InputEventKey keyEvent || !keyEvent.Pressed || keyEvent.Echo)
+            return;
+
+        if (keyEvent.Keycode == Key.P)
         {
-            if (keyEvent.Keycode == Key.P)
-            {
-                SetShotControlsVisible(!_shotControlsVisible);
-            }
+            SetShotControlsVisible(!_shotControlsVisible);
+            return;
         }
+
+        if (keyEvent.Keycode == Key.F)
+            ToggleFullscreen();
     }
 
     public override void _Process(double delta)
@@ -179,6 +176,17 @@ public partial class RangeUI : MarginContainer
     private void ToggleShotInjector(Variant value)
     {
         GetNode("ShotInjector").Set("visible", value);
+    }
+
+    private void ToggleFullscreen()
+    {
+        Window window = GetWindow();
+        if (window == null)
+            return;
+
+        window.Mode = window.Mode == Window.ModeEnum.Fullscreen
+            ? Window.ModeEnum.Windowed
+            : Window.ModeEnum.Fullscreen;
     }
 
     public void SetTotalDistance(string text)
@@ -230,7 +238,7 @@ public partial class RangeUI : MarginContainer
         if (_targetElevationLabel == null)
             return;
 
-        ElevationVisual visual = BuildElevationVisual(feet, includeSignInText: false);
+        ElevationVisual visual = ElevationPresenter.Build(feet, includeSignInText: false);
         _targetElevationLabel.Text = $"{visual.Arrow} {visual.Text}";
         _targetElevationLabel.AddThemeColorOverride("font_color", visual.Color);
     }
@@ -240,8 +248,9 @@ public partial class RangeUI : MarginContainer
         if (_targetElevationLabel == null)
             return;
 
-        _targetElevationLabel.Text = $"{ElevationArrowFlat} 0FT";
-        _targetElevationLabel.AddThemeColorOverride("font_color", NeutralElevationColor);
+        ElevationVisual visual = ElevationPresenter.Build(0, includeSignInText: false);
+        _targetElevationLabel.Text = $"{visual.Arrow} {visual.Text}";
+        _targetElevationLabel.AddThemeColorOverride("font_color", visual.Color);
     }
 
     public void SetScoreLabel(string label)
@@ -304,7 +313,7 @@ public partial class RangeUI : MarginContainer
         _worldClickMarkerActive = true;
         _worldMarkerDistanceLabel.Text = string.IsNullOrWhiteSpace(distanceText) ? "---" : distanceText;
 
-        ElevationVisual visual = BuildElevationVisual(elevationFeet, includeSignInText: true);
+        ElevationVisual visual = ElevationPresenter.Build(elevationFeet, includeSignInText: true);
         if (_worldMarkerArrowLabel != null)
         {
             _worldMarkerArrowLabel.Text = visual.Arrow;
@@ -460,36 +469,5 @@ public partial class RangeUI : MarginContainer
         _shotControlsVisible = visible;
         _shotTypeOption.Visible = visible;
         _hitShotButton.Visible = visible;
-    }
-
-    private static ElevationVisual BuildElevationVisual(int feet, bool includeSignInText)
-    {
-        if (feet > 0)
-        {
-            string text = includeSignInText ? $"+{feet}FT" : $"{feet}FT";
-            return new ElevationVisual(ElevationArrowUp, text, PositiveElevationColor);
-        }
-
-        if (feet < 0)
-        {
-            string text = includeSignInText ? $"{feet}FT" : $"{Mathf.Abs(feet)}FT";
-            return new ElevationVisual(ElevationArrowDown, text, NegativeElevationColor);
-        }
-
-        return new ElevationVisual(ElevationArrowFlat, "0FT", NeutralElevationColor);
-    }
-
-    private readonly struct ElevationVisual
-    {
-        public ElevationVisual(string arrow, string text, Color color)
-        {
-            Arrow = arrow;
-            Text = text;
-            Color = color;
-        }
-
-        public string Arrow { get; }
-        public string Text { get; }
-        public Color Color { get; }
     }
 }

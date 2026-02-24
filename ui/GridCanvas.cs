@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Godot;
 
 public partial class GridCanvas : Control
@@ -75,6 +76,7 @@ public partial class GridCanvas : Control
         ConnectPanelSignals("SideSpin");
         ConnectPanelSignals("TotalSpin");
         ConnectPanelSignals("SpinAxis");
+        ApplyEditMode();
     }
 
     private void ConnectPanelSignals(string panelName)
@@ -97,70 +99,28 @@ public partial class GridCanvas : Control
     public void ToggleEditMode()
     {
         _editMode = !_editMode;
-        foreach (var panel in GetNode("VBoxContainer").GetChildren())
-        {
-            panel.Call("set_editable", _editMode);
-        }
+        if (!_editMode)
+            _showGrid = false;
+
+        ApplyEditMode();
+        QueueRedraw();
     }
 
     public void SaveLayout()
     {
-        var config = new ConfigFile();
-        foreach (Control panel in GetChildren())
-        {
-            config.SetValue("positions", panel.Name, panel.Position);
-            config.SetValue("visibility", panel.Name, panel.Visible);
-        }
-        config.Save("user://layout.cfg");
+        LayoutPersistenceService.Save("user://layout.cfg", GetPanels());
     }
 
     public void LoadLayout()
     {
-        var userConfig = new ConfigFile();
-        if (userConfig.Load("user://layout.cfg") == Error.Ok)
+        if (LayoutPersistenceService.TryLoad("user://layout.cfg", out ConfigFile userConfig))
         {
-            ApplyLayoutFromConfig(userConfig);
+            LayoutPersistenceService.Apply(userConfig, GetPanels(), GetViewportRect().Size);
             return;
         }
 
         ApplyFirstRunDefaultLayout();
         SaveLayout();
-    }
-
-    private void ApplyLayoutFromConfig(ConfigFile config)
-    {
-        foreach (Control panel in GetChildren())
-        {
-            if (config.HasSectionKey("positions", panel.Name))
-            {
-                var posValue = config.GetValue("positions", panel.Name);
-                if (posValue.VariantType == Variant.Type.Vector2)
-                {
-                    var pos = (Vector2)posValue;
-                    var viewport = GetViewportRect().Size;
-                    // Validate position is within reasonable bounds
-                    pos.X = Mathf.Clamp(pos.X, -panel.Size.X, viewport.X);
-                    pos.Y = Mathf.Clamp(pos.Y, -panel.Size.Y, viewport.Y);
-                    panel.Position = pos;
-                }
-                else
-                {
-                    PhysicsLogger.Error($"GridCanvas: invalid position type for panel '{panel.Name}'");
-                }
-            }
-            if (config.HasSectionKey("visibility", panel.Name))
-            {
-                var visValue = config.GetValue("visibility", panel.Name);
-                if (visValue.VariantType == Variant.Type.Bool)
-                {
-                    panel.Visible = (bool)visValue;
-                }
-                else
-                {
-                    PhysicsLogger.Error($"GridCanvas: invalid visibility type for panel '{panel.Name}'");
-                }
-            }
-        }
     }
 
     private void ApplyFirstRunDefaultLayout()
@@ -201,12 +161,18 @@ public partial class GridCanvas : Control
 
     private void OnPanelDragStarted()
     {
+        if (!_editMode)
+            return;
+
         _showGrid = true;
         QueueRedraw();
     }
 
     private void OnPanelDragEnded(DataPanel panel)
     {
+        if (!_editMode)
+            return;
+
         _showGrid = false;
         QueueRedraw();
         SnapToGrid(panel);
@@ -243,6 +209,24 @@ public partial class GridCanvas : Control
             GetNode<DataPanel>("Carry").SetUnits("m");
             GetNode<DataPanel>("Side").SetUnits("m");
             GetNode<DataPanel>("Apex").SetUnits("m");
+        }
+    }
+
+    private IEnumerable<Control> GetPanels()
+    {
+        foreach (Node node in GetChildren())
+        {
+            if (node is Control panel)
+                yield return panel;
+        }
+    }
+
+    private void ApplyEditMode()
+    {
+        foreach (Control panel in GetPanels())
+        {
+            if (panel is DataPanel dataPanel)
+                dataPanel.SetEditable(_editMode);
         }
     }
 }

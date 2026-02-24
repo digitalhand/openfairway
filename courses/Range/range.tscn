@@ -470,6 +470,14 @@ stack = Array[ExtResource("19_86nby")]([SubResource("Resource_05bm3"), SubResour
 script = ExtResource("36_qi1v7")
 size = Vector3(238.05638, 1, 32.699203)
 
+[sub_resource type="Resource" id="Resource_wfyqq"]
+script = ExtResource("36_qi1v7")
+size = Vector3(162.95212, 1, 4.1641235)
+
+[sub_resource type="Resource" id="Resource_5lqdh"]
+script = ExtResource("36_qi1v7")
+size = Vector3(41.57245, 1, 5.7964478)
+
 [sub_resource type="Resource" id="Resource_enkft"]
 script = ExtResource("20_k0egi")
 amount = 100
@@ -734,6 +742,18 @@ path = "uid://caqxfqurbp3ku"
 transform = Transform3D(1, 0, -2.98023e-08, 0, 1, 0, 2.98023e-08, 0, 1, 29.31121, 0, -32.371582)
 script = ExtResource("26_qi1v7")
 shape = SubResource("Resource_kis36")
+
+[node name="ScatterShape_delete" type="Node3D" parent="trees_right" unique_id=138533752]
+transform = Transform3D(1, 0, -5.96046e-08, 0, 1, 0, 5.96046e-08, 0, 1, 53.181595, 0, -43.427307)
+script = ExtResource("26_qi1v7")
+negative = true
+shape = SubResource("Resource_wfyqq")
+
+[node name="ScatterShape_delete_right" type="Node3D" parent="trees_right" unique_id=629061984]
+transform = Transform3D(1, 0, -1.192092e-07, 0, 1, 0, 1.192092e-07, 0, 1, 126.44205, 0, -38.450294)
+script = ExtResource("26_qi1v7")
+negative = true
+shape = SubResource("Resource_5lqdh")
 
 [node name="trees_right_tall" type="Node3D" parent="." unique_id=1473135683]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 83.37401, 0, 107.236725)

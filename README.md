@@ -16,6 +16,8 @@ Realistic golf ball physics engine for Godot 4.5+ (.NET/C#). Provides force, tor
 - [Installation](#installation)
 - [Quick Start](#quick-start)
 - [Camera Updates (Range Scene)](#camera-updates-range-scene)
+- [Keyboard Shortcuts](#keyboard-shortcuts)
+- [Range HUD Reusable Components](#range-hud-reusable-components)
 - [Surface Zones (Local Terrain Overrides)](#surface-zones-local-terrain-overrides)
 - [Distance Benchmarks](#distance-benchmarks)
 - [Addon Classes](#addon-classes)
@@ -112,12 +114,66 @@ The default range scene now uses an orbit + follow workflow:
 - A temporary ground aim marker appears while orbiting to show the current launch direction.
 - Shot launch direction is derived from camera aim and applied as world yaw to the ball launch vector.
 - On shot start, camera follow snaps immediately to the follow offset before enabling follow mode to avoid drift/swing.
-- On ball rest, camera follow is frozen, then reset to tee/start after the configured reset delay.
+- On ball rest, camera follow is frozen, then camera resets behind the current lie after the configured reset delay.
 
-Quick controls:
+Keyboard controls are listed in [Keyboard Shortcuts](#keyboard-shortcuts).
 
+## Keyboard Shortcuts
+
+- `F` toggles fullscreen/windowed mode.
+- `P` toggles shot controls visibility.
 - `H` (`hit`) injects a local test shot.
-- `R` (`reset`) resets the shot display/camera/ball state.
+- `R` (`reset`) resets shot display/camera/ball state.
+- `ui_left` / `ui_right` (left/right arrows by default) orbit around the ball at rest.
+
+## Range HUD Reusable Components
+
+Recent range-scene updates moved shared formatting and persistence logic into reusable components:
+
+- `utils/MeasurementUtils.cs`
+  - Centralized distance/elevation conversions (`meters -> yards`, `meters -> feet`).
+  - Used by both target HUD and world marker calculations.
+- `ui/ElevationPresenter.cs`
+  - Centralized elevation presentation (arrow direction, signed text, and color selection).
+  - Keeps target elevation and marker elevation visually consistent.
+- `ui/LayoutPersistenceService.cs`
+  - Centralized panel layout save/load/apply behavior.
+  - Persists panel position and visibility in `user://layout.cfg` for reusable layout management.
+
+Range scene integration points:
+
+- `courses/Range/Range.cs`
+  - Shared shot-launch path (`LaunchShot(...)`) used by TCP shots, UI shots, and test shots.
+  - Shared HUD refresh flow (`RefreshTargetHud()`).
+- `ui/RangeUI.cs`
+  - Uses `ElevationPresenter` for both top-left target elevation and world-click marker elevation.
+
+The reusable scoring label mapper for per-course par logic remains in `game/scoring/ScoreMapper.cs` and course header metadata is defined in `game/scoring/CourseCatalog.cs`.
+
+### Component Diagram
+
+```plantuml
+@startuml
+skinparam monochrome true
+
+class Range
+class RangeUI
+class MeasurementUtils
+class ElevationPresenter
+class LayoutPersistenceService
+class ScoreMapper
+class CourseCatalog
+class GridCanvas
+
+Range --> RangeUI : updates HUD + marker
+Range --> MeasurementUtils : yards/feet math
+Range --> ScoreMapper : round-end label
+Range --> CourseCatalog : course card data
+RangeUI --> ElevationPresenter : elevation visuals
+GridCanvas --> LayoutPersistenceService : panel layout save/load
+
+@enduml
+```
 
 ## Surface Zones (Local Terrain Overrides)
 

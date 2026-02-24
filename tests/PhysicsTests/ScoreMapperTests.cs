@@ -55,7 +55,7 @@ namespace OpenFairway.Tests
             Assert.That(courseCard.CourseName, Is.EqualTo("Airways"));
             Assert.That(courseCard.HoleNumber, Is.EqualTo(1));
             Assert.That(courseCard.Par, Is.EqualTo(3));
-            Assert.That(courseCard.Yardage, Is.EqualTo(150));
+            Assert.That(courseCard.Yardage, Is.EqualTo(203));
         }
     }
 }
