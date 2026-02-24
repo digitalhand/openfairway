@@ -123,7 +123,7 @@ _shader_parameters = {
 &"enable_macro_variation": true,
 &"enable_projection": true,
 &"flat_terrain_normals": false,
-&"macro_variation1": Color(1, 1, 1, 1),
+&"macro_variation1": Color(0.89059, 0.89059, 0.8905901, 1),
 &"macro_variation2": Color(1, 1, 1, 1),
 &"macro_variation_slope": 0.333,
 &"mipmap_bias": 1.0,
@@ -233,7 +233,7 @@ roughness = 1.0
 [sub_resource type="Terrain3DTextureAsset" id="Terrain3DTextureAsset_87hcm"]
 name = "range"
 id = 1
-albedo_color = Color(0.58819973, 0.5754257, 0.21089497, 1)
+albedo_color = Color(0.44733757, 0.43857402, 0.1487762, 1)
 albedo_texture = ExtResource("9_rgr1e")
 normal_texture = ExtResource("10_redvt")
 roughness = 1.0
@@ -262,7 +262,7 @@ uv_scale = 0.3
 [sub_resource type="Terrain3DTextureAsset" id="Terrain3DTextureAsset_e04qn"]
 name = "graass_005_alb_ht"
 id = 5
-albedo_color = Color(0.5882353, 0.5764706, 0.21176471, 1)
+albedo_color = Color(0.45184118, 0.4423438, 0.15053928, 1)
 albedo_texture = ExtResource("9_rgr1e")
 normal_texture = ExtResource("10_redvt")
 uv_scale = 0.6

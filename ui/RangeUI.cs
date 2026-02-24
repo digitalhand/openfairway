@@ -6,10 +6,11 @@ public partial class RangeUI : MarginContainer
     [Signal]
     public delegate void HitShotEventHandler(Dictionary data);
 
+    private const string DefaultPlayerName = "JesseInCode";
     private const string DefaultCourseName = "Airways";
     private const int DefaultHoleNumber = 1;
     private const int DefaultPar = 3;
-    private const int DefaultYardage = 150;
+    private const int DefaultYardage = 203;
 
     private string _selectedShotPath = TestShots.DefaultShot;
     private GridCanvas _gridCanvas;
@@ -21,8 +22,8 @@ public partial class RangeUI : MarginContainer
     private Label _holeNumberLabel;
     private Label _parHeaderLabel;
     private Label _yardageHeaderLabel;
-    private Label _strokeCountLabel;
-    private Label _scoreLabel;
+    private Label _playerNameLabel;
+    private Label _shotLabel;
     private Label _targetYardageLabel;
     private bool _shotControlsVisible;
     private readonly System.Collections.Generic.Dictionary<int, string> _panelMenuIndexToName = new();
@@ -61,9 +62,11 @@ public partial class RangeUI : MarginContainer
         _holeNumberLabel = GetNode<Label>("OverlayLayer/CourseHeaderCard/HoleBox/HoleNumberLabel");
         _parHeaderLabel = GetNode<Label>("OverlayLayer/CourseHeaderCard/InfoBlock/CourseMetaBar/MetaHBox/ParLabel");
         _yardageHeaderLabel = GetNode<Label>("OverlayLayer/CourseHeaderCard/InfoBlock/CourseMetaBar/MetaHBox/YardageLabel");
-        _strokeCountLabel = GetNode<Label>("HBoxContainer/StrokeCount");
-        _scoreLabel = GetNode<Label>("HBoxContainer/ScoreLabel");
-        _targetYardageLabel = GetNode<Label>("HBoxContainer/TargetYardage");
+        _playerNameLabel = GetNode<Label>("OverlayLayer/PlayerShotCard/TopBar/PlayerNameLabel");
+        _shotLabel = GetNode<Label>("OverlayLayer/PlayerShotCard/BottomBar/BottomRow/ShotLabel");
+        _targetYardageLabel = GetNode<Label>("OverlayLayer/PlayerShotCard/BottomBar/BottomRow/YardageLabel");
+
+        _playerNameLabel.Text = DefaultPlayerName;
         SetCourseHeader(DefaultCourseName, DefaultHoleNumber, DefaultPar, DefaultYardage);
         SetStrokeCount(0);
         SetScoreUnknown();
@@ -160,10 +163,10 @@ public partial class RangeUI : MarginContainer
 
     public void SetStrokeCount(int strokes)
     {
-        if (_strokeCountLabel == null)
+        if (_shotLabel == null)
             return;
 
-        _strokeCountLabel.Text = $"Strokes: {Mathf.Max(0, strokes)}";
+        _shotLabel.Text = $"Shot {Mathf.Max(0, strokes) + 1}";
     }
 
     public void SetTargetYardage(float yards)
@@ -171,8 +174,7 @@ public partial class RangeUI : MarginContainer
         if (_targetYardageLabel == null)
             return;
 
-        int wholeYards = Mathf.RoundToInt(Mathf.Max(0.0f, yards));
-        _targetYardageLabel.Text = $"To Target: {wholeYards} yd";
+        _targetYardageLabel.Text = $"{Mathf.Max(0.0f, yards):F1} YDS";
     }
 
     public void SetTargetYardageUnknown()
@@ -180,24 +182,17 @@ public partial class RangeUI : MarginContainer
         if (_targetYardageLabel == null)
             return;
 
-        _targetYardageLabel.Text = "To Target: -- yd";
+        _targetYardageLabel.Text = "--.- YDS";
     }
 
     public void SetScoreLabel(string label)
     {
-        if (_scoreLabel == null)
-            return;
-
-        string safeLabel = string.IsNullOrWhiteSpace(label) ? "--" : label;
-        _scoreLabel.Text = $"Score: {safeLabel}";
+        // Score logic is still computed in gameplay code, but hidden in this HUD revision.
     }
 
     public void SetScoreUnknown()
     {
-        if (_scoreLabel == null)
-            return;
-
-        _scoreLabel.Text = "Score: --";
+        // Score logic is still computed in gameplay code, but hidden in this HUD revision.
     }
 
     public void SetCourseHeader(string courseName, int holeNumber, int par, int yardage)

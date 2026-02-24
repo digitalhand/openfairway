@@ -18,33 +18,77 @@ theme_override_constants/margin_right = 15
 theme_override_constants/margin_bottom = 15
 script = ExtResource("1_kur1t")
 
-[node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=1177287301]
-layout_mode = 2
-size_flags_vertical = 0
-theme_override_constants/separation = 11
-
-[node name="StrokeCount" type="Label" parent="HBoxContainer" unique_id=210441882]
-layout_mode = 2
-size_flags_vertical = 0
-theme_override_font_sizes/font_size = 22
-text = "Strokes: 0"
-vertical_alignment = 1
-
-[node name="ScoreLabel" type="Label" parent="HBoxContainer" unique_id=1401290150]
-layout_mode = 2
-size_flags_vertical = 0
-theme_override_font_sizes/font_size = 22
-text = "Score: --"
-vertical_alignment = 1
-
-[node name="TargetYardage" type="Label" parent="HBoxContainer" unique_id=1102041797]
-layout_mode = 2
-size_flags_vertical = 0
-theme_override_font_sizes/font_size = 22
-text = "To Target: -- yd"
-vertical_alignment = 1
-
 [node name="OverlayLayer" type="CanvasLayer" parent="." unique_id=1270438998]
+
+[node name="PlayerShotCard" type="VBoxContainer" parent="OverlayLayer" unique_id=1816653839]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 15.0
+offset_right = 325.0
+offset_bottom = 75.0
+theme_override_constants/separation = 0
+
+[node name="TopBar" type="ColorRect" parent="OverlayLayer/PlayerShotCard" unique_id=1172969499]
+custom_minimum_size = Vector2(310, 34)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.0431373, 0.180392, 0.309804, 0.8)
+
+[node name="PlayerNameLabel" type="Label" parent="OverlayLayer/PlayerShotCard/TopBar" unique_id=1702586464]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_right = -8.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+theme_override_font_sizes/font_size = 26
+text = "JesseInCode"
+vertical_alignment = 1
+
+[node name="BottomBar" type="ColorRect" parent="OverlayLayer/PlayerShotCard" unique_id=53512468]
+custom_minimum_size = Vector2(310, 26)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.0627451, 0.0862745, 0.12549, 0.8)
+
+[node name="BottomRow" type="HBoxContainer" parent="OverlayLayer/PlayerShotCard/BottomBar" unique_id=35875486]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 8.0
+offset_top = 1.0
+offset_right = -8.0
+offset_bottom = -1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 10
+
+[node name="ShotLabel" type="Label" parent="OverlayLayer/PlayerShotCard/BottomBar/BottomRow" unique_id=779704199]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+theme_override_font_sizes/font_size = 15
+text = "Shot 1"
+vertical_alignment = 1
+
+[node name="BottomSpacer" type="Control" parent="OverlayLayer/PlayerShotCard/BottomBar/BottomRow" unique_id=201375562]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="YardageLabel" type="Label" parent="OverlayLayer/PlayerShotCard/BottomBar/BottomRow" unique_id=791739785]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+theme_override_font_sizes/font_size = 15
+text = "--.- YDS"
+vertical_alignment = 1
+
+[node name="DeltaLabel" type="Label" parent="OverlayLayer/PlayerShotCard/BottomBar/BottomRow" unique_id=590250127]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.683984, 0.859376, 0.307523, 1)
+theme_override_font_sizes/font_size = 15
+text = "v 7FT"
+vertical_alignment = 1
 
 [node name="CourseHeaderCard" type="HBoxContainer" parent="OverlayLayer" unique_id=1692748890]
 layout_mode = 0
@@ -85,7 +129,7 @@ theme_override_constants/separation = 0
 custom_minimum_size = Vector2(318, 36)
 layout_mode = 2
 mouse_filter = 2
-color = Color(0.113725, 0.176471, 0.239216, 1)
+color = Color(0.0431373, 0.180392, 0.309804, 0.8)
 
 [node name="CourseNameLabel" type="Label" parent="OverlayLayer/CourseHeaderCard/InfoBlock/CourseNameBar" unique_id=1079787818]
 layout_mode = 0
@@ -104,7 +148,7 @@ vertical_alignment = 1
 custom_minimum_size = Vector2(318, 26)
 layout_mode = 2
 mouse_filter = 2
-color = Color(0.286275, 0.337255, 0.372549, 1)
+color = Color(0.0627451, 0.0862745, 0.12549, 0.8)
 
 [node name="MetaHBox" type="HBoxContainer" parent="OverlayLayer/CourseHeaderCard/InfoBlock/CourseMetaBar" unique_id=2144498722]
 layout_mode = 0
@@ -133,7 +177,7 @@ size_flags_horizontal = 3
 layout_mode = 2
 theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
 theme_override_font_sizes/font_size = 15
-text = "150 YDS"
+text = "203 YDS"
 vertical_alignment = 1
 
 [node name="SettingsBox" type="ColorRect" parent="OverlayLayer/CourseHeaderCard" unique_id=1738125372]

@@ -5,12 +5,12 @@ using System.IO;
 public static class CourseCatalog
 {
     public const int DefaultPar = 3;
-    public static readonly CourseCardInfo DefaultCourseCard = new("Airways", 1, DefaultPar, 150);
+    public static readonly CourseCardInfo DefaultCourseCard = new("Airways", 1, DefaultPar, 203);
 
     private static readonly Dictionary<string, CourseCardInfo> CourseCardByKey = new(StringComparer.OrdinalIgnoreCase)
     {
-        { "res://courses/Range/range.tscn", new CourseCardInfo("Airways", 1, 3, 150) },
-        { "range", new CourseCardInfo("Airways", 1, 3, 150) }
+        { "res://courses/Range/range.tscn", new CourseCardInfo("Airways", 1, 3, 203) },
+        { "range", new CourseCardInfo("Airways", 1, 3, 203) }
     };
 
     public static bool TryGetPar(string sceneId, out int par)

@@ -120,15 +120,7 @@ public partial class Range : Node3D
         _rangeUi.SetStrokeCount(_strokeCount);
         UpdateTargetYardageDisplay();
 
-        bool followEnabled = (bool)_rangeSettings.CameraFollowMode.Value;
-        if (followEnabled)
-        {
-            SetCameraToStartImmediate();
-        }
-        else
-        {
-            TweenCameraFromCloseToStart();
-        }
+        SetCameraToStartImmediate();
         OnCameraFollowChanged(_rangeSettings.CameraFollowMode.Value);
         ApplySurfaceToBall();
     }
