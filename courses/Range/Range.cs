@@ -63,6 +63,7 @@ public partial class Range : Node3D
     private Node3D _phantomCamera;
     private GolfBall _ball;
     private AudioStreamPlayer3D _audioDriverHit;
+    private AudioStreamPlayer3D _audioGolfBallLanding;
     private RangeSettings _rangeSettings;
 
     public override void _Ready()
@@ -72,6 +73,7 @@ public partial class Range : Node3D
         _phantomCamera = GetNode<Node3D>("PhantomCamera3D");
         _ball = GetNode<GolfBall>("ShotTracker/Ball");
         _audioDriverHit = GetNodeOrNull<AudioStreamPlayer3D>("audio_driver_hit");
+        _audioGolfBallLanding = GetNodeOrNull<AudioStreamPlayer3D>("audio_golf_ball_landing");
         ResetBallToStart();
         // Physics world may not have collision shapes ready in _Ready;
         // re-snap once deferred so the terrain raycast succeeds.
@@ -79,6 +81,7 @@ public partial class Range : Node3D
 
         // Connect signals
         _ball.BallAtRest += OnGolfBallRest;
+        _ball.BallLanded += OnGolfBallLanded;
         _rangeUi.HitShot += OnRangeUiHitShot;
         _shotTracker.TestHitRequested += OnTestHitRequested;
 
@@ -110,7 +113,10 @@ public partial class Range : Node3D
     public override void _ExitTree()
     {
         if (_ball != null)
+        {
             _ball.BallAtRest -= OnGolfBallRest;
+            _ball.BallLanded -= OnGolfBallLanded;
+        }
         if (_rangeUi != null)
             _rangeUi.HitShot -= OnRangeUiHitShot;
         if (_shotTracker != null)
@@ -227,6 +233,11 @@ public partial class Range : Node3D
         }
     }
 
+    private void OnGolfBallLanded()
+    {
+        PlayGolfBallLandingAudio();
+    }
+
     private void OnRangeUiHitShot(Dictionary data)
     {
         _resetCts?.Cancel();
@@ -278,6 +289,18 @@ public partial class Range : Node3D
             _audioDriverHit.Stop();
 
         _audioDriverHit.Play();
+    }
+
+    private void PlayGolfBallLandingAudio()
+    {
+        if (_audioGolfBallLanding == null)
+            return;
+
+        _audioGolfBallLanding.GlobalPosition = _ball.GlobalPosition;
+        if (_audioGolfBallLanding.Playing)
+            _audioGolfBallLanding.Stop();
+
+        _audioGolfBallLanding.Play();
     }
 
     private void PrepareShotLaunchOrientation(Dictionary data)

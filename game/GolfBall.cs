@@ -23,6 +23,8 @@ public partial class GolfBall : CharacterBody3D
     // Signals
     [Signal]
     public delegate void BallAtRestEventHandler();
+    [Signal]
+    public delegate void BallLandedEventHandler();
 
     // Physics instances
     private readonly BallPhysics _ballPhysics = new();
@@ -311,7 +313,10 @@ public partial class GolfBall : CharacterBody3D
         OnGround = true;
 
         if (State == PhysicsEnums.BallState.Flight)
+        {
             State = PhysicsEnums.BallState.Rollout;
+            EmitSignal(SignalName.BallLanded);
+        }
 
         PhysicsLogger.Verbose($"Recovered ball-to-ground at {GlobalPosition} (normal: {hitNormal})");
         return true;
@@ -354,11 +359,12 @@ public partial class GolfBall : CharacterBody3D
             {
                 FloorNormal = normal;
                 float prevNormalVelocity = prevVelocity.Dot(normal);
-                bool isLanding = (State == PhysicsEnums.BallState.Flight) || prevNormalVelocity < -0.5f;
+                bool landedFromFlight = State == PhysicsEnums.BallState.Flight;
+                bool isLanding = landedFromFlight || prevNormalVelocity < -0.5f;
 
                 if (isLanding)
                 {
-                    if (State == PhysicsEnums.BallState.Flight)
+                    if (landedFromFlight)
                     {
                         PrintImpactDebug();
                         // Capture impact spin for friction calculation during rollout
@@ -371,6 +377,8 @@ public partial class GolfBall : CharacterBody3D
                     Velocity = bounceResult.NewVelocity;
                     Omega = bounceResult.NewOmega;
                     State = bounceResult.NewState;
+                    if (landedFromFlight && State == PhysicsEnums.BallState.Rollout)
+                        EmitSignal(SignalName.BallLanded);
 
                     PhysicsLogger.Verbose($"  Velocity after bounce: {Velocity} ({Velocity.Length():F2} m/s)");
 
