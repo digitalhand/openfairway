@@ -62,6 +62,7 @@ public partial class Range : Node3D
     private RangeUI _rangeUi;
     private Node3D _phantomCamera;
     private GolfBall _ball;
+    private AudioStreamPlayer3D _audioDriverHit;
     private RangeSettings _rangeSettings;
 
     public override void _Ready()
@@ -70,7 +71,11 @@ public partial class Range : Node3D
         _rangeUi = GetNode<RangeUI>("RangeUI");
         _phantomCamera = GetNode<Node3D>("PhantomCamera3D");
         _ball = GetNode<GolfBall>("ShotTracker/Ball");
+        _audioDriverHit = GetNodeOrNull<AudioStreamPlayer3D>("audio_driver_hit");
         ResetBallToStart();
+        // Physics world may not have collision shapes ready in _Ready;
+        // re-snap once deferred so the terrain raycast succeeds.
+        _ball.CallDeferred("SnapToGround");
 
         // Connect signals
         _ball.BallAtRest += OnGolfBallRest;
@@ -173,6 +178,7 @@ public partial class Range : Node3D
         PhysicsLogger.Info($"Launch monitor payload: {Json.Stringify(data)}");
         _rawBallData = data.Duplicate();
         UpdateBallDisplay();
+        PlayDriverHitAudio();
 
         // Forward to ShotTracker to actually hit the ball
         _shotTracker.OnTcpClientHitBall(data);
@@ -230,6 +236,7 @@ public partial class Range : Node3D
 
         _rawBallData = data.Duplicate();
         UpdateBallDisplay();
+        PlayDriverHitAudio();
 
         // Forward to ShotTracker to actually hit the ball
         _shotTracker.OnRangeUiHitShot(data);
@@ -255,10 +262,22 @@ public partial class Range : Node3D
 
         _rawBallData = data.Duplicate();
         UpdateBallDisplay();
+        PlayDriverHitAudio();
 
         _shotTracker.OnRangeUiHitShot(data);
 
         EnableCameraFollowDeferred();
+    }
+
+    private void PlayDriverHitAudio()
+    {
+        if (_audioDriverHit == null)
+            return;
+
+        if (_audioDriverHit.Playing)
+            _audioDriverHit.Stop();
+
+        _audioDriverHit.Play();
     }
 
     private void PrepareShotLaunchOrientation(Dictionary data)
@@ -433,6 +452,7 @@ public partial class Range : Node3D
     private void ResetBallToStart()
     {
         _ball.Position = BALL_START_POSITION;
+        _ball.SnapToGround();
         _ball.Velocity = Vector3.Zero;
         _ball.Omega = Vector3.Zero;
         _ball.State = PhysicsEnums.BallState.Rest;
@@ -440,7 +460,7 @@ public partial class Range : Node3D
 
     private Vector3 GetBallStartGlobalPosition()
     {
-        return _shotTracker.ToGlobal(BALL_START_POSITION);
+        return _ball.GlobalPosition;
     }
 
     private void CreateAimMarker()
