@@ -578,7 +578,7 @@ public partial class GolfBall : CharacterBody3D
         RolloutImpactSpinRpm = 0.0f;
         _surfaceZoneStack.Clear();
         SetSurface(GetConfiguredSurfaceType());
-        Position = START_POSITION;
+        // Launch from the current lie so course play can continue from where the ball stopped.
         SnapToGround();
 
         Velocity = launchVelocity;

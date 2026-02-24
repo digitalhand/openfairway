@@ -3,12 +3,12 @@
 importer="wav"
 type="AudioStreamWAV"
 uid="uid://b4napiey6vofb"
-path="res://.godot/imported/golf_ball_landing.wav-6530846cd9dc79bf17583637ed5b3241.sample"
+path="res://.godot/imported/golf_ball_landing.wav-3eec420b331f3d32b242f920de5a9564.sample"
 
 [deps]
 
-source_file="res://addons/proton_scatter/demos/assets/sounds/golf_ball_landing.wav"
-dest_files=["res://.godot/imported/golf_ball_landing.wav-6530846cd9dc79bf17583637ed5b3241.sample"]
+source_file="res://assets/sounds/golf_ball_landing.wav"
+dest_files=["res://.godot/imported/golf_ball_landing.wav-3eec420b331f3d32b242f920de5a9564.sample"]
 
 [params]
 

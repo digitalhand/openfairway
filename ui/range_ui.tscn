@@ -23,23 +23,156 @@ layout_mode = 2
 size_flags_vertical = 0
 theme_override_constants/separation = 11
 
-[node name="PlayerName" type="Label" parent="HBoxContainer" unique_id=2137630634]
+[node name="StrokeCount" type="Label" parent="HBoxContainer" unique_id=210441882]
 layout_mode = 2
 size_flags_vertical = 0
-theme_override_font_sizes/font_size = 32
-text = "OpenFairway"
+theme_override_font_sizes/font_size = 22
+text = "Strokes: 0"
 vertical_alignment = 1
 
-[node name="Control" type="Control" parent="HBoxContainer" unique_id=1936266922]
+[node name="ScoreLabel" type="Label" parent="HBoxContainer" unique_id=1401290150]
+layout_mode = 2
+size_flags_vertical = 0
+theme_override_font_sizes/font_size = 22
+text = "Score: --"
+vertical_alignment = 1
+
+[node name="TargetYardage" type="Label" parent="HBoxContainer" unique_id=1102041797]
+layout_mode = 2
+size_flags_vertical = 0
+theme_override_font_sizes/font_size = 22
+text = "To Target: -- yd"
+vertical_alignment = 1
+
+[node name="OverlayLayer" type="CanvasLayer" parent="." unique_id=1270438998]
+
+[node name="CourseHeaderCard" type="HBoxContainer" parent="OverlayLayer" unique_id=1692748890]
+layout_mode = 0
+anchor_left = 1.0
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 0.0
+offset_left = -449.0
+offset_top = 15.0
+offset_right = -15.0
+offset_bottom = 77.0
+theme_override_constants/separation = 2
+
+[node name="HoleBox" type="ColorRect" parent="OverlayLayer/CourseHeaderCard" unique_id=41598303]
+custom_minimum_size = Vector2(56, 62)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 1)
+
+[node name="HoleNumberLabel" type="Label" parent="OverlayLayer/CourseHeaderCard/HoleBox" unique_id=1813057027]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0.113725, 0.176471, 0.239216, 1)
+theme_override_font_sizes/font_size = 30
+text = "1"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="InfoBlock" type="VBoxContainer" parent="OverlayLayer/CourseHeaderCard" unique_id=1229436175]
+custom_minimum_size = Vector2(318, 62)
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="CourseNameBar" type="ColorRect" parent="OverlayLayer/CourseHeaderCard/InfoBlock" unique_id=1608661940]
+custom_minimum_size = Vector2(318, 36)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.113725, 0.176471, 0.239216, 1)
+
+[node name="CourseNameLabel" type="Label" parent="OverlayLayer/CourseHeaderCard/InfoBlock/CourseNameBar" unique_id=1079787818]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_right = -8.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+theme_override_font_sizes/font_size = 24
+text = "Airways"
+vertical_alignment = 1
+
+[node name="CourseMetaBar" type="ColorRect" parent="OverlayLayer/CourseHeaderCard/InfoBlock" unique_id=849155194]
+custom_minimum_size = Vector2(318, 26)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.286275, 0.337255, 0.372549, 1)
+
+[node name="MetaHBox" type="HBoxContainer" parent="OverlayLayer/CourseHeaderCard/InfoBlock/CourseMetaBar" unique_id=2144498722]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = 1.0
+offset_right = -10.0
+offset_bottom = -1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 10
+
+[node name="ParLabel" type="Label" parent="OverlayLayer/CourseHeaderCard/InfoBlock/CourseMetaBar/MetaHBox" unique_id=1595270246]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+theme_override_font_sizes/font_size = 15
+text = "PAR 3"
+vertical_alignment = 1
+
+[node name="MetaSpacer" type="Control" parent="OverlayLayer/CourseHeaderCard/InfoBlock/CourseMetaBar/MetaHBox" unique_id=1391113355]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="ShotTypeOption" type="OptionButton" parent="HBoxContainer" unique_id=536066020]
+[node name="YardageLabel" type="Label" parent="OverlayLayer/CourseHeaderCard/InfoBlock/CourseMetaBar/MetaHBox" unique_id=996825725]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+theme_override_font_sizes/font_size = 15
+text = "150 YDS"
+vertical_alignment = 1
+
+[node name="SettingsBox" type="ColorRect" parent="OverlayLayer/CourseHeaderCard" unique_id=1738125372]
+custom_minimum_size = Vector2(56, 62)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.113725, 0.176471, 0.239216, 0.72)
+
+[node name="SettingsLabel" type="Label" parent="OverlayLayer/CourseHeaderCard/SettingsBox" unique_id=2035036215]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+theme_override_font_sizes/font_size = 30
+text = "..."
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="CourseHeaderControlsRow" type="HBoxContainer" parent="OverlayLayer" unique_id=809501377]
+layout_mode = 0
+anchor_left = 1.0
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 0.0
+offset_left = -449.0
+offset_top = 85.0
+offset_right = -15.0
+offset_bottom = 121.0
+theme_override_constants/separation = 6
+
+[node name="ShotTypeOption" type="OptionButton" parent="OverlayLayer/CourseHeaderControlsRow" unique_id=536066020]
 visible = false
+custom_minimum_size = Vector2(170, 0)
 layout_mode = 2
 size_flags_vertical = 0
 
-[node name="HitShotButton" type="Button" parent="HBoxContainer" unique_id=1466247724]
+[node name="HitShotButton" type="Button" parent="OverlayLayer/CourseHeaderControlsRow" unique_id=1466247724]
 visible = false
 custom_minimum_size = Vector2(120, 0)
 layout_mode = 2
@@ -47,16 +180,18 @@ size_flags_vertical = 0
 theme_override_font_sizes/font_size = 18
 text = "Hit Shot"
 
-[node name="PanelsMenu" type="Button" parent="HBoxContainer" unique_id=36180300]
+[node name="ControlsSpacer" type="Control" parent="OverlayLayer/CourseHeaderControlsRow" unique_id=413646088]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="PanelsMenu" type="Button" parent="OverlayLayer/CourseHeaderControlsRow" unique_id=36180300]
 custom_minimum_size = Vector2(120, 0)
 layout_mode = 2
 size_flags_vertical = 0
 theme_override_font_sizes/font_size = 18
 text = "Panels"
 
-[node name="PanelsPopup" type="PopupMenu" parent="HBoxContainer/PanelsMenu" unique_id=488506219]
-
-[node name="OverlayLayer" type="CanvasLayer" parent="." unique_id=1270438998]
+[node name="PanelsPopup" type="PopupMenu" parent="OverlayLayer/CourseHeaderControlsRow/PanelsMenu" unique_id=488506219]
 
 [node name="TotalDistanceOverlay" type="Label" parent="OverlayLayer" unique_id=793381493]
 visible = false

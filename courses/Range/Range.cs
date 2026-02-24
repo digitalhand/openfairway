@@ -37,6 +37,7 @@ public partial class Range : Node3D
     private const float CAMERA_START_CLOSE_BACK = 0.9f;
     private const float CAMERA_START_CLOSE_HEIGHT = 0.25f;
     private const float CAMERA_START_CLOSE_LOOK_HEIGHT = 0.1f;
+    private const float METERS_TO_YARDS = 1.09361f;
 
     // Orbit camera constants
     private const float CAMERA_ORBIT_RADIUS = 2.5f;
@@ -48,6 +49,7 @@ public partial class Range : Node3D
     private const float AIM_MARKER_THICKNESS = 0.04f;
     private const float AIM_MARKER_HOLD_TIME = 0.18f;
     private const float CAMERA_RESET_TWEEN_DURATION = 1.2f;
+    private const float GOAL_COMPLETE_DELAY_SECONDS = 3.0f;
 
     // Current horizontal aim angle in degrees; 0 = directly behind ball
     private float _cameraYaw = 0.0f;
@@ -61,19 +63,34 @@ public partial class Range : Node3D
     private ShotTracker _shotTracker;
     private RangeUI _rangeUi;
     private Node3D _phantomCamera;
+    private Node3D _basicGreenTarget;
     private GolfBall _ball;
     private AudioStreamPlayer3D _audioDriverHit;
+    private AudioStreamPlayer3D _audioBackgroundBirds;
     private AudioStreamPlayer3D _audioGolfBallLanding;
     private RangeSettings _rangeSettings;
+    private GameProgressStore _progressStore;
+    private string _sceneId = string.Empty;
+    private CourseCardInfo _courseCard = CourseCatalog.DefaultCourseCard;
+    private int _coursePar = CourseCatalog.DefaultPar;
+    private int _strokeCount = 0;
+    private bool _goalCompletionCountdownRunning = false;
+    private readonly System.Collections.Generic.List<CourseGoalZone> _goalZones = new();
 
     public override void _Ready()
     {
         _shotTracker = GetNode<ShotTracker>("ShotTracker");
         _rangeUi = GetNode<RangeUI>("RangeUI");
         _phantomCamera = GetNode<Node3D>("PhantomCamera3D");
+        _basicGreenTarget = GetNodeOrNull<Node3D>("BasicGreen");
         _ball = GetNode<GolfBall>("ShotTracker/Ball");
-        _audioDriverHit = GetNodeOrNull<AudioStreamPlayer3D>("audio_driver_hit");
+        _audioDriverHit = GetNodeOrNull<AudioStreamPlayer3D>("audio_iron_hit");
+        _audioBackgroundBirds = GetNodeOrNull<AudioStreamPlayer3D>("audio_background_birds");
         _audioGolfBallLanding = GetNodeOrNull<AudioStreamPlayer3D>("audio_golf_ball_landing");
+        ConfigureConsistentAudioLevels();
+        _progressStore = GetNodeOrNull<GameProgressStore>("/root/GameProgressStore");
+        _sceneId = GetSceneId();
+        ResolveCourseCard();
         ResetBallToStart();
         // Physics world may not have collision shapes ready in _Ready;
         // re-snap once deferred so the terrain raycast succeeds.
@@ -96,6 +113,10 @@ public partial class Range : Node3D
         _rangeSettings.CameraFollowMode.SettingChanged += OnCameraFollowChanged;
         _rangeSettings.SurfaceType.SettingChanged += OnSurfaceChanged;
         CreateAimMarker();
+        ConnectGoalZones();
+        LoadRoundProgress();
+        _rangeUi.SetStrokeCount(_strokeCount);
+        UpdateTargetYardageDisplay();
 
         bool followEnabled = (bool)_rangeSettings.CameraFollowMode.Value;
         if (followEnabled)
@@ -126,26 +147,24 @@ public partial class Range : Node3D
             _rangeSettings.CameraFollowMode.SettingChanged -= OnCameraFollowChanged;
             _rangeSettings.SurfaceType.SettingChanged -= OnSurfaceChanged;
         }
+        _goalZones.Clear();
     }
 
     public override void _UnhandledInput(InputEvent @event)
     {
         if (@event.IsActionPressed("reset"))
         {
-            _resetCts?.Cancel();
-            _isShotLaunching = false;
-            HideAimMarker();
-            ResetDisplayData();
-            _rangeUi.SetData(_displayData);
-            _cameraYaw = 0.0f;
-            _launchFollowDirection = Vector3.Right;
-            SetCameraToStartImmediate();
+            ResetRoundView();
+            SetStrokeCount(0);
+            ClearRoundProgress();
+            CallDeferred(nameof(SetCameraToStartImmediate));
         }
     }
 
     public override void _Process(double delta)
     {
         UpdateAimMarkerTimer((float)delta);
+        UpdateTargetYardageDisplay();
 
         if (_isShotLaunching || _shotTracker.GetBallState() != PhysicsEnums.BallState.Rest)
         {
@@ -177,6 +196,9 @@ public partial class Range : Node3D
 
     private void OnTcpClientHitBall(Dictionary data)
     {
+        if (_goalCompletionCountdownRunning)
+            return;
+
         _resetCts?.Cancel();
         HideAimMarker();
         PrepareShotLaunchOrientation(data);
@@ -185,6 +207,7 @@ public partial class Range : Node3D
         _rawBallData = data.Duplicate();
         UpdateBallDisplay();
         PlayDriverHitAudio();
+        IncrementStrokeCount();
 
         // Forward to ShotTracker to actually hit the ball
         _shotTracker.OnTcpClientHitBall(data);
@@ -198,6 +221,22 @@ public partial class Range : Node3D
         try
         {
             UpdateBallDisplay();
+
+            if (_goalCompletionCountdownRunning)
+            {
+                FreezeCameraOnBall();
+                return;
+            }
+
+            if (IsBallOnGoalZone())
+            {
+                PhysicsLogger.Info("Ball settled on BasicGreen. Ending round in 3 seconds.");
+                FreezeCameraOnBall();
+                StartGoalCompletionCountdown();
+                return;
+            }
+
+            SaveRoundProgress();
 
             // Freeze camera at its current spot on rest to avoid drift/overshoot
             FreezeCameraOnBall();
@@ -225,6 +264,7 @@ public partial class Range : Node3D
                 ResetDisplayData();
                 _rangeUi.SetData(_displayData);
                 _shotTracker.ResetBall();
+                CallDeferred(nameof(SetCameraToStartImmediate));
             }
         }
         catch (System.Exception ex)
@@ -240,6 +280,9 @@ public partial class Range : Node3D
 
     private void OnRangeUiHitShot(Dictionary data)
     {
+        if (_goalCompletionCountdownRunning)
+            return;
+
         _resetCts?.Cancel();
         HideAimMarker();
         PrepareShotLaunchOrientation(data);
@@ -248,6 +291,7 @@ public partial class Range : Node3D
         _rawBallData = data.Duplicate();
         UpdateBallDisplay();
         PlayDriverHitAudio();
+        IncrementStrokeCount();
 
         // Forward to ShotTracker to actually hit the ball
         _shotTracker.OnRangeUiHitShot(data);
@@ -258,6 +302,9 @@ public partial class Range : Node3D
 
     private void OnTestHitRequested()
     {
+        if (_goalCompletionCountdownRunning)
+            return;
+
         _resetCts?.Cancel();
         HideAimMarker();
         var data = new Dictionary
@@ -274,6 +321,7 @@ public partial class Range : Node3D
         _rawBallData = data.Duplicate();
         UpdateBallDisplay();
         PlayDriverHitAudio();
+        IncrementStrokeCount();
 
         _shotTracker.OnRangeUiHitShot(data);
 
@@ -289,6 +337,24 @@ public partial class Range : Node3D
             _audioDriverHit.Stop();
 
         _audioDriverHit.Play();
+    }
+
+    private void ConfigureConsistentAudioLevels()
+    {
+        ConfigureNonAttenuated3DAudio(_audioBackgroundBirds, ensurePlaying: true);
+        ConfigureNonAttenuated3DAudio(_audioDriverHit, ensurePlaying: false);
+    }
+
+    private void ConfigureNonAttenuated3DAudio(AudioStreamPlayer3D player, bool ensurePlaying)
+    {
+        if (player == null)
+            return;
+
+        player.AttenuationModel = AudioStreamPlayer3D.AttenuationModelEnum.Disabled;
+        player.DopplerTracking = AudioStreamPlayer3D.DopplerTrackingEnum.Disabled;
+
+        if (ensurePlaying && !player.Playing)
+            player.Play();
     }
 
     private void PlayGolfBallLandingAudio()
@@ -363,19 +429,16 @@ public partial class Range : Node3D
 
     private async System.Threading.Tasks.Task ResetCameraToStart()
     {
-        _cameraYaw = 0.0f;
         _isShotLaunching = false;
         _ball.AimYawOffsetDeg = 0.0f;
         HideAimMarker();
 
-        // Reset ball immediately so it's at the tee when the camera moves there.
-        // ShotTracker.ResetBall() also resets the ball (deferred), but additionally
-        // clears tracers and shot stats — the two resets serve different purposes.
-        ResetBallToStart();
+        // Keep the ball at the current lie; only reset on explicit new-round actions.
         _phantomCamera.Set("follow_mode", (int)FollowMode3D.None);
         _phantomCamera.Set("look_at_mode", (int)LookAtMode.None);
 
         Vector3 ballStartGlobal = GetBallStartGlobalPosition();
+        AlignCameraYawToTarget(ballStartGlobal);
         Vector3 startPos = GetOrbitPosition(ballStartGlobal);
         Vector3 endLookPos = ballStartGlobal + CAMERA_LOOK_OFFSET;
         Vector3 startLookPos = _phantomCamera.GlobalPosition + (-_phantomCamera.GlobalBasis.Z * 15.0f);
@@ -465,6 +528,7 @@ public partial class Range : Node3D
     private void SetCameraToStartImmediate()
     {
         Vector3 ballStartGlobal = GetBallStartGlobalPosition();
+        AlignCameraYawToTarget(ballStartGlobal);
         _phantomCamera.Set("follow_mode", (int)FollowMode3D.None);
         _phantomCamera.Set("look_at_mode", (int)LookAtMode.None);
         _phantomCamera.Set("global_position", GetOrbitPosition(ballStartGlobal));
@@ -479,6 +543,184 @@ public partial class Range : Node3D
         _ball.Velocity = Vector3.Zero;
         _ball.Omega = Vector3.Zero;
         _ball.State = PhysicsEnums.BallState.Rest;
+    }
+
+    private void ConnectGoalZones()
+    {
+        _goalZones.Clear();
+
+        foreach (Node node in GetTree().GetNodesInGroup("course_goal_zone"))
+        {
+            if (node is not CourseGoalZone goalZone)
+                continue;
+
+            _goalZones.Add(goalZone);
+        }
+    }
+
+    private async void StartGoalCompletionCountdown()
+    {
+        if (_goalCompletionCountdownRunning)
+            return;
+
+        _goalCompletionCountdownRunning = true;
+        _resetCts?.Cancel();
+        _resetCts = new CancellationTokenSource();
+        var token = _resetCts.Token;
+
+        await ToSignal(GetTree().CreateTimer(GOAL_COMPLETE_DELAY_SECONDS), SceneTreeTimer.SignalName.Timeout);
+        if (token.IsCancellationRequested)
+        {
+            _goalCompletionCountdownRunning = false;
+            return;
+        }
+
+        CompleteGoalRound();
+        _goalCompletionCountdownRunning = false;
+    }
+
+    private void CompleteGoalRound()
+    {
+        if (_strokeCount > 0)
+        {
+            ScoreResult finalScore = ScoreMapper.MapScore(_strokeCount, _coursePar);
+            string relative = finalScore.RelativeToPar > 0 ? $"+{finalScore.RelativeToPar}" : finalScore.RelativeToPar.ToString();
+            PhysicsLogger.Info($"Goal countdown complete. Final score: {finalScore.Label} ({finalScore.Strokes} strokes, par {finalScore.Par}, {relative}). Starting a new round.");
+        }
+        else
+        {
+            PhysicsLogger.Info("Goal countdown complete. Starting a new round.");
+        }
+        ResetRoundView();
+        SetStrokeCount(0);
+        ClearRoundProgress();
+        _shotTracker.ResetBall();
+        CallDeferred(nameof(SetCameraToStartImmediate));
+    }
+
+    private bool IsBallOnGoalZone()
+    {
+        foreach (var goalZone in _goalZones)
+        {
+            if (goalZone == null)
+                continue;
+
+            if (goalZone.IsBallOnZone(_ball))
+                return true;
+        }
+
+        return false;
+    }
+
+    private void LoadRoundProgress()
+    {
+        SetStrokeCount(0);
+
+        if (_progressStore == null || string.IsNullOrWhiteSpace(_sceneId))
+            return;
+
+        if (!_progressStore.TryGetSlotForScene(_sceneId, out var slot))
+            return;
+
+        _ball.GlobalPosition = slot.BallPosition;
+        _ball.SnapToGround();
+        _ball.Velocity = Vector3.Zero;
+        _ball.Omega = Vector3.Zero;
+        _ball.State = PhysicsEnums.BallState.Rest;
+        _ball.OnGround = false;
+        _ball.AimYawOffsetDeg = 0.0f;
+        _ball.LaunchSpinRpm = 0.0f;
+        _ball.RolloutImpactSpinRpm = 0.0f;
+
+        SetStrokeCount(slot.Strokes);
+    }
+
+    private void SaveRoundProgress()
+    {
+        if (_progressStore == null)
+            return;
+
+        if (string.IsNullOrWhiteSpace(_sceneId))
+            _sceneId = GetSceneId();
+
+        if (string.IsNullOrWhiteSpace(_sceneId))
+            return;
+
+        _progressStore.SaveSlot(new CourseProgressSlot
+        {
+            SceneId = _sceneId,
+            BallPosition = _ball.GlobalPosition,
+            Strokes = _strokeCount,
+            Completed = false
+        });
+    }
+
+    private void ClearRoundProgress()
+    {
+        _progressStore?.ClearSlot();
+    }
+
+    private void IncrementStrokeCount()
+    {
+        SetStrokeCount(_strokeCount + 1);
+    }
+
+    private void SetStrokeCount(int strokes)
+    {
+        _strokeCount = Mathf.Max(0, strokes);
+        _rangeUi?.SetStrokeCount(_strokeCount);
+        UpdateScoreLabelFromStrokes();
+    }
+
+    private void ResetRoundView()
+    {
+        _resetCts?.Cancel();
+        _goalCompletionCountdownRunning = false;
+        _isShotLaunching = false;
+        HideAimMarker();
+        ResetDisplayData();
+        _rangeUi.SetData(_displayData);
+        _launchFollowDirection = Vector3.Right;
+    }
+
+    private string GetSceneId()
+    {
+        var scene = GetTree()?.CurrentScene;
+        if (scene == null)
+            return string.Empty;
+
+        return string.IsNullOrWhiteSpace(scene.SceneFilePath) ? scene.Name : scene.SceneFilePath;
+    }
+
+    private void ResolveCourseCard()
+    {
+        _courseCard = CourseCatalog.DefaultCourseCard;
+        if (CourseCatalog.TryGetCourseCard(_sceneId, out CourseCardInfo resolvedCard))
+        {
+            _courseCard = resolvedCard;
+        }
+        else
+        {
+            PhysicsLogger.Info($"No course header configured for scene '{_sceneId}'. Using defaults.");
+        }
+
+        _coursePar = _courseCard.Par;
+        _rangeUi?.SetCourseHeader(_courseCard.CourseName, _courseCard.HoleNumber, _courseCard.Par, _courseCard.Yardage);
+    }
+
+    private void UpdateScoreLabelFromStrokes()
+    {
+        if (_rangeUi == null)
+            return;
+
+        if (_strokeCount <= 0)
+        {
+            _rangeUi.SetScoreUnknown();
+            return;
+        }
+
+        ScoreResult score = ScoreMapper.MapScore(_strokeCount, _coursePar);
+        _rangeUi.SetScoreLabel(score.Label);
     }
 
     private Vector3 GetBallStartGlobalPosition()
@@ -597,6 +839,7 @@ public partial class Range : Node3D
         _phantomCamera.Set("look_at_mode", (int)LookAtMode.None);
 
         Vector3 ballStartGlobal = GetBallStartGlobalPosition();
+        AlignCameraYawToTarget(ballStartGlobal);
         Vector3 ballLookPos = ballStartGlobal + CAMERA_LOOK_OFFSET;
         Vector3 closeLookPos = ballStartGlobal + Vector3.Up * CAMERA_START_CLOSE_LOOK_HEIGHT;
         Vector3 startPos = GetOrbitPosition(ballStartGlobal);
@@ -621,6 +864,25 @@ public partial class Range : Node3D
         {
             _phantomCamera.Call("look_at", pos, Vector3.Up);
         }), closeLookPos, ballLookPos, CAMERA_START_TWEEN_DURATION);
+    }
+
+    private void AlignCameraYawToTarget(Vector3 ballPos)
+    {
+        _cameraYaw = GetTargetAlignedYawDeg(ballPos);
+    }
+
+    private float GetTargetAlignedYawDeg(Vector3 ballPos)
+    {
+        if (_basicGreenTarget == null)
+            return 0.0f;
+
+        Vector3 toTarget = _basicGreenTarget.GlobalPosition - ballPos;
+        toTarget.Y = 0.0f;
+        if (toTarget.LengthSquared() < 0.000001f)
+            return 0.0f;
+
+        float targetAimDeg = Mathf.RadToDeg(Mathf.Atan2(toTarget.Z, toTarget.X));
+        return Mathf.Wrap(-targetAimDeg, -180.0f, 180.0f);
     }
 
     /// <summary>
@@ -692,5 +954,30 @@ public partial class Range : Node3D
         );
         _lastDisplay = _displayData.Duplicate();
         _rangeUi.SetData(_displayData);
+    }
+
+    private void UpdateTargetYardageDisplay()
+    {
+        if (_rangeUi == null)
+            return;
+
+        float yards = GetYardsToTarget();
+        if (yards < 0.0f)
+        {
+            _rangeUi.SetTargetYardageUnknown();
+            return;
+        }
+
+        _rangeUi.SetTargetYardage(yards);
+    }
+
+    private float GetYardsToTarget()
+    {
+        if (_basicGreenTarget == null || _ball == null)
+            return -1.0f;
+
+        Vector3 toTarget = _basicGreenTarget.GlobalPosition - _ball.GlobalPosition;
+        toTarget.Y = 0.0f;
+        return Mathf.Max(0.0f, toTarget.Length() * METERS_TO_YARDS);
     }
 }

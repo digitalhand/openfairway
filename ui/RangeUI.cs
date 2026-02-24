@@ -6,12 +6,24 @@ public partial class RangeUI : MarginContainer
     [Signal]
     public delegate void HitShotEventHandler(Dictionary data);
 
+    private const string DefaultCourseName = "Airways";
+    private const int DefaultHoleNumber = 1;
+    private const int DefaultPar = 3;
+    private const int DefaultYardage = 150;
+
     private string _selectedShotPath = TestShots.DefaultShot;
     private GridCanvas _gridCanvas;
     private Button _panelsMenu;
     private PopupMenu _panelsPopup;
     private OptionButton _shotTypeOption;
     private Button _hitShotButton;
+    private Label _courseNameLabel;
+    private Label _holeNumberLabel;
+    private Label _parHeaderLabel;
+    private Label _yardageHeaderLabel;
+    private Label _strokeCountLabel;
+    private Label _scoreLabel;
+    private Label _targetYardageLabel;
     private bool _shotControlsVisible;
     private readonly System.Collections.Generic.Dictionary<int, string> _panelMenuIndexToName = new();
     private Setting _shotInjectorSetting;
@@ -40,11 +52,22 @@ public partial class RangeUI : MarginContainer
         shotInjector.Inject += OnShotInjectorInject;
 
         // Connect UI button signals
-        _hitShotButton = GetNode<Button>("HBoxContainer/HitShotButton");
+        _hitShotButton = GetNode<Button>("OverlayLayer/CourseHeaderControlsRow/HitShotButton");
         _hitShotButton.Pressed += OnHitShotPressed;
 
-        _shotTypeOption = GetNode<OptionButton>("HBoxContainer/ShotTypeOption");
+        _shotTypeOption = GetNode<OptionButton>("OverlayLayer/CourseHeaderControlsRow/ShotTypeOption");
         _shotTypeOption.ItemSelected += OnShotTypeSelected;
+        _courseNameLabel = GetNode<Label>("OverlayLayer/CourseHeaderCard/InfoBlock/CourseNameBar/CourseNameLabel");
+        _holeNumberLabel = GetNode<Label>("OverlayLayer/CourseHeaderCard/HoleBox/HoleNumberLabel");
+        _parHeaderLabel = GetNode<Label>("OverlayLayer/CourseHeaderCard/InfoBlock/CourseMetaBar/MetaHBox/ParLabel");
+        _yardageHeaderLabel = GetNode<Label>("OverlayLayer/CourseHeaderCard/InfoBlock/CourseMetaBar/MetaHBox/YardageLabel");
+        _strokeCountLabel = GetNode<Label>("HBoxContainer/StrokeCount");
+        _scoreLabel = GetNode<Label>("HBoxContainer/ScoreLabel");
+        _targetYardageLabel = GetNode<Label>("HBoxContainer/TargetYardage");
+        SetCourseHeader(DefaultCourseName, DefaultHoleNumber, DefaultPar, DefaultYardage);
+        SetStrokeCount(0);
+        SetScoreUnknown();
+        SetTargetYardageUnknown();
 
         // Cache DataPanel references
         _panelDistance = GetNode<DataPanel>("GridCanvas/Distance");
@@ -135,6 +158,70 @@ public partial class RangeUI : MarginContainer
         GetNode<Label>("OverlayLayer/TotalDistanceOverlay").Text = "Total Distance --";
     }
 
+    public void SetStrokeCount(int strokes)
+    {
+        if (_strokeCountLabel == null)
+            return;
+
+        _strokeCountLabel.Text = $"Strokes: {Mathf.Max(0, strokes)}";
+    }
+
+    public void SetTargetYardage(float yards)
+    {
+        if (_targetYardageLabel == null)
+            return;
+
+        int wholeYards = Mathf.RoundToInt(Mathf.Max(0.0f, yards));
+        _targetYardageLabel.Text = $"To Target: {wholeYards} yd";
+    }
+
+    public void SetTargetYardageUnknown()
+    {
+        if (_targetYardageLabel == null)
+            return;
+
+        _targetYardageLabel.Text = "To Target: -- yd";
+    }
+
+    public void SetScoreLabel(string label)
+    {
+        if (_scoreLabel == null)
+            return;
+
+        string safeLabel = string.IsNullOrWhiteSpace(label) ? "--" : label;
+        _scoreLabel.Text = $"Score: {safeLabel}";
+    }
+
+    public void SetScoreUnknown()
+    {
+        if (_scoreLabel == null)
+            return;
+
+        _scoreLabel.Text = "Score: --";
+    }
+
+    public void SetCourseHeader(string courseName, int holeNumber, int par, int yardage)
+    {
+        if (_courseNameLabel != null)
+            _courseNameLabel.Text = string.IsNullOrWhiteSpace(courseName) ? DefaultCourseName : courseName.Trim();
+
+        if (_holeNumberLabel != null)
+            _holeNumberLabel.Text = Mathf.Max(1, holeNumber).ToString();
+
+        if (_parHeaderLabel != null)
+            _parHeaderLabel.Text = $"PAR {Mathf.Max(1, par)}";
+
+        SetCourseHeaderYardage(yardage);
+    }
+
+    public void SetCourseHeaderYardage(int yardage)
+    {
+        if (_yardageHeaderLabel == null)
+            return;
+
+        _yardageHeaderLabel.Text = $"{Mathf.Max(0, yardage)} YDS";
+    }
+
     private void PopulateShotTypes()
     {
         _shotTypeOption.Clear();
@@ -173,8 +260,8 @@ public partial class RangeUI : MarginContainer
 
     private void SetupPanelsMenu()
     {
-        _panelsMenu = GetNode<Button>("HBoxContainer/PanelsMenu");
-        _panelsPopup = GetNode<PopupMenu>("HBoxContainer/PanelsMenu/PanelsPopup");
+        _panelsMenu = GetNode<Button>("OverlayLayer/CourseHeaderControlsRow/PanelsMenu");
+        _panelsPopup = GetNode<PopupMenu>("OverlayLayer/CourseHeaderControlsRow/PanelsMenu/PanelsPopup");
         _panelsPopup.Clear();
         _panelMenuIndexToName.Clear();
 

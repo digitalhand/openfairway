@@ -23,6 +23,7 @@ config/features=PackedStringArray("4.6", "C#", "Mobile")
 
 PhantomCameraManager="*uid://duq6jhf6unyis"
 GlobalSettings="*res://utils/Settings/GlobalSettings.cs"
+GameProgressStore="*res://game/save/GameProgressStore.cs"
 
 [display]
 

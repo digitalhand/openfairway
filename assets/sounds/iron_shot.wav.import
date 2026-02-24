@@ -3,12 +3,12 @@
 importer="wav"
 type="AudioStreamWAV"
 uid="uid://dfnfnnag7f8yx"
-path="res://.godot/imported/iron_shot.wav-30d99e50103c92f572faa1698de7c8a4.sample"
+path="res://.godot/imported/iron_shot.wav-9ad5bdbcc5d878e6f507788424a65d5f.sample"
 
 [deps]
 
-source_file="res://addons/proton_scatter/demos/assets/sounds/iron_shot.wav"
-dest_files=["res://.godot/imported/iron_shot.wav-30d99e50103c92f572faa1698de7c8a4.sample"]
+source_file="res://assets/sounds/iron_shot.wav"
+dest_files=["res://.godot/imported/iron_shot.wav-9ad5bdbcc5d878e6f507788424a65d5f.sample"]
 
 [params]
 

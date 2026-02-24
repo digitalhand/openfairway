@@ -1,4 +1,4 @@
-[gd_resource type="AnimatedTexture" load_steps=9 format=3 uid="uid://dev74yqbbxjc6"]
+[gd_resource type="AnimatedTexture" format=3 uid="uid://dev74yqbbxjc6"]
 
 [ext_resource type="Texture2D" uid="uid://bxaffg1bqa2jk" path="res://addons/proton_scatter/icons/loading/progress1.svg" id="1_n051c"]
 [ext_resource type="Texture2D" uid="uid://dt36cq4i6vxbp" path="res://addons/proton_scatter/icons/loading/progress2.svg" id="2_huiva"]
