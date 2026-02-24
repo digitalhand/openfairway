@@ -23,6 +23,8 @@ public partial class GolfBall : CharacterBody3D
     // Signals
     [Signal]
     public delegate void BallAtRestEventHandler();
+    [Signal]
+    public delegate void BallLandedEventHandler();
 
     // Physics instances
     private readonly BallPhysics _ballPhysics = new();
@@ -30,8 +32,9 @@ public partial class GolfBall : CharacterBody3D
     private readonly Surface _surfaceHelper = new();
     private readonly ShotSetup _shotSetup = new();
 
-    // State
-    public const float START_HEIGHT = 0.02f;
+    // State — ball center sits one radius above ground so it rests on the surface
+    public const float TEE_HEIGHT = BallPhysics.RADIUS;
+    public static readonly Vector3 START_POSITION = new Vector3(1.0f, TEE_HEIGHT, 0.0f);
     public PhysicsEnums.BallState State { get; set; } = PhysicsEnums.BallState.Rest;
     public Vector3 Omega { get; set; } = Vector3.Zero;  // Angular velocity (rad/s)
     public bool OnGround { get; set; } = false;
@@ -39,6 +42,9 @@ public partial class GolfBall : CharacterBody3D
 
     // Settings reference for signal cleanup
     private RangeSettings _rangeSettings;
+
+    // Terrain3D data reference for height queries (cached on _Ready)
+    private GodotObject _terrainData;
 
     // Surface parameters
     public PhysicsEnums.SurfaceType SurfaceType { get; set; } = PhysicsEnums.SurfaceType.Fairway;
@@ -63,9 +69,21 @@ public partial class GolfBall : CharacterBody3D
 
     public override void _Ready()
     {
+        CacheTerrainData();
         ConnectSettings();
         SetSurface(GetConfiguredSurfaceType());
         UpdateEnvironment();
+    }
+
+    private void CacheTerrainData()
+    {
+        var terrain = GetTree().Root.FindChild("Terrain3D", true, false);
+        if (terrain == null)
+            return;
+
+        var data = terrain.Get("data");
+        if (data.Obj is GodotObject obj)
+            _terrainData = obj;
     }
 
     private void ConnectSettings()
@@ -295,7 +313,10 @@ public partial class GolfBall : CharacterBody3D
         OnGround = true;
 
         if (State == PhysicsEnums.BallState.Flight)
+        {
             State = PhysicsEnums.BallState.Rollout;
+            EmitSignal(SignalName.BallLanded);
+        }
 
         PhysicsLogger.Verbose($"Recovered ball-to-ground at {GlobalPosition} (normal: {hitNormal})");
         return true;
@@ -338,11 +359,12 @@ public partial class GolfBall : CharacterBody3D
             {
                 FloorNormal = normal;
                 float prevNormalVelocity = prevVelocity.Dot(normal);
-                bool isLanding = (State == PhysicsEnums.BallState.Flight) || prevNormalVelocity < -0.5f;
+                bool landedFromFlight = State == PhysicsEnums.BallState.Flight;
+                bool isLanding = landedFromFlight || prevNormalVelocity < -0.5f;
 
                 if (isLanding)
                 {
-                    if (State == PhysicsEnums.BallState.Flight)
+                    if (landedFromFlight)
                     {
                         PrintImpactDebug();
                         // Capture impact spin for friction calculation during rollout
@@ -355,6 +377,8 @@ public partial class GolfBall : CharacterBody3D
                     Velocity = bounceResult.NewVelocity;
                     Omega = bounceResult.NewOmega;
                     State = bounceResult.NewState;
+                    if (landedFromFlight && State == PhysicsEnums.BallState.Rollout)
+                        EmitSignal(SignalName.BallLanded);
 
                     PhysicsLogger.Verbose($"  Velocity after bounce: {Velocity} ({Velocity.Length():F2} m/s)");
 
@@ -435,11 +459,57 @@ public partial class GolfBall : CharacterBody3D
     }
 
     /// <summary>
+    /// Query terrain height at the ball's current X,Z and place it
+    /// TEE_HEIGHT metres above the surface.
+    /// Uses Terrain3D data API first (works immediately, no physics frame needed),
+    /// falls back to physics raycast.
+    /// </summary>
+    public void SnapToGround()
+    {
+        // Lazy-cache: Terrain3D data may not be ready during _Ready(),
+        // so retry on first actual use.
+        if (_terrainData == null)
+            CacheTerrainData();
+
+        // Terrain3D data API — queries the heightmap directly, no physics step required.
+        if (_terrainData != null)
+        {
+            float height = (float)_terrainData.Call("get_height", GlobalPosition);
+            if (!float.IsNaN(height))
+            {
+                GlobalPosition = new Vector3(GlobalPosition.X, height + TEE_HEIGHT, GlobalPosition.Z);
+                return;
+            }
+        }
+
+        // Fallback: physics raycast (requires collision shapes to be ready).
+        var world = GetWorld3D();
+        if (world == null)
+            return;
+
+        Vector3 rayStart = GlobalPosition + Vector3.Up * 50.0f;
+        Vector3 rayEnd = GlobalPosition + Vector3.Down * 50.0f;
+
+        var query = PhysicsRayQueryParameters3D.Create(rayStart, rayEnd);
+        query.CollideWithAreas = false;
+        query.CollideWithBodies = true;
+        query.Exclude = new Array<Rid> { GetRid() };
+
+        var hit = world.DirectSpaceState.IntersectRay(query);
+        if (hit.Count == 0)
+            return;
+
+        Vector3 hitPosition = (Vector3)hit["position"];
+        GlobalPosition = new Vector3(GlobalPosition.X, hitPosition.Y + TEE_HEIGHT, GlobalPosition.Z);
+    }
+
+    /// <summary>
     /// Reset ball to starting position
     /// </summary>
     public void Reset()
     {
-        Position = new Vector3(0.0f, START_HEIGHT, 0.0f);
+        Position = START_POSITION;
+        SnapToGround();
         Velocity = Vector3.Zero;
         Omega = Vector3.Zero;
         AimYawOffsetDeg = 0.0f;
@@ -508,7 +578,8 @@ public partial class GolfBall : CharacterBody3D
         RolloutImpactSpinRpm = 0.0f;
         _surfaceZoneStack.Clear();
         SetSurface(GetConfiguredSurfaceType());
-        Position = new Vector3(0.0f, START_HEIGHT, 0.0f);
+        Position = START_POSITION;
+        SnapToGround();
 
         Velocity = launchVelocity;
         Omega = launchOmega;

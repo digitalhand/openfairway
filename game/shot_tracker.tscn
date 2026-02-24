@@ -6,10 +6,7 @@
 [ext_resource type="PackedScene" uid="uid://byy76pu4x6rnq" path="res://assets/models/balls/golf_ball.glb" id="4_golf_ball"]
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_ball"]
-; 1.68in if a golf ball size or 42.67mm. 
-; Conversion of 1 unit = 1 meter in Godot 3D, radius should be 0.021335
-; I think margin was messing with ball physics "floating" effect.
-margin = 0.00
+margin = 0.0
 radius = 0.021335
 
 [sub_resource type="ImmediateMesh" id="ImmediateMesh_trail"]
@@ -18,6 +15,7 @@ radius = 0.021335
 script = ExtResource("1_tracker")
 
 [node name="Ball" type="CharacterBody3D" parent="." unique_id=1977285301]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
 script = ExtResource("2_ball")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Ball" unique_id=1670706616]

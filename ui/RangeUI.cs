@@ -74,7 +74,7 @@ public partial class RangeUI : MarginContainer
     {
         if (@event is InputEventKey keyEvent && keyEvent.Pressed && !keyEvent.Echo)
         {
-            if (keyEvent.Keycode == Key.D)
+            if (keyEvent.Keycode == Key.P)
             {
                 SetShotControlsVisible(!_shotControlsVisible);
             }

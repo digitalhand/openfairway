@@ -9,7 +9,7 @@ using PhantomCamera;
 /// </summary>
 public partial class Range : Node3D
 {
-    private static readonly Vector3 BALL_START_POSITION = new Vector3(0.0f, GolfBall.START_HEIGHT, 0.0f);
+    private static readonly Vector3 BALL_START_POSITION = GolfBall.START_POSITION;
 
     private Dictionary _displayData = new()
     {
@@ -29,7 +29,8 @@ public partial class Range : Node3D
     private Dictionary _rawBallData = new();
     private Dictionary _lastDisplay = new();
 
-    private const float CAMERA_FOLLOW_BACK = 8.0f;
+// Moving it forward a bit to not enable another array block in terrain3d behind it. 
+    private const float CAMERA_FOLLOW_BACK = 8.5f; 
     private const float CAMERA_FOLLOW_HEIGHT = 2.0f;
     private static readonly Vector3 CAMERA_LOOK_OFFSET = new Vector3(0.0f, 1.5f, 0.0f);
     private const float CAMERA_START_TWEEN_DURATION = 2.0f;
@@ -61,6 +62,8 @@ public partial class Range : Node3D
     private RangeUI _rangeUi;
     private Node3D _phantomCamera;
     private GolfBall _ball;
+    private AudioStreamPlayer3D _audioDriverHit;
+    private AudioStreamPlayer3D _audioGolfBallLanding;
     private RangeSettings _rangeSettings;
 
     public override void _Ready()
@@ -69,9 +72,16 @@ public partial class Range : Node3D
         _rangeUi = GetNode<RangeUI>("RangeUI");
         _phantomCamera = GetNode<Node3D>("PhantomCamera3D");
         _ball = GetNode<GolfBall>("ShotTracker/Ball");
+        _audioDriverHit = GetNodeOrNull<AudioStreamPlayer3D>("audio_driver_hit");
+        _audioGolfBallLanding = GetNodeOrNull<AudioStreamPlayer3D>("audio_golf_ball_landing");
+        ResetBallToStart();
+        // Physics world may not have collision shapes ready in _Ready;
+        // re-snap once deferred so the terrain raycast succeeds.
+        _ball.CallDeferred("SnapToGround");
 
         // Connect signals
         _ball.BallAtRest += OnGolfBallRest;
+        _ball.BallLanded += OnGolfBallLanded;
         _rangeUi.HitShot += OnRangeUiHitShot;
         _shotTracker.TestHitRequested += OnTestHitRequested;
 
@@ -103,7 +113,10 @@ public partial class Range : Node3D
     public override void _ExitTree()
     {
         if (_ball != null)
+        {
             _ball.BallAtRest -= OnGolfBallRest;
+            _ball.BallLanded -= OnGolfBallLanded;
+        }
         if (_rangeUi != null)
             _rangeUi.HitShot -= OnRangeUiHitShot;
         if (_shotTracker != null)
@@ -171,6 +184,7 @@ public partial class Range : Node3D
         PhysicsLogger.Info($"Launch monitor payload: {Json.Stringify(data)}");
         _rawBallData = data.Duplicate();
         UpdateBallDisplay();
+        PlayDriverHitAudio();
 
         // Forward to ShotTracker to actually hit the ball
         _shotTracker.OnTcpClientHitBall(data);
@@ -219,6 +233,11 @@ public partial class Range : Node3D
         }
     }
 
+    private void OnGolfBallLanded()
+    {
+        PlayGolfBallLandingAudio();
+    }
+
     private void OnRangeUiHitShot(Dictionary data)
     {
         _resetCts?.Cancel();
@@ -228,6 +247,7 @@ public partial class Range : Node3D
 
         _rawBallData = data.Duplicate();
         UpdateBallDisplay();
+        PlayDriverHitAudio();
 
         // Forward to ShotTracker to actually hit the ball
         _shotTracker.OnRangeUiHitShot(data);
@@ -253,10 +273,34 @@ public partial class Range : Node3D
 
         _rawBallData = data.Duplicate();
         UpdateBallDisplay();
+        PlayDriverHitAudio();
 
         _shotTracker.OnRangeUiHitShot(data);
 
         EnableCameraFollowDeferred();
+    }
+
+    private void PlayDriverHitAudio()
+    {
+        if (_audioDriverHit == null)
+            return;
+
+        if (_audioDriverHit.Playing)
+            _audioDriverHit.Stop();
+
+        _audioDriverHit.Play();
+    }
+
+    private void PlayGolfBallLandingAudio()
+    {
+        if (_audioGolfBallLanding == null)
+            return;
+
+        _audioGolfBallLanding.GlobalPosition = _ball.GlobalPosition;
+        if (_audioGolfBallLanding.Playing)
+            _audioGolfBallLanding.Stop();
+
+        _audioGolfBallLanding.Play();
     }
 
     private void PrepareShotLaunchOrientation(Dictionary data)
@@ -324,19 +368,16 @@ public partial class Range : Node3D
         _ball.AimYawOffsetDeg = 0.0f;
         HideAimMarker();
 
-        // Reset ball position immediately so it's at the tee when the camera moves there.
+        // Reset ball immediately so it's at the tee when the camera moves there.
         // ShotTracker.ResetBall() also resets the ball (deferred), but additionally
         // clears tracers and shot stats — the two resets serve different purposes.
-        _ball.Position = BALL_START_POSITION;
-        _ball.Velocity = Vector3.Zero;
-        _ball.Omega = Vector3.Zero;
-        _ball.State = PhysicsEnums.BallState.Rest;
-
+        ResetBallToStart();
         _phantomCamera.Set("follow_mode", (int)FollowMode3D.None);
         _phantomCamera.Set("look_at_mode", (int)LookAtMode.None);
 
-        Vector3 startPos = GetOrbitPosition(BALL_START_POSITION);
-        Vector3 endLookPos = BALL_START_POSITION + CAMERA_LOOK_OFFSET;
+        Vector3 ballStartGlobal = GetBallStartGlobalPosition();
+        Vector3 startPos = GetOrbitPosition(ballStartGlobal);
+        Vector3 endLookPos = ballStartGlobal + CAMERA_LOOK_OFFSET;
         Vector3 startLookPos = _phantomCamera.GlobalPosition + (-_phantomCamera.GlobalBasis.Z * 15.0f);
 
         var tween = CreateTween();
@@ -423,11 +464,26 @@ public partial class Range : Node3D
 
     private void SetCameraToStartImmediate()
     {
+        Vector3 ballStartGlobal = GetBallStartGlobalPosition();
         _phantomCamera.Set("follow_mode", (int)FollowMode3D.None);
         _phantomCamera.Set("look_at_mode", (int)LookAtMode.None);
-        _phantomCamera.Set("global_position", GetOrbitPosition(BALL_START_POSITION));
-        _phantomCamera.Call("look_at", BALL_START_POSITION + CAMERA_LOOK_OFFSET, Vector3.Up);
+        _phantomCamera.Set("global_position", GetOrbitPosition(ballStartGlobal));
+        _phantomCamera.Call("look_at", ballStartGlobal + CAMERA_LOOK_OFFSET, Vector3.Up);
         SyncMainCameraToPhantom();
+    }
+
+    private void ResetBallToStart()
+    {
+        _ball.Position = BALL_START_POSITION;
+        _ball.SnapToGround();
+        _ball.Velocity = Vector3.Zero;
+        _ball.Omega = Vector3.Zero;
+        _ball.State = PhysicsEnums.BallState.Rest;
+    }
+
+    private Vector3 GetBallStartGlobalPosition()
+    {
+        return _ball.GlobalPosition;
     }
 
     private void CreateAimMarker()
@@ -504,7 +560,7 @@ public partial class Range : Node3D
             return;
 
         Vector3 aimDir = GetCurrentAimDirection();
-        _aimMarker.GlobalPosition = BALL_START_POSITION + aimDir * AIM_MARKER_DISTANCE + Vector3.Up * AIM_MARKER_Y_OFFSET;
+        _aimMarker.GlobalPosition = GetBallStartGlobalPosition() + aimDir * AIM_MARKER_DISTANCE + Vector3.Up * AIM_MARKER_Y_OFFSET;
         _aimMarker.Visible = true;
         _aimMarkerTimer = AIM_MARKER_HOLD_TIME;
     }
@@ -540,16 +596,17 @@ public partial class Range : Node3D
         _phantomCamera.Set("follow_mode", (int)FollowMode3D.None);
         _phantomCamera.Set("look_at_mode", (int)LookAtMode.None);
 
-        Vector3 ballLookPos = BALL_START_POSITION + CAMERA_LOOK_OFFSET;
-        Vector3 closeLookPos = BALL_START_POSITION + Vector3.Up * CAMERA_START_CLOSE_LOOK_HEIGHT;
-        Vector3 startPos = GetOrbitPosition(BALL_START_POSITION);
+        Vector3 ballStartGlobal = GetBallStartGlobalPosition();
+        Vector3 ballLookPos = ballStartGlobal + CAMERA_LOOK_OFFSET;
+        Vector3 closeLookPos = ballStartGlobal + Vector3.Up * CAMERA_START_CLOSE_LOOK_HEIGHT;
+        Vector3 startPos = GetOrbitPosition(ballStartGlobal);
         Vector3 shotDir = _ball.ShotDirection;
         if (shotDir.Length() < 0.5f)
         {
             shotDir = Vector3.Right;
         }
         shotDir = shotDir.Normalized();
-        Vector3 closePos = BALL_START_POSITION - shotDir * CAMERA_START_CLOSE_BACK
+        Vector3 closePos = ballStartGlobal - shotDir * CAMERA_START_CLOSE_BACK
             + Vector3.Up * CAMERA_START_CLOSE_HEIGHT;
 
         _phantomCamera.Set("global_position", closePos);
