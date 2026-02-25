@@ -18,6 +18,7 @@ public partial class DataPanel : PanelContainer
 
     private bool _dragging = false;
     private Vector2 _dragOffset = Vector2.Zero;
+    private bool _editable = true;
 
     public override void _Ready()
     {
@@ -44,8 +45,18 @@ public partial class DataPanel : PanelContainer
         GetNode<Godot.Label>("VBoxContainer/Units").Text = u;
     }
 
+    public void SetEditable(bool editable)
+    {
+        _editable = editable;
+        if (!editable)
+            _dragging = false;
+    }
+
     public override void _GuiInput(InputEvent @event)
     {
+        if (!_editable)
+            return;
+
         if (@event is InputEventMouseButton mouseButton && mouseButton.ButtonIndex == MouseButton.Left)
         {
             if (mouseButton.Pressed)

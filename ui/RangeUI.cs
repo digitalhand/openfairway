@@ -1,3 +1,4 @@
+using System;
 using Godot;
 using Godot.Collections;
 
@@ -6,10 +7,11 @@ public partial class RangeUI : MarginContainer
     [Signal]
     public delegate void HitShotEventHandler(Dictionary data);
 
+    private const string DefaultPlayerName = "JesseInCode";
     private const string DefaultCourseName = "Airways";
     private const int DefaultHoleNumber = 1;
     private const int DefaultPar = 3;
-    private const int DefaultYardage = 150;
+    private const int DefaultYardage = 203;
 
     private string _selectedShotPath = TestShots.DefaultShot;
     private GridCanvas _gridCanvas;
@@ -21,9 +23,19 @@ public partial class RangeUI : MarginContainer
     private Label _holeNumberLabel;
     private Label _parHeaderLabel;
     private Label _yardageHeaderLabel;
-    private Label _strokeCountLabel;
-    private Label _scoreLabel;
+    private Label _playerNameLabel;
+    private Label _shotLabel;
     private Label _targetYardageLabel;
+    private Label _targetElevationLabel;
+    private Label _roundEndScoreOverlay;
+    private Tween _roundEndScoreTween;
+    private Control _worldClickMarker;
+    private Label _worldMarkerDistanceLabel;
+    private Label _worldMarkerArrowLabel;
+    private Label _worldMarkerElevationLabel;
+    private Camera3D _worldMarkerCamera;
+    private bool _worldClickMarkerActive;
+    private Vector3 _worldClickMarkerPosition = Vector3.Zero;
     private bool _shotControlsVisible;
     private readonly System.Collections.Generic.Dictionary<int, string> _panelMenuIndexToName = new();
     private Setting _shotInjectorSetting;
@@ -61,13 +73,24 @@ public partial class RangeUI : MarginContainer
         _holeNumberLabel = GetNode<Label>("OverlayLayer/CourseHeaderCard/HoleBox/HoleNumberLabel");
         _parHeaderLabel = GetNode<Label>("OverlayLayer/CourseHeaderCard/InfoBlock/CourseMetaBar/MetaHBox/ParLabel");
         _yardageHeaderLabel = GetNode<Label>("OverlayLayer/CourseHeaderCard/InfoBlock/CourseMetaBar/MetaHBox/YardageLabel");
-        _strokeCountLabel = GetNode<Label>("HBoxContainer/StrokeCount");
-        _scoreLabel = GetNode<Label>("HBoxContainer/ScoreLabel");
-        _targetYardageLabel = GetNode<Label>("HBoxContainer/TargetYardage");
+        _playerNameLabel = GetNode<Label>("OverlayLayer/PlayerShotCard/TopBar/PlayerNameLabel");
+        _shotLabel = GetNode<Label>("OverlayLayer/PlayerShotCard/BottomBar/BottomRow/ShotLabel");
+        _targetYardageLabel = GetNode<Label>("OverlayLayer/PlayerShotCard/BottomBar/BottomRow/YardageLabel");
+        _targetElevationLabel = GetNode<Label>("OverlayLayer/PlayerShotCard/BottomBar/BottomRow/DeltaLabel");
+        _roundEndScoreOverlay = GetNode<Label>("OverlayLayer/RoundEndScoreOverlay");
+        _worldClickMarker = GetNode<Control>("OverlayLayer/WorldClickMarker");
+        _worldMarkerDistanceLabel = GetNode<Label>("OverlayLayer/WorldClickMarker/Card/MarkerContent/DistanceLabel");
+        _worldMarkerArrowLabel = GetNode<Label>("OverlayLayer/WorldClickMarker/Card/MarkerContent/ElevationRow/ArrowLabel");
+        _worldMarkerElevationLabel = GetNode<Label>("OverlayLayer/WorldClickMarker/Card/MarkerContent/ElevationRow/ElevationLabel");
+
+        _playerNameLabel.Text = DefaultPlayerName;
         SetCourseHeader(DefaultCourseName, DefaultHoleNumber, DefaultPar, DefaultYardage);
         SetStrokeCount(0);
         SetScoreUnknown();
         SetTargetYardageUnknown();
+        SetTargetElevationUnknown();
+        HideRoundEndScore();
+        HideWorldClickMarker();
 
         // Cache DataPanel references
         _panelDistance = GetNode<DataPanel>("GridCanvas/Distance");
@@ -95,13 +118,22 @@ public partial class RangeUI : MarginContainer
 
     public override void _Input(InputEvent @event)
     {
-        if (@event is InputEventKey keyEvent && keyEvent.Pressed && !keyEvent.Echo)
+        if (@event is not InputEventKey keyEvent || !keyEvent.Pressed || keyEvent.Echo)
+            return;
+
+        if (keyEvent.Keycode == Key.P)
         {
-            if (keyEvent.Keycode == Key.P)
-            {
-                SetShotControlsVisible(!_shotControlsVisible);
-            }
+            SetShotControlsVisible(!_shotControlsVisible);
+            return;
         }
+
+        if (keyEvent.Keycode == Key.F)
+            ToggleFullscreen();
+    }
+
+    public override void _Process(double delta)
+    {
+        UpdateWorldClickMarkerProjection();
     }
 
     public void SetData(Dictionary data)
@@ -146,6 +178,17 @@ public partial class RangeUI : MarginContainer
         GetNode("ShotInjector").Set("visible", value);
     }
 
+    private void ToggleFullscreen()
+    {
+        Window window = GetWindow();
+        if (window == null)
+            return;
+
+        window.Mode = window.Mode == Window.ModeEnum.Fullscreen
+            ? Window.ModeEnum.Windowed
+            : Window.ModeEnum.Fullscreen;
+    }
+
     public void SetTotalDistance(string text)
     {
         GetNode<Label>("OverlayLayer/TotalDistanceOverlay").Text = text;
@@ -160,10 +203,18 @@ public partial class RangeUI : MarginContainer
 
     public void SetStrokeCount(int strokes)
     {
-        if (_strokeCountLabel == null)
+        if (_shotLabel == null)
             return;
 
-        _strokeCountLabel.Text = $"Strokes: {Mathf.Max(0, strokes)}";
+        _shotLabel.Text = $"Shot {Mathf.Max(0, strokes) + 1}";
+    }
+
+    public void SetFinalStrokeCount(int strokes)
+    {
+        if (_shotLabel == null)
+            return;
+
+        _shotLabel.Text = $"Shot {Mathf.Max(1, strokes)}";
     }
 
     public void SetTargetYardage(float yards)
@@ -171,8 +222,7 @@ public partial class RangeUI : MarginContainer
         if (_targetYardageLabel == null)
             return;
 
-        int wholeYards = Mathf.RoundToInt(Mathf.Max(0.0f, yards));
-        _targetYardageLabel.Text = $"To Target: {wholeYards} yd";
+        _targetYardageLabel.Text = $"{Mathf.Max(0.0f, yards):F1} YDS";
     }
 
     public void SetTargetYardageUnknown()
@@ -180,24 +230,134 @@ public partial class RangeUI : MarginContainer
         if (_targetYardageLabel == null)
             return;
 
-        _targetYardageLabel.Text = "To Target: -- yd";
+        _targetYardageLabel.Text = "--.- YDS";
+    }
+
+    public void SetTargetElevationFeet(int feet)
+    {
+        if (_targetElevationLabel == null)
+            return;
+
+        ElevationVisual visual = ElevationPresenter.Build(feet, includeSignInText: false);
+        _targetElevationLabel.Text = $"{visual.Arrow} {visual.Text}";
+        _targetElevationLabel.AddThemeColorOverride("font_color", visual.Color);
+    }
+
+    public void SetTargetElevationUnknown()
+    {
+        if (_targetElevationLabel == null)
+            return;
+
+        ElevationVisual visual = ElevationPresenter.Build(0, includeSignInText: false);
+        _targetElevationLabel.Text = $"{visual.Arrow} {visual.Text}";
+        _targetElevationLabel.AddThemeColorOverride("font_color", visual.Color);
     }
 
     public void SetScoreLabel(string label)
     {
-        if (_scoreLabel == null)
-            return;
-
-        string safeLabel = string.IsNullOrWhiteSpace(label) ? "--" : label;
-        _scoreLabel.Text = $"Score: {safeLabel}";
+        // Score logic is still computed in gameplay code, but hidden in this HUD revision.
     }
 
     public void SetScoreUnknown()
     {
-        if (_scoreLabel == null)
+        // Score logic is still computed in gameplay code, but hidden in this HUD revision.
+    }
+
+    public void ShowRoundEndScore(string label)
+    {
+        if (_roundEndScoreOverlay == null)
             return;
 
-        _scoreLabel.Text = "Score: --";
+        string safeLabel = string.IsNullOrWhiteSpace(label) ? "PAR" : label.Trim();
+        _roundEndScoreOverlay.Text = safeLabel.ToUpperInvariant();
+        _roundEndScoreTween?.Kill();
+
+        // Tween in from slightly smaller + transparent for a punch-in effect.
+        _roundEndScoreOverlay.PivotOffset = _roundEndScoreOverlay.Size * 0.5f;
+        _roundEndScoreOverlay.Scale = new Vector2(0.82f, 0.82f);
+        _roundEndScoreOverlay.Modulate = new Color(1, 1, 1, 0);
+        _roundEndScoreOverlay.Visible = true;
+
+        _roundEndScoreTween = CreateTween();
+        _roundEndScoreTween.SetTrans(Tween.TransitionType.Cubic);
+        _roundEndScoreTween.SetEase(Tween.EaseType.Out);
+        _roundEndScoreTween.Parallel().TweenProperty(_roundEndScoreOverlay, "scale", Vector2.One, 0.28f);
+        _roundEndScoreTween.Parallel().TweenProperty(_roundEndScoreOverlay, "modulate:a", 1.0f, 0.2f);
+    }
+
+    public void HideRoundEndScore()
+    {
+        if (_roundEndScoreOverlay == null)
+            return;
+
+        _roundEndScoreTween?.Kill();
+        _roundEndScoreTween = null;
+        _roundEndScoreOverlay.Visible = false;
+        _roundEndScoreOverlay.Text = string.Empty;
+        _roundEndScoreOverlay.Scale = Vector2.One;
+        _roundEndScoreOverlay.Modulate = Colors.White;
+    }
+
+    public void SetMarkerCamera(Camera3D camera)
+    {
+        _worldMarkerCamera = camera;
+        UpdateWorldClickMarkerProjection();
+    }
+
+    public void ShowWorldClickMarker(Vector3 worldPoint, string distanceText, int elevationFeet)
+    {
+        if (_worldClickMarker == null)
+            return;
+
+        _worldClickMarkerPosition = worldPoint;
+        _worldClickMarkerActive = true;
+        _worldMarkerDistanceLabel.Text = string.IsNullOrWhiteSpace(distanceText) ? "---" : distanceText;
+
+        ElevationVisual visual = ElevationPresenter.Build(elevationFeet, includeSignInText: true);
+        if (_worldMarkerArrowLabel != null)
+        {
+            _worldMarkerArrowLabel.Text = visual.Arrow;
+            _worldMarkerArrowLabel.AddThemeColorOverride("font_color", visual.Color);
+        }
+
+        _worldMarkerElevationLabel.Text = visual.Text;
+        _worldMarkerElevationLabel.AddThemeColorOverride("font_color", visual.Color);
+
+        _worldClickMarker.Visible = true;
+        UpdateWorldClickMarkerProjection();
+    }
+
+    public void HideWorldClickMarker()
+    {
+        _worldClickMarkerActive = false;
+        if (_worldClickMarker != null)
+            _worldClickMarker.Visible = false;
+    }
+
+    private void UpdateWorldClickMarkerProjection()
+    {
+        if (_worldClickMarker == null)
+            return;
+
+        if (!_worldClickMarkerActive || _worldMarkerCamera == null)
+        {
+            _worldClickMarker.Visible = false;
+            return;
+        }
+
+        if (_worldMarkerCamera.IsPositionBehind(_worldClickMarkerPosition))
+        {
+            _worldClickMarker.Visible = false;
+            return;
+        }
+
+        Vector2 screenPosition = _worldMarkerCamera.UnprojectPosition(_worldClickMarkerPosition);
+        Vector2 markerSize = _worldClickMarker.Size;
+        if (markerSize.X <= 0.0f || markerSize.Y <= 0.0f)
+            markerSize = _worldClickMarker.GetCombinedMinimumSize();
+
+        _worldClickMarker.Position = screenPosition - new Vector2(markerSize.X * 0.5f, markerSize.Y);
+        _worldClickMarker.Visible = true;
     }
 
     public void SetCourseHeader(string courseName, int holeNumber, int par, int yardage)

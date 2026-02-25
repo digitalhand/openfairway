@@ -33,11 +33,7 @@ public partial class Range : Node3D
     private const float CAMERA_FOLLOW_BACK = 8.5f; 
     private const float CAMERA_FOLLOW_HEIGHT = 2.0f;
     private static readonly Vector3 CAMERA_LOOK_OFFSET = new Vector3(0.0f, 1.5f, 0.0f);
-    private const float CAMERA_START_TWEEN_DURATION = 2.0f;
-    private const float CAMERA_START_CLOSE_BACK = 0.9f;
-    private const float CAMERA_START_CLOSE_HEIGHT = 0.25f;
-    private const float CAMERA_START_CLOSE_LOOK_HEIGHT = 0.1f;
-    private const float METERS_TO_YARDS = 1.09361f;
+    private const float CLICK_RAY_DISTANCE = 5000.0f;
 
     // Orbit camera constants
     private const float CAMERA_ORBIT_RADIUS = 2.5f;
@@ -49,7 +45,7 @@ public partial class Range : Node3D
     private const float AIM_MARKER_THICKNESS = 0.04f;
     private const float AIM_MARKER_HOLD_TIME = 0.18f;
     private const float CAMERA_RESET_TWEEN_DURATION = 1.2f;
-    private const float GOAL_COMPLETE_DELAY_SECONDS = 3.0f;
+    private const float ROUND_END_SCORE_DURATION_SECONDS = 4.0f;
 
     // Current horizontal aim angle in degrees; 0 = directly behind ball
     private float _cameraYaw = 0.0f;
@@ -63,7 +59,9 @@ public partial class Range : Node3D
     private ShotTracker _shotTracker;
     private RangeUI _rangeUi;
     private Node3D _phantomCamera;
+    private Camera3D _mainCamera;
     private Node3D _basicGreenTarget;
+    private GodotObject _terrainData;
     private GolfBall _ball;
     private AudioStreamPlayer3D _audioDriverHit;
     private AudioStreamPlayer3D _audioBackgroundBirds;
@@ -75,6 +73,8 @@ public partial class Range : Node3D
     private int _coursePar = CourseCatalog.DefaultPar;
     private int _strokeCount = 0;
     private bool _goalCompletionCountdownRunning = false;
+    private bool _hasMarkerSelection = false;
+    private Vector3 _selectedMarkerWorldPoint = Vector3.Zero;
     private readonly System.Collections.Generic.List<CourseGoalZone> _goalZones = new();
 
     public override void _Ready()
@@ -82,6 +82,7 @@ public partial class Range : Node3D
         _shotTracker = GetNode<ShotTracker>("ShotTracker");
         _rangeUi = GetNode<RangeUI>("RangeUI");
         _phantomCamera = GetNode<Node3D>("PhantomCamera3D");
+        _mainCamera = GetNodeOrNull<Camera3D>("Camera3D");
         _basicGreenTarget = GetNodeOrNull<Node3D>("BasicGreen");
         _ball = GetNode<GolfBall>("ShotTracker/Ball");
         _audioDriverHit = GetNodeOrNull<AudioStreamPlayer3D>("audio_iron_hit");
@@ -91,6 +92,7 @@ public partial class Range : Node3D
         _progressStore = GetNodeOrNull<GameProgressStore>("/root/GameProgressStore");
         _sceneId = GetSceneId();
         ResolveCourseCard();
+        CacheTerrainData();
         ResetBallToStart();
         // Physics world may not have collision shapes ready in _Ready;
         // re-snap once deferred so the terrain raycast succeeds.
@@ -114,21 +116,17 @@ public partial class Range : Node3D
         _rangeSettings.SurfaceType.SettingChanged += OnSurfaceChanged;
         CreateAimMarker();
         ConnectGoalZones();
-        LoadRoundProgress();
+        // Always start fresh at the tee on scene load.
+        // Saved progress can be restored later through an explicit resume flow.
+        SetStrokeCount(0);
         _rangeUi.SetStrokeCount(_strokeCount);
-        UpdateTargetYardageDisplay();
+        _rangeUi.SetMarkerCamera(_mainCamera);
+        RefreshTargetHud();
 
-        bool followEnabled = (bool)_rangeSettings.CameraFollowMode.Value;
-        if (followEnabled)
-        {
-            SetCameraToStartImmediate();
-        }
-        else
-        {
-            TweenCameraFromCloseToStart();
-        }
+        SetCameraToStartImmediate();
         OnCameraFollowChanged(_rangeSettings.CameraFollowMode.Value);
         ApplySurfaceToBall();
+        ShowWorldClickMarkerOnTarget();
     }
 
     public override void _ExitTree()
@@ -158,13 +156,32 @@ public partial class Range : Node3D
             SetStrokeCount(0);
             ClearRoundProgress();
             CallDeferred(nameof(SetCameraToStartImmediate));
+            QueueMarkerResetToTarget();
+            return;
         }
+    }
+
+    public override void _Input(InputEvent @event)
+    {
+        if (@event is not InputEventMouseButton mouseButton
+            || !mouseButton.Pressed
+            || mouseButton.ButtonIndex != MouseButton.Left
+            || _goalCompletionCountdownRunning)
+        {
+            return;
+        }
+
+        // Ignore clicks over interactive UI controls.
+        if (GetViewport()?.GuiGetHoveredControl() != null)
+            return;
+
+        HandleWorldClickMarkerPlacement(mouseButton.Position);
     }
 
     public override void _Process(double delta)
     {
         UpdateAimMarkerTimer((float)delta);
-        UpdateTargetYardageDisplay();
+        RefreshTargetHud();
 
         if (_isShotLaunching || _shotTracker.GetBallState() != PhysicsEnums.BallState.Rest)
         {
@@ -196,24 +213,7 @@ public partial class Range : Node3D
 
     private void OnTcpClientHitBall(Dictionary data)
     {
-        if (_goalCompletionCountdownRunning)
-            return;
-
-        _resetCts?.Cancel();
-        HideAimMarker();
-        PrepareShotLaunchOrientation(data);
-        DisableCameraFollow();
-        PhysicsLogger.Info($"Launch monitor payload: {Json.Stringify(data)}");
-        _rawBallData = data.Duplicate();
-        UpdateBallDisplay();
-        PlayDriverHitAudio();
-        IncrementStrokeCount();
-
-        // Forward to ShotTracker to actually hit the ball
-        _shotTracker.OnTcpClientHitBall(data);
-
-        // Enable follow after deferred HitFromData has applied launch state.
-        EnableCameraFollowDeferred();
+        LaunchShot(data, useTcpTracker: true, logPayload: true);
     }
 
     private async void OnGolfBallRest()
@@ -224,6 +224,7 @@ public partial class Range : Node3D
 
             if (_goalCompletionCountdownRunning)
             {
+                HideWorldClickMarker();
                 FreezeCameraOnBall();
                 return;
             }
@@ -231,11 +232,14 @@ public partial class Range : Node3D
             if (IsBallOnGoalZone())
             {
                 PhysicsLogger.Info("Ball settled on BasicGreen. Ending round in 3 seconds.");
+                _rangeUi?.SetFinalStrokeCount(_strokeCount);
+                HideWorldClickMarker();
                 FreezeCameraOnBall();
                 StartGoalCompletionCountdown();
                 return;
             }
 
+            ShowWorldClickMarkerForRestState();
             SaveRoundProgress();
 
             // Freeze camera at its current spot on rest to avoid drift/overshoot
@@ -280,33 +284,11 @@ public partial class Range : Node3D
 
     private void OnRangeUiHitShot(Dictionary data)
     {
-        if (_goalCompletionCountdownRunning)
-            return;
-
-        _resetCts?.Cancel();
-        HideAimMarker();
-        PrepareShotLaunchOrientation(data);
-        DisableCameraFollow();
-
-        _rawBallData = data.Duplicate();
-        UpdateBallDisplay();
-        PlayDriverHitAudio();
-        IncrementStrokeCount();
-
-        // Forward to ShotTracker to actually hit the ball
-        _shotTracker.OnRangeUiHitShot(data);
-
-        // Enable follow after deferred HitFromData has applied launch state.
-        EnableCameraFollowDeferred();
+        LaunchShot(data, useTcpTracker: false, logPayload: false);
     }
 
     private void OnTestHitRequested()
     {
-        if (_goalCompletionCountdownRunning)
-            return;
-
-        _resetCts?.Cancel();
-        HideAimMarker();
         var data = new Dictionary
         {
             { "Speed", 100.0f },
@@ -315,17 +297,7 @@ public partial class Range : Node3D
             { "TotalSpin", 6000.0f },
             { "SpinAxis", 3.5f }
         };
-        PrepareShotLaunchOrientation(data);
-        DisableCameraFollow();
-
-        _rawBallData = data.Duplicate();
-        UpdateBallDisplay();
-        PlayDriverHitAudio();
-        IncrementStrokeCount();
-
-        _shotTracker.OnRangeUiHitShot(data);
-
-        EnableCameraFollowDeferred();
+        LaunchShot(data, useTcpTracker: false, logPayload: false);
     }
 
     private void PlayDriverHitAudio()
@@ -337,6 +309,34 @@ public partial class Range : Node3D
             _audioDriverHit.Stop();
 
         _audioDriverHit.Play();
+    }
+
+    private void LaunchShot(Dictionary data, bool useTcpTracker, bool logPayload)
+    {
+        if (_goalCompletionCountdownRunning)
+            return;
+
+        _resetCts?.Cancel();
+        HideWorldClickMarker();
+        HideAimMarker();
+        PrepareShotLaunchOrientation(data);
+        DisableCameraFollow();
+
+        if (logPayload)
+            PhysicsLogger.Info($"Launch monitor payload: {Json.Stringify(data)}");
+
+        _rawBallData = data.Duplicate();
+        UpdateBallDisplay();
+        PlayDriverHitAudio();
+        IncrementStrokeCount();
+
+        if (useTcpTracker)
+            _shotTracker.OnTcpClientHitBall(data);
+        else
+            _shotTracker.OnRangeUiHitShot(data);
+
+        // Enable follow after deferred HitFromData has applied launch state.
+        EnableCameraFollowDeferred();
     }
 
     private void ConfigureConsistentAudioLevels()
@@ -567,16 +567,28 @@ public partial class Range : Node3D
         _resetCts?.Cancel();
         _resetCts = new CancellationTokenSource();
         var token = _resetCts.Token;
+        _rangeUi?.ShowRoundEndScore(GetRoundEndScoreOverlayText());
 
-        await ToSignal(GetTree().CreateTimer(GOAL_COMPLETE_DELAY_SECONDS), SceneTreeTimer.SignalName.Timeout);
+        await ToSignal(GetTree().CreateTimer(ROUND_END_SCORE_DURATION_SECONDS), SceneTreeTimer.SignalName.Timeout);
         if (token.IsCancellationRequested)
         {
+            _rangeUi?.HideRoundEndScore();
             _goalCompletionCountdownRunning = false;
             return;
         }
 
+        _rangeUi?.HideRoundEndScore();
         CompleteGoalRound();
         _goalCompletionCountdownRunning = false;
+    }
+
+    private string GetRoundEndScoreOverlayText()
+    {
+        if (_strokeCount <= 0)
+            return "Par";
+
+        ScoreResult finalScore = ScoreMapper.MapScore(_strokeCount, _coursePar);
+        return finalScore.Label;
     }
 
     private void CompleteGoalRound()
@@ -596,6 +608,7 @@ public partial class Range : Node3D
         ClearRoundProgress();
         _shotTracker.ResetBall();
         CallDeferred(nameof(SetCameraToStartImmediate));
+        QueueMarkerResetToTarget();
     }
 
     private bool IsBallOnGoalZone()
@@ -610,29 +623,6 @@ public partial class Range : Node3D
         }
 
         return false;
-    }
-
-    private void LoadRoundProgress()
-    {
-        SetStrokeCount(0);
-
-        if (_progressStore == null || string.IsNullOrWhiteSpace(_sceneId))
-            return;
-
-        if (!_progressStore.TryGetSlotForScene(_sceneId, out var slot))
-            return;
-
-        _ball.GlobalPosition = slot.BallPosition;
-        _ball.SnapToGround();
-        _ball.Velocity = Vector3.Zero;
-        _ball.Omega = Vector3.Zero;
-        _ball.State = PhysicsEnums.BallState.Rest;
-        _ball.OnGround = false;
-        _ball.AimYawOffsetDeg = 0.0f;
-        _ball.LaunchSpinRpm = 0.0f;
-        _ball.RolloutImpactSpinRpm = 0.0f;
-
-        SetStrokeCount(slot.Strokes);
     }
 
     private void SaveRoundProgress()
@@ -677,6 +667,8 @@ public partial class Range : Node3D
         _resetCts?.Cancel();
         _goalCompletionCountdownRunning = false;
         _isShotLaunching = false;
+        _rangeUi?.HideRoundEndScore();
+        HideWorldClickMarker();
         HideAimMarker();
         ResetDisplayData();
         _rangeUi.SetData(_displayData);
@@ -833,39 +825,6 @@ public partial class Range : Node3D
         return dir.Normalized();
     }
 
-    private void TweenCameraFromCloseToStart()
-    {
-        _phantomCamera.Set("follow_mode", (int)FollowMode3D.None);
-        _phantomCamera.Set("look_at_mode", (int)LookAtMode.None);
-
-        Vector3 ballStartGlobal = GetBallStartGlobalPosition();
-        AlignCameraYawToTarget(ballStartGlobal);
-        Vector3 ballLookPos = ballStartGlobal + CAMERA_LOOK_OFFSET;
-        Vector3 closeLookPos = ballStartGlobal + Vector3.Up * CAMERA_START_CLOSE_LOOK_HEIGHT;
-        Vector3 startPos = GetOrbitPosition(ballStartGlobal);
-        Vector3 shotDir = _ball.ShotDirection;
-        if (shotDir.Length() < 0.5f)
-        {
-            shotDir = Vector3.Right;
-        }
-        shotDir = shotDir.Normalized();
-        Vector3 closePos = ballStartGlobal - shotDir * CAMERA_START_CLOSE_BACK
-            + Vector3.Up * CAMERA_START_CLOSE_HEIGHT;
-
-        _phantomCamera.Set("global_position", closePos);
-        _phantomCamera.Call("look_at", closeLookPos, Vector3.Up);
-        SyncMainCameraToPhantom();
-
-        var tween = CreateTween();
-        tween.SetTrans(Tween.TransitionType.Cubic);
-        tween.SetEase(Tween.EaseType.InOut);
-        tween.Parallel().TweenProperty(_phantomCamera, "global_position", startPos, CAMERA_START_TWEEN_DURATION);
-        tween.Parallel().TweenMethod(Callable.From<Vector3>((pos) =>
-        {
-            _phantomCamera.Call("look_at", pos, Vector3.Up);
-        }), closeLookPos, ballLookPos, CAMERA_START_TWEEN_DURATION);
-    }
-
     private void AlignCameraYawToTarget(Vector3 ballPos)
     {
         _cameraYaw = GetTargetAlignedYawDeg(ballPos);
@@ -956,6 +915,193 @@ public partial class Range : Node3D
         _rangeUi.SetData(_displayData);
     }
 
+    private void HandleWorldClickMarkerPlacement(Vector2 mousePosition)
+    {
+        if (!TryGetWorldClickPoint(mousePosition, out Vector3 worldPoint))
+            return;
+
+        _selectedMarkerWorldPoint = worldPoint;
+        _hasMarkerSelection = true;
+
+        bool ballAtRest = _shotTracker != null && _shotTracker.GetBallState() == PhysicsEnums.BallState.Rest;
+        if (ballAtRest && !_isShotLaunching && !_goalCompletionCountdownRunning)
+            ShowWorldClickMarkerAt(worldPoint);
+    }
+
+    private bool TryGetWorldClickPoint(Vector2 mousePosition, out Vector3 worldPoint)
+    {
+        worldPoint = Vector3.Zero;
+        if (_mainCamera == null)
+            return false;
+
+        var world = GetWorld3D();
+        if (world == null)
+            return false;
+
+        Vector3 rayOrigin = _mainCamera.ProjectRayOrigin(mousePosition);
+        Vector3 rayDirection = _mainCamera.ProjectRayNormal(mousePosition);
+        var query = PhysicsRayQueryParameters3D.Create(rayOrigin, rayOrigin + rayDirection * CLICK_RAY_DISTANCE);
+        query.CollideWithBodies = true;
+        query.CollideWithAreas = true;
+
+        if (_ball != null)
+        {
+            var exclude = new Godot.Collections.Array<Rid>();
+            exclude.Add(_ball.GetRid());
+            query.Exclude = exclude;
+        }
+
+        Dictionary hit = world.DirectSpaceState.IntersectRay(query);
+        if (hit.Count > 0 && hit.ContainsKey("position"))
+        {
+            worldPoint = (Vector3)hit["position"];
+            return true;
+        }
+
+        return TryResolveTerrainPointFromRay(mousePosition, out worldPoint);
+    }
+
+    private void ShowWorldClickMarkerForRestState()
+    {
+        if (_goalCompletionCountdownRunning)
+        {
+            HideWorldClickMarker();
+            return;
+        }
+
+        if (!TryResolveWorldClickMarkerPoint(out Vector3 worldPoint))
+        {
+            HideWorldClickMarker();
+            return;
+        }
+
+        ShowWorldClickMarkerAt(worldPoint);
+    }
+
+    private void ShowWorldClickMarkerOnTarget()
+    {
+        _hasMarkerSelection = false;
+        if (!TryGetTargetMarkerPoint(out Vector3 targetPoint))
+        {
+            HideWorldClickMarker();
+            return;
+        }
+
+        _selectedMarkerWorldPoint = targetPoint;
+        ShowWorldClickMarkerAt(targetPoint);
+    }
+
+    private bool TryResolveWorldClickMarkerPoint(out Vector3 worldPoint)
+    {
+        if (_hasMarkerSelection)
+        {
+            worldPoint = _selectedMarkerWorldPoint;
+            return true;
+        }
+
+        return TryGetTargetMarkerPoint(out worldPoint);
+    }
+
+    private bool TryGetTargetMarkerPoint(out Vector3 worldPoint)
+    {
+        worldPoint = Vector3.Zero;
+        if (_basicGreenTarget == null)
+            return false;
+
+        worldPoint = _basicGreenTarget.GlobalPosition;
+        return true;
+    }
+
+    private void HideWorldClickMarker()
+    {
+        _rangeUi?.HideWorldClickMarker();
+    }
+
+    private void ShowWorldClickMarkerAt(Vector3 worldPoint)
+    {
+        if (_rangeUi == null || _ball == null)
+            return;
+
+        int elevationFeet = GetElevationFeetFromBall(worldPoint);
+        _rangeUi.ShowWorldClickMarker(
+            worldPoint,
+            FormatWorldClickMarkerDistance(worldPoint),
+            elevationFeet
+        );
+    }
+
+    private void QueueMarkerResetToTarget()
+    {
+        _hasMarkerSelection = false;
+        CallDeferred(nameof(ShowWorldClickMarkerOnTarget));
+    }
+
+    private string FormatWorldClickMarkerDistance(Vector3 worldPoint)
+    {
+        int yards = MeasurementUtils.HorizontalDistanceYards(_ball.GlobalPosition, worldPoint);
+        return yards.ToString();
+    }
+
+    private int GetElevationFeetFromBall(Vector3 worldPoint)
+    {
+        if (_ball == null)
+            return 0;
+
+        return MeasurementUtils.VerticalDeltaFeet(_ball.GlobalPosition, worldPoint);
+    }
+
+    private void CacheTerrainData()
+    {
+        if (_terrainData != null)
+            return;
+
+        var terrain = GetTree()?.Root?.FindChild("Terrain3D", true, false);
+        if (terrain == null)
+            return;
+
+        Variant data = terrain.Get("data");
+        if (data.Obj is GodotObject obj)
+            _terrainData = obj;
+    }
+
+    private bool TryResolveTerrainPointFromRay(Vector2 mousePosition, out Vector3 worldPoint)
+    {
+        worldPoint = Vector3.Zero;
+        if (_mainCamera == null || _ball == null)
+            return false;
+
+        if (_terrainData == null)
+            CacheTerrainData();
+
+        if (_terrainData == null)
+            return false;
+
+        Vector3 rayOrigin = _mainCamera.ProjectRayOrigin(mousePosition);
+        Vector3 rayDirection = _mainCamera.ProjectRayNormal(mousePosition);
+        if (Mathf.Abs(rayDirection.Y) < 0.00001f)
+            return false;
+
+        // Intersect the click ray with the ball-height horizontal plane,
+        // then sample actual terrain height at that X/Z.
+        float t = (_ball.GlobalPosition.Y - rayOrigin.Y) / rayDirection.Y;
+        if (t <= 0.0f)
+            return false;
+
+        Vector3 planePoint = rayOrigin + rayDirection * t;
+        float height = (float)_terrainData.Call("get_height", planePoint);
+        if (float.IsNaN(height))
+            return false;
+
+        worldPoint = new Vector3(planePoint.X, height, planePoint.Z);
+        return true;
+    }
+
+    private void RefreshTargetHud()
+    {
+        UpdateTargetYardageDisplay();
+        UpdateTargetElevationDisplay();
+    }
+
     private void UpdateTargetYardageDisplay()
     {
         if (_rangeUi == null)
@@ -971,13 +1117,35 @@ public partial class Range : Node3D
         _rangeUi.SetTargetYardage(yards);
     }
 
+    private void UpdateTargetElevationDisplay()
+    {
+        if (_rangeUi == null)
+            return;
+
+        if (!TryGetTargetElevationFeet(out int feet))
+        {
+            _rangeUi.SetTargetElevationUnknown();
+            return;
+        }
+
+        _rangeUi.SetTargetElevationFeet(feet);
+    }
+
+    private bool TryGetTargetElevationFeet(out int feet)
+    {
+        feet = 0;
+        if (_basicGreenTarget == null || _ball == null)
+            return false;
+
+        feet = MeasurementUtils.VerticalDeltaFeet(_ball.GlobalPosition, _basicGreenTarget.GlobalPosition);
+        return true;
+    }
+
     private float GetYardsToTarget()
     {
         if (_basicGreenTarget == null || _ball == null)
             return -1.0f;
 
-        Vector3 toTarget = _basicGreenTarget.GlobalPosition - _ball.GlobalPosition;
-        toTarget.Y = 0.0f;
-        return Mathf.Max(0.0f, toTarget.Length() * METERS_TO_YARDS);
+        return MeasurementUtils.HorizontalDistanceYardsFloat(_ball.GlobalPosition, _basicGreenTarget.GlobalPosition);
     }
 }

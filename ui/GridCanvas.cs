@@ -1,15 +1,37 @@
+using System.Collections.Generic;
 using Godot;
 
 public partial class GridCanvas : Control
 {
     private bool _showGrid = false;
     private bool _editMode = true;
-    private const float CELL_SIZE_X = 120f;
-    private const float CELL_SIZE_Y = 93f;
-    private const float GRID_SPACING_X = 10f;
-    private const float GRID_SPACING_Y = 10f;
+    private const float PANEL_WIDTH = 84f;
+    private const float PANEL_HEIGHT = 65f;
+    private const float GRID_SPACING_X = 2f;
+    private const float GRID_SPACING_Y = 2f;
+    private const float DEFAULT_RIGHT_MARGIN = 20f;
+    private const float DEFAULT_BOTTOM_MARGIN = 20f;
+    private const float DEFAULT_TOP_MIN = 120f;
+    private const float DEFAULT_TOP_RATIO = 0.36f;
+    private const int DEFAULT_PANEL_COLUMNS = 2;
     private readonly Vector2 GRID_SIZE = new Vector2(CELL_SIZE_X + GRID_SPACING_X, CELL_SIZE_Y + GRID_SPACING_Y);
     private static readonly Vector2 GRID_ORIGIN = new Vector2(15f, 15f);
+    private static readonly string[] DefaultPanelOrder =
+    {
+        "Distance",
+        "Carry",
+        "HLA",
+        "VLA",
+        "Speed",
+        "Apex",
+        "TotalSpin",
+        "BackSpin",
+        "SpinAxis",
+        "SideSpin"
+    };
+
+    private const float CELL_SIZE_X = PANEL_WIDTH;
+    private const float CELL_SIZE_Y = PANEL_HEIGHT;
 
     public override void _Draw()
     {
@@ -54,6 +76,7 @@ public partial class GridCanvas : Control
         ConnectPanelSignals("SideSpin");
         ConnectPanelSignals("TotalSpin");
         ConnectPanelSignals("SpinAxis");
+        ApplyEditMode();
     }
 
     private void ConnectPanelSignals(string panelName)
@@ -76,73 +99,80 @@ public partial class GridCanvas : Control
     public void ToggleEditMode()
     {
         _editMode = !_editMode;
-        foreach (var panel in GetNode("VBoxContainer").GetChildren())
-        {
-            panel.Call("set_editable", _editMode);
-        }
+        if (!_editMode)
+            _showGrid = false;
+
+        ApplyEditMode();
+        QueueRedraw();
     }
 
     public void SaveLayout()
     {
-        var config = new ConfigFile();
-        foreach (Control panel in GetChildren())
-        {
-            config.SetValue("positions", panel.Name, panel.Position);
-            config.SetValue("visibility", panel.Name, panel.Visible);
-        }
-        config.Save("user://layout.cfg");
+        LayoutPersistenceService.Save("user://layout.cfg", GetPanels());
     }
 
     public void LoadLayout()
     {
-        var config = new ConfigFile();
-        if (config.Load("user://layout.cfg") != Error.Ok)
+        if (LayoutPersistenceService.TryLoad("user://layout.cfg", out ConfigFile userConfig))
         {
-            config.Load("res://ui/default_layout.cfg");
+            LayoutPersistenceService.Apply(userConfig, GetPanels(), GetViewportRect().Size);
+            return;
         }
+
+        ApplyFirstRunDefaultLayout();
+        SaveLayout();
+    }
+
+    private void ApplyFirstRunDefaultLayout()
+    {
+        Vector2 viewport = GetViewportRect().Size;
 
         foreach (Control panel in GetChildren())
         {
-            if (config.HasSectionKey("positions", panel.Name))
-            {
-                var posValue = config.GetValue("positions", panel.Name);
-                if (posValue.VariantType == Variant.Type.Vector2)
-                {
-                    var pos = (Vector2)posValue;
-                    var viewport = GetViewportRect().Size;
-                    // Validate position is within reasonable bounds
-                    pos.X = Mathf.Clamp(pos.X, -panel.Size.X, viewport.X);
-                    pos.Y = Mathf.Clamp(pos.Y, -panel.Size.Y, viewport.Y);
-                    panel.Position = pos;
-                }
-                else
-                {
-                    PhysicsLogger.Error($"GridCanvas: invalid position type for panel '{panel.Name}'");
-                }
-            }
-            if (config.HasSectionKey("visibility", panel.Name))
-            {
-                var visValue = config.GetValue("visibility", panel.Name);
-                if (visValue.VariantType == Variant.Type.Bool)
-                {
-                    panel.Visible = (bool)visValue;
-                }
-                else
-                {
-                    PhysicsLogger.Error($"GridCanvas: invalid visibility type for panel '{panel.Name}'");
-                }
-            }
+            panel.Size = new Vector2(PANEL_WIDTH, PANEL_HEIGHT);
+            panel.Visible = false;
+        }
+
+        float totalWidth = PANEL_WIDTH * DEFAULT_PANEL_COLUMNS + GRID_SPACING_X * (DEFAULT_PANEL_COLUMNS - 1);
+        float startX = Mathf.Max(10.0f, viewport.X - DEFAULT_RIGHT_MARGIN - totalWidth);
+
+        int rows = Mathf.CeilToInt((float)DefaultPanelOrder.Length / DEFAULT_PANEL_COLUMNS);
+        float totalHeight = rows * PANEL_HEIGHT + GRID_SPACING_Y * (rows - 1);
+        float maxTop = Mathf.Max(10.0f, viewport.Y - totalHeight - DEFAULT_BOTTOM_MARGIN);
+        float minTop = Mathf.Min(DEFAULT_TOP_MIN, maxTop);
+        float startY = Mathf.Clamp(viewport.Y * DEFAULT_TOP_RATIO, minTop, maxTop);
+
+        for (int i = 0; i < DefaultPanelOrder.Length; i++)
+        {
+            string panelName = DefaultPanelOrder[i];
+            if (!HasNode(panelName))
+                continue;
+
+            var panel = GetNode<Control>(panelName);
+            int row = i / DEFAULT_PANEL_COLUMNS;
+            int col = i % DEFAULT_PANEL_COLUMNS;
+            panel.Position = new Vector2(
+                startX + col * (PANEL_WIDTH + GRID_SPACING_X),
+                startY + row * (PANEL_HEIGHT + GRID_SPACING_Y)
+            );
+            panel.Visible = true;
         }
     }
 
     private void OnPanelDragStarted()
     {
+        if (!_editMode)
+            return;
+
         _showGrid = true;
         QueueRedraw();
     }
 
     private void OnPanelDragEnded(DataPanel panel)
     {
+        if (!_editMode)
+            return;
+
         _showGrid = false;
         QueueRedraw();
         SnapToGrid(panel);
@@ -179,6 +209,24 @@ public partial class GridCanvas : Control
             GetNode<DataPanel>("Carry").SetUnits("m");
             GetNode<DataPanel>("Side").SetUnits("m");
             GetNode<DataPanel>("Apex").SetUnits("m");
+        }
+    }
+
+    private IEnumerable<Control> GetPanels()
+    {
+        foreach (Node node in GetChildren())
+        {
+            if (node is Control panel)
+                yield return panel;
+        }
+    }
+
+    private void ApplyEditMode()
+    {
+        foreach (Control panel in GetPanels())
+        {
+            if (panel is DataPanel dataPanel)
+                dataPanel.SetEditable(_editMode);
         }
     }
 }
