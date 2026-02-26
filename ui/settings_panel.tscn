@@ -1,0 +1,203 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://ui/SettingsPanel.cs" id="1_settings_script"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_settings_panel"]
+bg_color = Color(0.0431373, 0.180392, 0.309804, 0.94)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.25)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_settings_button"]
+bg_color = Color(0.0627451, 0.0862745, 0.12549, 0.95)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.25)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+content_margin_left = 10.0
+content_margin_top = 4.0
+content_margin_right = 10.0
+content_margin_bottom = 4.0
+
+[node name="SettingsPanel" type="CanvasLayer"]
+visible = false
+script = ExtResource("1_settings_script")
+
+[node name="Root" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Backdrop" type="ColorRect" parent="Root"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0.45)
+
+[node name="Panel" type="PanelContainer" parent="Root"]
+layout_mode = 0
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -360.0
+offset_top = -250.0
+offset_right = 360.0
+offset_bottom = 250.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_settings_panel")
+
+[node name="Margin" type="MarginContainer" parent="Root/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 16
+
+[node name="Content" type="VBoxContainer" parent="Root/Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="HeaderRow" type="HBoxContainer" parent="Root/Panel/Margin/Content"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="Root/Panel/Margin/Content/HeaderRow"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+theme_override_font_sizes/font_size = 32
+text = "SETTINGS"
+
+[node name="HeaderSpacer" type="Control" parent="Root/Panel/Margin/Content/HeaderRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="CloseButton" type="Button" parent="Root/Panel/Margin/Content/HeaderRow"]
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_settings_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_settings_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_settings_button")
+theme_override_styles/focus = SubResource("StyleBoxFlat_settings_button")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_settings_button")
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.98, 1, 1)
+text = "CLOSE"
+
+[node name="Tabs" type="TabContainer" parent="Root/Panel/Margin/Content"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Player" type="VBoxContainer" parent="Root/Panel/Margin/Content/Tabs"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="PlayerNameLabel" type="Label" parent="Root/Panel/Margin/Content/Tabs/Player"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+theme_override_font_sizes/font_size = 18
+text = "Player Name"
+
+[node name="PlayerNameInput" type="LineEdit" parent="Root/Panel/Margin/Content/Tabs/Player"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+placeholder_text = "Enter player name"
+
+[node name="Display" type="VBoxContainer" parent="Root/Panel/Margin/Content/Tabs"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="ResolutionLabel" type="Label" parent="Root/Panel/Margin/Content/Tabs/Display"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+theme_override_font_sizes/font_size = 18
+text = "Window Size"
+
+[node name="ResolutionOption" type="OptionButton" parent="Root/Panel/Margin/Content/Tabs/Display"]
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_settings_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_settings_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_settings_button")
+theme_override_styles/focus = SubResource("StyleBoxFlat_settings_button")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_settings_button")
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_focus_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_disabled_color = Color(0.96, 0.98, 1, 0.6)
+
+[node name="FullscreenCheck" type="CheckBox" parent="Root/Panel/Margin/Content/Tabs/Display"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+theme_override_font_sizes/font_size = 18
+text = "Fullscreen"
+
+[node name="Game" type="VBoxContainer" parent="Root/Panel/Margin/Content/Tabs"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="CameraDistanceLabel" type="Label" parent="Root/Panel/Margin/Content/Tabs/Game"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+theme_override_font_sizes/font_size = 18
+text = "Camera Distance"
+
+[node name="CameraDistanceRow" type="HBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Game"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="CameraDistanceSlider" type="HSlider" parent="Root/Panel/Margin/Content/Tabs/Game/CameraDistanceRow"]
+custom_minimum_size = Vector2(420, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 1.0
+max_value = 8.0
+step = 0.1
+
+[node name="CameraDistanceValue" type="SpinBox" parent="Root/Panel/Margin/Content/Tabs/Game/CameraDistanceRow"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+min_value = 1.0
+max_value = 8.0
+step = 0.1
+alignment = 1
+
+[node name="CameraDelayLabel" type="Label" parent="Root/Panel/Margin/Content/Tabs/Game"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+theme_override_font_sizes/font_size = 18
+text = "Camera Follow Delay (s)"
+
+[node name="CameraDelayRow" type="HBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Game"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="CameraDelaySlider" type="HSlider" parent="Root/Panel/Margin/Content/Tabs/Game/CameraDelayRow"]
+custom_minimum_size = Vector2(420, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 2.0
+step = 0.05
+
+[node name="CameraDelayValue" type="SpinBox" parent="Root/Panel/Margin/Content/Tabs/Game/CameraDelayRow"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+max_value = 2.0
+step = 0.05
+alignment = 1

@@ -29,6 +29,9 @@ public partial class Hole1 : Node3D
 	private AudioStreamPlayer3D _audioBackgroundBirds;
 	private AudioStreamPlayer3D _audioGolfBallLanding;
 	private RangeSettings _rangeSettings;
+	private AppSettings _appSettings;
+	private Setting _cameraOrbitDistanceSetting;
+	private Setting _cameraFollowDelaySetting;
 	private GameProgressStore _progressStore;
 	private string _sceneId = string.Empty;
 	private ShotMarkerController _shotMarkerController = new();
@@ -83,9 +86,17 @@ public partial class Hole1 : Node3D
 			tcpServer.HitBall += OnTcpClientHitBall;
 		}
 
-		_rangeSettings = GetNode<GlobalSettings>("/root/GlobalSettings").RangeSettings;
+		var globalSettings = GetNode<GlobalSettings>("/root/GlobalSettings");
+		_rangeSettings = globalSettings.RangeSettings;
+		_appSettings = globalSettings.AppSettings;
 		_rangeSettings.CameraFollowMode.SettingChanged += OnCameraFollowChanged;
 		_rangeSettings.SurfaceType.SettingChanged += OnSurfaceChanged;
+		_cameraOrbitDistanceSetting = _appSettings?.CameraOrbitDistance;
+		_cameraFollowDelaySetting = _appSettings?.CameraFollowDelaySeconds;
+		if (_cameraOrbitDistanceSetting != null)
+			_cameraOrbitDistanceSetting.SettingChanged += OnCameraOrbitDistanceChanged;
+		if (_cameraFollowDelaySetting != null)
+			_cameraFollowDelaySetting.SettingChanged += OnCameraFollowDelayChanged;
 		ConnectGoalZones();
 		InitializeGoalCompletionFlow();
 
@@ -121,6 +132,10 @@ public partial class Hole1 : Node3D
 			_rangeSettings.CameraFollowMode.SettingChanged -= OnCameraFollowChanged;
 			_rangeSettings.SurfaceType.SettingChanged -= OnSurfaceChanged;
 		}
+		if (_cameraOrbitDistanceSetting != null)
+			_cameraOrbitDistanceSetting.SettingChanged -= OnCameraOrbitDistanceChanged;
+		if (_cameraFollowDelaySetting != null)
+			_cameraFollowDelaySetting.SettingChanged -= OnCameraFollowDelayChanged;
 
 		_resetCts?.Cancel();
 		_goalCompletionFlow?.Cancel();
@@ -376,8 +391,9 @@ public partial class Hole1 : Node3D
 			{
 				FollowBack = 8.5f,
 				FollowHeight = 2.0f,
+				FollowStartDelaySeconds = GetCameraFollowDelaySecondsSetting(),
 				CameraLookOffset = new Vector3(0.0f, 1.5f, 0.0f),
-				OrbitRadius = 2.5f,
+				OrbitRadius = GetCameraOrbitDistanceSetting(),
 				OrbitHeight = 1.5f,
 				OrbitSpeedDegPerSec = 30.0f,
 				YawIndicatorDistance = 30.0f,
@@ -397,6 +413,30 @@ public partial class Hole1 : Node3D
 			PlayerMarkerSelectionSetter = worldPoint => _shotMarkerController.SetPlayerSelection(worldPoint),
 			SyncMainCamera = SyncMainCameraToPhantom
 		});
+	}
+
+	private void ApplyShotCameraSettings()
+	{
+		_shotCameraController.UpdateRuntimeSettings(
+			GetCameraOrbitDistanceSetting(),
+			GetCameraFollowDelaySecondsSetting()
+		);
+	}
+
+	private float GetCameraOrbitDistanceSetting()
+	{
+		if (_appSettings == null)
+			return AppSettings.DefaultCameraOrbitDistance;
+
+		return (float)_appSettings.CameraOrbitDistance.Value;
+	}
+
+	private float GetCameraFollowDelaySecondsSetting()
+	{
+		if (_appSettings == null)
+			return AppSettings.DefaultCameraFollowDelaySeconds;
+
+		return (float)_appSettings.CameraFollowDelaySeconds.Value;
 	}
 
 	private Vector3? ResolveInitialYawTarget()
@@ -579,6 +619,16 @@ public partial class Hole1 : Node3D
 	private void OnSurfaceChanged(Variant value)
 	{
 		ApplySurfaceToBall();
+	}
+
+	private void OnCameraOrbitDistanceChanged(Variant value)
+	{
+		ApplyShotCameraSettings();
+	}
+
+	private void OnCameraFollowDelayChanged(Variant value)
+	{
+		ApplyShotCameraSettings();
 	}
 
 	private void ApplySurfaceToBall()

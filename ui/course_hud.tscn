@@ -4,6 +4,7 @@
 [ext_resource type="PackedScene" uid="uid://bxqjwaed60ykh" path="res://ui/data_panel.tscn" id="1_q72xt"]
 [ext_resource type="Script" uid="uid://kehfldgysi44" path="res://ui/GridCanvas.cs" id="5_rfb4h"]
 [ext_resource type="Script" uid="uid://by5qgm64uh0v8" path="res://ui/ShotInjector.cs" id="6_j5yvw"]
+[ext_resource type="PackedScene" path="res://ui/settings_panel.tscn" id="7_settings_panel"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_controls_button"]
 bg_color = Color(0.0431373, 0.180392, 0.309804, 0.8)
@@ -20,6 +21,8 @@ content_margin_left = 10.0
 content_margin_top = 4.0
 content_margin_right = 10.0
 content_margin_bottom = 4.0
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_settings_menu"]
 
 [node name="CourseHud" type="Control"]
 layout_mode = 3
@@ -219,19 +222,30 @@ vertical_alignment = 1
 custom_minimum_size = Vector2(56, 62)
 layout_mode = 2
 mouse_filter = 2
-color = Color(0.113725, 0.176471, 0.239216, 0.72)
+color = Color(0.0627451, 0.0862745, 0.12549, 0.8)
 
-[node name="SettingsLabel" type="Label" parent="OverlayLayer/CourseHeaderCard/SettingsBox" unique_id=2035036215]
+[node name="SettingsMenu" type="Button" parent="OverlayLayer/CourseHeaderCard/SettingsBox" unique_id=2035036215]
 layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_styles/normal = SubResource("StyleBoxEmpty_settings_menu")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_settings_menu")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_settings_menu")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_settings_menu")
+theme_override_styles/disabled = SubResource("StyleBoxEmpty_settings_menu")
 theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
-theme_override_font_sizes/font_size = 30
-text = "..."
+theme_override_colors/font_hover_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_focus_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_disabled_color = Color(0.96, 0.98, 1, 0.6)
+theme_override_font_sizes/font_size = 36
+text = "⋮"
 horizontal_alignment = 1
 vertical_alignment = 1
+
+[node name="SettingsPopup" type="PopupMenu" parent="OverlayLayer/CourseHeaderCard/SettingsBox/SettingsMenu" unique_id=2106391942]
 
 [node name="CourseHeaderControlsRow" type="HBoxContainer" parent="OverlayLayer" unique_id=809501377]
 layout_mode = 0
@@ -472,3 +486,5 @@ text = "Test Payload"
 
 [node name="PayloadOption" type="OptionButton" parent="ShotInjector" unique_id=1478542372]
 layout_mode = 2
+
+[node name="SettingsPanel" parent="." instance=ExtResource("7_settings_panel")]

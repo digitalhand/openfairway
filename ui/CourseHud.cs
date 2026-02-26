@@ -8,6 +8,9 @@ public partial class CourseHud : Control
 
     private static readonly Color ControlsThemeColor = new Color(0.0431373f, 0.180392f, 0.309804f, 0.8f);
     private static readonly Color ControlsFontColor = new Color(0.96f, 0.98f, 1.0f, 1.0f);
+    private const int SettingsOpenSettingsId = 0;
+    private const int SettingsMainMenuId = 1;
+    private const string MainMenuScenePath = "res://ui/main_menu.tscn";
     private const string DefaultPlayerName = "JesseInCode";
     private const string DefaultCourseName = "Airways";
     private const int DefaultHoleNumber = 1;
@@ -18,6 +21,9 @@ public partial class CourseHud : Control
     private GridCanvas _gridCanvas;
     private Button _panelsMenu;
     private PopupMenu _panelsPopup;
+    private Button _settingsMenu;
+    private PopupMenu _settingsPopup;
+    private SettingsPanel _settingsPanel;
     private OptionButton _shotTypeOption;
     private Button _hitShotButton;
     private Label _courseNameLabel;
@@ -33,6 +39,7 @@ public partial class CourseHud : Control
     private bool _shotControlsVisible;
     private readonly System.Collections.Generic.Dictionary<int, string> _panelMenuIndexToName = new();
     private Setting _shotInjectorSetting;
+    private Setting _playerNameSetting;
 
     private DataPanel _panelDistance;
     private DataPanel _panelCarry;
@@ -49,8 +56,13 @@ public partial class CourseHud : Control
     public override void _Ready()
     {
         _gridCanvas = GetNode<GridCanvas>("GridCanvas");
-        _shotInjectorSetting = GetNode<GlobalSettings>("/root/GlobalSettings").RangeSettings.ShotInjectorEnabled;
+        _settingsPanel = GetNodeOrNull<SettingsPanel>("SettingsPanel");
+        GlobalSettings globalSettings = GetNode<GlobalSettings>("/root/GlobalSettings");
+        _shotInjectorSetting = globalSettings.RangeSettings.ShotInjectorEnabled;
+        _playerNameSetting = globalSettings.AppSettings?.PlayerName;
         _shotInjectorSetting.SettingChanged += ToggleShotInjector;
+        if (_playerNameSetting != null)
+            _playerNameSetting.SettingChanged += OnPlayerNameSettingChanged;
 
         var shotInjector = GetNode<ShotInjector>("ShotInjector");
         shotInjector.Inject += OnShotInjectorInject;
@@ -70,7 +82,7 @@ public partial class CourseHud : Control
         _targetElevationLabel = GetNode<Label>("OverlayLayer/PlayerShotCard/BottomBar/BottomRow/DeltaLabel");
         _roundEndScoreOverlay = GetNode<Label>("OverlayLayer/RoundEndScoreOverlay");
 
-        _playerNameLabel.Text = DefaultPlayerName;
+        SetPlayerName(_playerNameSetting != null ? _playerNameSetting.Value.ToString() : DefaultPlayerName);
         SetCourseHeader(DefaultCourseName, DefaultHoleNumber, DefaultPar, DefaultYardage);
         SetStrokeCount(0);
         SetScoreUnknown();
@@ -92,6 +104,7 @@ public partial class CourseHud : Control
 
         PopulateShotTypes();
         SetupPanelsMenu();
+        SetupSettingsMenu();
         ApplyDropdownThemes();
         SetShotControlsVisible(true);
     }
@@ -100,6 +113,20 @@ public partial class CourseHud : Control
     {
         if (_shotInjectorSetting != null)
             _shotInjectorSetting.SettingChanged -= ToggleShotInjector;
+        if (_playerNameSetting != null)
+            _playerNameSetting.SettingChanged -= OnPlayerNameSettingChanged;
+        if (_shotTypeOption != null)
+            _shotTypeOption.ItemSelected -= OnShotTypeSelected;
+        if (_hitShotButton != null)
+            _hitShotButton.Pressed -= OnHitShotPressed;
+        if (_panelsPopup != null)
+            _panelsPopup.IdPressed -= OnPanelsMenuIdPressed;
+        if (_panelsMenu != null)
+            _panelsMenu.Pressed -= OnPanelsMenuPressed;
+        if (_settingsPopup != null)
+            _settingsPopup.IdPressed -= OnSettingsMenuIdPressed;
+        if (_settingsMenu != null)
+            _settingsMenu.Pressed -= OnSettingsMenuPressed;
     }
 
     public override void _Input(InputEvent @event)
@@ -270,6 +297,15 @@ public partial class CourseHud : Control
         SetCourseHeaderYardage(yardage);
     }
 
+    public void SetPlayerName(string playerName)
+    {
+        if (_playerNameLabel == null)
+            return;
+
+        string safeName = string.IsNullOrWhiteSpace(playerName) ? DefaultPlayerName : playerName.Trim();
+        _playerNameLabel.Text = safeName;
+    }
+
     public void SetCourseHeaderYardage(int yardage)
     {
         if (_yardageHeaderLabel == null)
@@ -370,6 +406,7 @@ public partial class CourseHud : Control
     {
         ApplyPopupTheme(_shotTypeOption.GetPopup());
         ApplyPopupTheme(_panelsPopup);
+        ApplyPopupTheme(_settingsPopup);
     }
 
     private void ApplyPopupTheme(PopupMenu popup)
@@ -437,6 +474,45 @@ public partial class CourseHud : Control
         var popupPos = _panelsMenu.GlobalPosition + new Vector2(0, _panelsMenu.Size.Y);
         _panelsPopup.Position = new Vector2I((int)popupPos.X, (int)popupPos.Y);
         _panelsPopup.Popup();
+    }
+
+    private void SetupSettingsMenu()
+    {
+        _settingsMenu = GetNode<Button>("OverlayLayer/CourseHeaderCard/SettingsBox/SettingsMenu");
+        _settingsPopup = GetNode<PopupMenu>("OverlayLayer/CourseHeaderCard/SettingsBox/SettingsMenu/SettingsPopup");
+        _settingsPopup.Clear();
+        _settingsPopup.AddItem("Settings", SettingsOpenSettingsId);
+        _settingsPopup.AddItem("Main Menu", SettingsMainMenuId);
+        _settingsPopup.IdPressed += OnSettingsMenuIdPressed;
+        _settingsMenu.Pressed += OnSettingsMenuPressed;
+    }
+
+    private void OnSettingsMenuPressed()
+    {
+        var popupPos = _settingsMenu.GlobalPosition + new Vector2(0, _settingsMenu.Size.Y);
+        _settingsPopup.Position = new Vector2I((int)popupPos.X, (int)popupPos.Y);
+        _settingsPopup.Popup();
+    }
+
+    private void OnSettingsMenuIdPressed(long id)
+    {
+        if (id == SettingsOpenSettingsId)
+        {
+            _settingsPanel?.ShowPanel();
+            return;
+        }
+
+        if (id != SettingsMainMenuId)
+            return;
+
+        Error error = GetTree().ChangeSceneToFile(MainMenuScenePath);
+        if (error != Error.Ok)
+            GD.PushError($"Settings menu: failed to load main menu scene '{MainMenuScenePath}'. Error: {error}");
+    }
+
+    private void OnPlayerNameSettingChanged(Variant value)
+    {
+        SetPlayerName(value.ToString());
     }
 
     private void SetShotControlsVisible(bool visible)
