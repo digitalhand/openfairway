@@ -31,19 +31,7 @@ public partial class RangeUI : MarginContainer
     private Label _targetElevationLabel;
     private Label _roundEndScoreOverlay;
     private Tween _roundEndScoreTween;
-    private Control _flagMarker;
-    private Label _flagMarkerDistanceLabel;
-    private Label _flagMarkerArrowLabel;
-    private Label _flagMarkerElevationLabel;
-    private bool _flagMarkerActive;
-    private Vector3 _flagMarkerPosition = Vector3.Zero;
-    private Control _playerMarker;
-    private Label _playerMarkerDistanceLabel;
-    private Label _playerMarkerArrowLabel;
-    private Label _playerMarkerElevationLabel;
-    private bool _playerMarkerActive;
-    private Vector3 _playerMarkerPosition = Vector3.Zero;
-    private Camera3D _markerCamera;
+    private MarkerHUD _markerHud;
     private bool _shotControlsVisible;
     private readonly System.Collections.Generic.Dictionary<int, string> _panelMenuIndexToName = new();
     private Setting _shotInjectorSetting;
@@ -86,14 +74,7 @@ public partial class RangeUI : MarginContainer
         _targetYardageLabel = GetNode<Label>("OverlayLayer/PlayerShotCard/BottomBar/BottomRow/YardageLabel");
         _targetElevationLabel = GetNode<Label>("OverlayLayer/PlayerShotCard/BottomBar/BottomRow/DeltaLabel");
         _roundEndScoreOverlay = GetNode<Label>("OverlayLayer/RoundEndScoreOverlay");
-        _flagMarker = GetNode<Control>("OverlayLayer/FlagMarker");
-        _flagMarkerDistanceLabel = GetNode<Label>("OverlayLayer/FlagMarker/Card/MarkerContent/DistanceLabel");
-        _flagMarkerArrowLabel = GetNode<Label>("OverlayLayer/FlagMarker/Card/MarkerContent/ElevationRow/ArrowLabel");
-        _flagMarkerElevationLabel = GetNode<Label>("OverlayLayer/FlagMarker/Card/MarkerContent/ElevationRow/ElevationLabel");
-        _playerMarker = GetNode<Control>("OverlayLayer/PlayerMarker");
-        _playerMarkerDistanceLabel = GetNode<Label>("OverlayLayer/PlayerMarker/Card/MarkerContent/DistanceLabel");
-        _playerMarkerArrowLabel = GetNode<Label>("OverlayLayer/PlayerMarker/Card/MarkerContent/ElevationRow/ArrowLabel");
-        _playerMarkerElevationLabel = GetNode<Label>("OverlayLayer/PlayerMarker/Card/MarkerContent/ElevationRow/ElevationLabel");
+        _markerHud = GetNode<MarkerHUD>("OverlayLayer/MarkerHUD");
 
         _playerNameLabel.Text = DefaultPlayerName;
         SetCourseHeader(DefaultCourseName, DefaultHoleNumber, DefaultPar, DefaultYardage);
@@ -102,8 +83,7 @@ public partial class RangeUI : MarginContainer
         SetTargetYardageUnknown();
         SetTargetElevationUnknown();
         HideRoundEndScore();
-        HideFlagMarker();
-        HidePlayerMarker();
+        _markerHud?.HideAll();
 
         // Cache DataPanel references
         _panelDistance = GetNode<DataPanel>("GridCanvas/Distance");
@@ -143,12 +123,6 @@ public partial class RangeUI : MarginContainer
 
         if (keyEvent.Keycode == Key.F)
             ToggleFullscreen();
-    }
-
-    public override void _Process(double delta)
-    {
-        UpdateMarkerProjection(_flagMarker, _flagMarkerActive, _flagMarkerPosition);
-        UpdateMarkerProjection(_playerMarker, _playerMarkerActive, _playerMarkerPosition);
     }
 
     public void SetData(Dictionary data)
@@ -315,114 +289,32 @@ public partial class RangeUI : MarginContainer
 
     public void SetMarkerCamera(Camera3D camera)
     {
-        _markerCamera = camera;
-        UpdateMarkerProjection(_flagMarker, _flagMarkerActive, _flagMarkerPosition);
-        UpdateMarkerProjection(_playerMarker, _playerMarkerActive, _playerMarkerPosition);
+        _markerHud?.SetCamera(camera);
+    }
+
+    public void ApplyMarkerSnapshot(MarkerSnapshot snapshot)
+    {
+        _markerHud?.ApplySnapshot(snapshot);
     }
 
     public void ShowFlagMarker(Vector3 worldPoint, string distanceText, int elevationFeet)
     {
-        ShowMarker(
-            _flagMarker,
-            _flagMarkerDistanceLabel,
-            _flagMarkerArrowLabel,
-            _flagMarkerElevationLabel,
-            worldPoint,
-            distanceText,
-            elevationFeet,
-            ref _flagMarkerActive,
-            ref _flagMarkerPosition
-        );
+        _markerHud?.ShowFlagMarker(worldPoint, distanceText, elevationFeet);
     }
 
     public void HideFlagMarker()
     {
-        HideMarker(_flagMarker, ref _flagMarkerActive);
+        _markerHud?.HideFlagMarker();
     }
 
     public void ShowPlayerMarker(Vector3 worldPoint, string distanceText, int elevationFeet)
     {
-        ShowMarker(
-            _playerMarker,
-            _playerMarkerDistanceLabel,
-            _playerMarkerArrowLabel,
-            _playerMarkerElevationLabel,
-            worldPoint,
-            distanceText,
-            elevationFeet,
-            ref _playerMarkerActive,
-            ref _playerMarkerPosition
-        );
+        _markerHud?.ShowPlayerMarker(worldPoint, distanceText, elevationFeet);
     }
 
     public void HidePlayerMarker()
     {
-        HideMarker(_playerMarker, ref _playerMarkerActive);
-    }
-
-    private void ShowMarker(
-        Control markerRoot,
-        Label distanceLabel,
-        Label arrowLabel,
-        Label elevationLabel,
-        Vector3 worldPoint,
-        string distanceText,
-        int elevationFeet,
-        ref bool isActive,
-        ref Vector3 markerPosition)
-    {
-        if (markerRoot == null)
-            return;
-
-        markerPosition = worldPoint;
-        isActive = true;
-        distanceLabel.Text = string.IsNullOrWhiteSpace(distanceText) ? "---" : distanceText;
-
-        ElevationVisual visual = ElevationPresenter.Build(elevationFeet, includeSignInText: true);
-        if (arrowLabel != null)
-        {
-            arrowLabel.Text = visual.Arrow;
-            arrowLabel.AddThemeColorOverride("font_color", visual.Color);
-        }
-
-        elevationLabel.Text = visual.Text;
-        elevationLabel.AddThemeColorOverride("font_color", visual.Color);
-
-        markerRoot.Visible = true;
-        UpdateMarkerProjection(markerRoot, isActive, markerPosition);
-    }
-
-    private void HideMarker(Control markerRoot, ref bool isActive)
-    {
-        isActive = false;
-        if (markerRoot != null)
-            markerRoot.Visible = false;
-    }
-
-    private void UpdateMarkerProjection(Control markerRoot, bool isActive, Vector3 markerPosition)
-    {
-        if (markerRoot == null)
-            return;
-
-        if (!isActive || _markerCamera == null)
-        {
-            markerRoot.Visible = false;
-            return;
-        }
-
-        if (_markerCamera.IsPositionBehind(markerPosition))
-        {
-            markerRoot.Visible = false;
-            return;
-        }
-
-        Vector2 screenPosition = _markerCamera.UnprojectPosition(markerPosition);
-        Vector2 markerSize = markerRoot.Size;
-        if (markerSize.X <= 0.0f || markerSize.Y <= 0.0f)
-            markerSize = markerRoot.GetCombinedMinimumSize();
-
-        markerRoot.Position = screenPosition - new Vector2(markerSize.X * 0.5f, markerSize.Y);
-        markerRoot.Visible = true;
+        _markerHud?.HidePlayerMarker();
     }
 
     public void SetCourseHeader(string courseName, int holeNumber, int par, int yardage)
