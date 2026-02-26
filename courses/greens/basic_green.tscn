@@ -1,16 +1,13 @@
 [gd_scene format=3 uid="uid://bbbci0q1y1bq5"]
 
-[ext_resource type="Script" path="res://game/CourseGoalZone.cs" id="1_goal_zone"]
+[ext_resource type="Script" uid="uid://d2g8lequi2rmg" path="res://game/CourseGoalZone.cs" id="1_goal_zone"]
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_7px5m"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_7px5m"]
 
-[sub_resource type="BoxShape3D" id="BoxShape3D_t6xft"]
-size = Vector3(1.9698792, 0.030517578, 1.9572449)
-
-[sub_resource type="BoxShape3D" id="BoxShape3D_7px5m"]
-size = Vector3(1.9416504, 0.50439453, 2.0357666)
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_t6xft"]
+height = 0.16845703
 
 [node name="BasicGreen" type="Node3D" unique_id=1788780328]
 
@@ -20,16 +17,10 @@ size = Vector3(1.9416504, 0.50439453, 2.0357666)
 mesh = SubResource("PlaneMesh_7px5m")
 surface_material_override/0 = SubResource("StandardMaterial3D_7px5m")
 
-[node name="StaticBody3D" type="StaticBody3D" parent="Node3D" unique_id=1208133971]
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Node3D/StaticBody3D" unique_id=1263173480]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.009994507, 0.00793457, 0.019821167)
-shape = SubResource("BoxShape3D_t6xft")
-
 [node name="Area3D" type="Area3D" parent="Node3D" unique_id=1651607082]
 script = ExtResource("1_goal_zone")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Node3D/Area3D" unique_id=2011880713]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.007446289, 0.24780273, -0.0026245117)
-shape = SubResource("BoxShape3D_7px5m")
-debug_color = Color(0.9588211, 0.07722346, 0.47744304, 0.41960785)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.007446289, 0.07519531, -0.0026245117)
+shape = SubResource("CylinderShape3D_t6xft")
+debug_color = Color(0.95686275, 0.078431375, 0.47843137, 0.8627451)

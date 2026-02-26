@@ -13,6 +13,7 @@ public static class TestShots
         { "Wedge", "res://assets/data/wedge_test_shot.json" },
         { "Bump", "res://assets/data/bump_test_shot.json" },
         { "Bump & Run", "res://assets/data/bump_and_run.json" },
+        { "Bump & Run SL", "res://assets/data/bump_and_run_slow.json" },
         { "Approach", "res://assets/data/approach_test_shot.json" },
         { "Topped", "res://assets/data/topped_test_shot.json" },
         { "Checked", "res://assets/data/checked_test_shot.json" },
