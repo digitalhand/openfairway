@@ -7,6 +7,8 @@ public partial class RangeUI : MarginContainer
     [Signal]
     public delegate void HitShotEventHandler(Dictionary data);
 
+    private static readonly Color ControlsThemeColor = new Color(0.0431373f, 0.180392f, 0.309804f, 0.8f);
+    private static readonly Color ControlsFontColor = new Color(0.96f, 0.98f, 1.0f, 1.0f);
     private const string DefaultPlayerName = "JesseInCode";
     private const string DefaultCourseName = "Airways";
     private const int DefaultHoleNumber = 1;
@@ -29,13 +31,7 @@ public partial class RangeUI : MarginContainer
     private Label _targetElevationLabel;
     private Label _roundEndScoreOverlay;
     private Tween _roundEndScoreTween;
-    private Control _worldClickMarker;
-    private Label _worldMarkerDistanceLabel;
-    private Label _worldMarkerArrowLabel;
-    private Label _worldMarkerElevationLabel;
-    private Camera3D _worldMarkerCamera;
-    private bool _worldClickMarkerActive;
-    private Vector3 _worldClickMarkerPosition = Vector3.Zero;
+    private MarkerHUD _markerHud;
     private bool _shotControlsVisible;
     private readonly System.Collections.Generic.Dictionary<int, string> _panelMenuIndexToName = new();
     private Setting _shotInjectorSetting;
@@ -78,10 +74,7 @@ public partial class RangeUI : MarginContainer
         _targetYardageLabel = GetNode<Label>("OverlayLayer/PlayerShotCard/BottomBar/BottomRow/YardageLabel");
         _targetElevationLabel = GetNode<Label>("OverlayLayer/PlayerShotCard/BottomBar/BottomRow/DeltaLabel");
         _roundEndScoreOverlay = GetNode<Label>("OverlayLayer/RoundEndScoreOverlay");
-        _worldClickMarker = GetNode<Control>("OverlayLayer/WorldClickMarker");
-        _worldMarkerDistanceLabel = GetNode<Label>("OverlayLayer/WorldClickMarker/Card/MarkerContent/DistanceLabel");
-        _worldMarkerArrowLabel = GetNode<Label>("OverlayLayer/WorldClickMarker/Card/MarkerContent/ElevationRow/ArrowLabel");
-        _worldMarkerElevationLabel = GetNode<Label>("OverlayLayer/WorldClickMarker/Card/MarkerContent/ElevationRow/ElevationLabel");
+        _markerHud = GetNode<MarkerHUD>("OverlayLayer/MarkerHUD");
 
         _playerNameLabel.Text = DefaultPlayerName;
         SetCourseHeader(DefaultCourseName, DefaultHoleNumber, DefaultPar, DefaultYardage);
@@ -90,7 +83,7 @@ public partial class RangeUI : MarginContainer
         SetTargetYardageUnknown();
         SetTargetElevationUnknown();
         HideRoundEndScore();
-        HideWorldClickMarker();
+        _markerHud?.HideAll();
 
         // Cache DataPanel references
         _panelDistance = GetNode<DataPanel>("GridCanvas/Distance");
@@ -107,6 +100,7 @@ public partial class RangeUI : MarginContainer
 
         PopulateShotTypes();
         SetupPanelsMenu();
+        ApplyDropdownThemes();
         SetShotControlsVisible(true);
     }
 
@@ -129,11 +123,6 @@ public partial class RangeUI : MarginContainer
 
         if (keyEvent.Keycode == Key.F)
             ToggleFullscreen();
-    }
-
-    public override void _Process(double delta)
-    {
-        UpdateWorldClickMarkerProjection();
     }
 
     public void SetData(Dictionary data)
@@ -300,64 +289,32 @@ public partial class RangeUI : MarginContainer
 
     public void SetMarkerCamera(Camera3D camera)
     {
-        _worldMarkerCamera = camera;
-        UpdateWorldClickMarkerProjection();
+        _markerHud?.SetCamera(camera);
     }
 
-    public void ShowWorldClickMarker(Vector3 worldPoint, string distanceText, int elevationFeet)
+    public void ApplyMarkerSnapshot(MarkerSnapshot snapshot)
     {
-        if (_worldClickMarker == null)
-            return;
-
-        _worldClickMarkerPosition = worldPoint;
-        _worldClickMarkerActive = true;
-        _worldMarkerDistanceLabel.Text = string.IsNullOrWhiteSpace(distanceText) ? "---" : distanceText;
-
-        ElevationVisual visual = ElevationPresenter.Build(elevationFeet, includeSignInText: true);
-        if (_worldMarkerArrowLabel != null)
-        {
-            _worldMarkerArrowLabel.Text = visual.Arrow;
-            _worldMarkerArrowLabel.AddThemeColorOverride("font_color", visual.Color);
-        }
-
-        _worldMarkerElevationLabel.Text = visual.Text;
-        _worldMarkerElevationLabel.AddThemeColorOverride("font_color", visual.Color);
-
-        _worldClickMarker.Visible = true;
-        UpdateWorldClickMarkerProjection();
+        _markerHud?.ApplySnapshot(snapshot);
     }
 
-    public void HideWorldClickMarker()
+    public void ShowFlagMarker(Vector3 worldPoint, string distanceText, int elevationFeet)
     {
-        _worldClickMarkerActive = false;
-        if (_worldClickMarker != null)
-            _worldClickMarker.Visible = false;
+        _markerHud?.ShowFlagMarker(worldPoint, distanceText, elevationFeet);
     }
 
-    private void UpdateWorldClickMarkerProjection()
+    public void HideFlagMarker()
     {
-        if (_worldClickMarker == null)
-            return;
+        _markerHud?.HideFlagMarker();
+    }
 
-        if (!_worldClickMarkerActive || _worldMarkerCamera == null)
-        {
-            _worldClickMarker.Visible = false;
-            return;
-        }
+    public void ShowPlayerMarker(Vector3 worldPoint, string distanceText, int elevationFeet)
+    {
+        _markerHud?.ShowPlayerMarker(worldPoint, distanceText, elevationFeet);
+    }
 
-        if (_worldMarkerCamera.IsPositionBehind(_worldClickMarkerPosition))
-        {
-            _worldClickMarker.Visible = false;
-            return;
-        }
-
-        Vector2 screenPosition = _worldMarkerCamera.UnprojectPosition(_worldClickMarkerPosition);
-        Vector2 markerSize = _worldClickMarker.Size;
-        if (markerSize.X <= 0.0f || markerSize.Y <= 0.0f)
-            markerSize = _worldClickMarker.GetCombinedMinimumSize();
-
-        _worldClickMarker.Position = screenPosition - new Vector2(markerSize.X * 0.5f, markerSize.Y);
-        _worldClickMarker.Visible = true;
+    public void HidePlayerMarker()
+    {
+        _markerHud?.HidePlayerMarker();
     }
 
     public void SetCourseHeader(string courseName, int holeNumber, int par, int yardage)
@@ -440,6 +397,59 @@ public partial class RangeUI : MarginContainer
 
         _panelsPopup.IdPressed += OnPanelsMenuIdPressed;
         _panelsMenu.Pressed += OnPanelsMenuPressed;
+    }
+
+    private void ApplyDropdownThemes()
+    {
+        ApplyPopupTheme(_shotTypeOption.GetPopup());
+        ApplyPopupTheme(_panelsPopup);
+    }
+
+    private void ApplyPopupTheme(PopupMenu popup)
+    {
+        if (popup == null)
+            return;
+
+        popup.AddThemeStyleboxOverride("panel", CreatePopupPanelStyle());
+        popup.AddThemeStyleboxOverride("hover", CreatePopupHoverStyle());
+        popup.AddThemeColorOverride("font_color", ControlsFontColor);
+        popup.AddThemeColorOverride("font_hover_color", ControlsFontColor);
+        popup.AddThemeColorOverride("font_separator_color", ControlsFontColor);
+        popup.AddThemeColorOverride("font_disabled_color", new Color(ControlsFontColor.R, ControlsFontColor.G, ControlsFontColor.B, 0.6f));
+    }
+
+    private static StyleBoxFlat CreatePopupPanelStyle()
+    {
+        return new StyleBoxFlat
+        {
+            BgColor = ControlsThemeColor,
+            BorderWidthLeft = 1,
+            BorderWidthTop = 1,
+            BorderWidthRight = 1,
+            BorderWidthBottom = 1,
+            BorderColor = new Color(1, 1, 1, 0.25f),
+            CornerRadiusTopLeft = 6,
+            CornerRadiusTopRight = 6,
+            CornerRadiusBottomRight = 6,
+            CornerRadiusBottomLeft = 6
+        };
+    }
+
+    private static StyleBoxFlat CreatePopupHoverStyle()
+    {
+        return new StyleBoxFlat
+        {
+            BgColor = ControlsThemeColor,
+            BorderWidthLeft = 1,
+            BorderWidthTop = 1,
+            BorderWidthRight = 1,
+            BorderWidthBottom = 1,
+            BorderColor = new Color(1, 1, 1, 0.5f),
+            CornerRadiusTopLeft = 4,
+            CornerRadiusTopRight = 4,
+            CornerRadiusBottomRight = 4,
+            CornerRadiusBottomLeft = 4
+        };
     }
 
     private void OnPanelsMenuIdPressed(long id)

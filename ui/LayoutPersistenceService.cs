@@ -3,6 +3,10 @@ using Godot;
 
 public static class LayoutPersistenceService
 {
+    public const int CurrentLayoutVersion = 3;
+    private const string MetaSection = "meta";
+    private const string LayoutVersionKey = "layout_version";
+
     public static bool TryLoad(string path, out ConfigFile config)
     {
         config = new ConfigFile();
@@ -18,7 +22,24 @@ public static class LayoutPersistenceService
             config.SetValue("visibility", panel.Name, panel.Visible);
         }
 
+        config.SetValue(MetaSection, LayoutVersionKey, CurrentLayoutVersion);
         config.Save(path);
+    }
+
+    public static int GetLayoutVersion(ConfigFile config)
+    {
+        if (!config.HasSectionKey(MetaSection, LayoutVersionKey))
+            return 1;
+
+        Variant versionValue = config.GetValue(MetaSection, LayoutVersionKey);
+        if (versionValue.VariantType == Variant.Type.Int)
+            return (int)versionValue;
+
+        if (versionValue.VariantType == Variant.Type.Float)
+            return Mathf.RoundToInt((float)versionValue);
+
+        PhysicsLogger.Error("LayoutPersistenceService: invalid layout_version type in metadata");
+        return 1;
     }
 
     public static void Apply(ConfigFile config, IEnumerable<Control> panels, Vector2 viewportSize)

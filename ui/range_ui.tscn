@@ -4,18 +4,23 @@
 [ext_resource type="PackedScene" uid="uid://bxqjwaed60ykh" path="res://ui/data_panel.tscn" id="1_q72xt"]
 [ext_resource type="Script" uid="uid://kehfldgysi44" path="res://ui/GridCanvas.cs" id="5_rfb4h"]
 [ext_resource type="Script" uid="uid://by5qgm64uh0v8" path="res://ui/ShotInjector.cs" id="6_j5yvw"]
+[ext_resource type="PackedScene" path="res://ui/marker_hud.tscn" id="7_markerhud"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_world_click_marker"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_controls_button"]
 bg_color = Color(0.0431373, 0.180392, 0.309804, 0.8)
-border_width_left = 3
-border_width_top = 3
-border_width_right = 3
-border_width_bottom = 3
-border_color = Color(1, 1, 1, 1)
-corner_radius_top_left = 12
-corner_radius_top_right = 12
-corner_radius_bottom_right = 12
-corner_radius_bottom_left = 12
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.25)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+content_margin_left = 10.0
+content_margin_top = 4.0
+content_margin_right = 10.0
+content_margin_bottom = 4.0
 
 [node name="RangeUI" type="MarginContainer" unique_id=1754073492]
 anchors_preset = 15
@@ -55,90 +60,7 @@ text = "PAR"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="WorldClickMarker" type="Control" parent="OverlayLayer"]
-visible = false
-layout_mode = 0
-mouse_filter = 2
-offset_right = 86.0
-offset_bottom = 124.0
-
-[node name="Card" type="Panel" parent="OverlayLayer/WorldClickMarker"]
-layout_mode = 0
-mouse_filter = 2
-offset_right = 86.0
-offset_bottom = 98.0
-theme_override_styles/panel = SubResource("StyleBoxFlat_world_click_marker")
-
-[node name="MarkerContent" type="VBoxContainer" parent="OverlayLayer/WorldClickMarker/Card"]
-layout_mode = 0
-mouse_filter = 2
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = 6.0
-offset_top = 4.0
-offset_right = -6.0
-offset_bottom = -6.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_constants/separation = 2
-
-[node name="DistanceLabel" type="Label" parent="OverlayLayer/WorldClickMarker/Card/MarkerContent"]
-layout_mode = 2
-size_flags_vertical = 3
-mouse_filter = 2
-theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
-theme_override_font_sizes/font_size = 34
-text = "---"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="Divider" type="ColorRect" parent="OverlayLayer/WorldClickMarker/Card/MarkerContent"]
-custom_minimum_size = Vector2(0, 2)
-layout_mode = 2
-mouse_filter = 2
-color = Color(1, 1, 1, 0.75)
-
-[node name="ElevationRow" type="HBoxContainer" parent="OverlayLayer/WorldClickMarker/Card/MarkerContent"]
-custom_minimum_size = Vector2(0, 18)
-layout_mode = 2
-mouse_filter = 2
-theme_override_constants/separation = 4
-
-[node name="LeftSpacer" type="Control" parent="OverlayLayer/WorldClickMarker/Card/MarkerContent/ElevationRow"]
-layout_mode = 2
-mouse_filter = 2
-size_flags_horizontal = 3
-
-[node name="ArrowLabel" type="Label" parent="OverlayLayer/WorldClickMarker/Card/MarkerContent/ElevationRow"]
-layout_mode = 2
-mouse_filter = 2
-theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
-theme_override_font_sizes/font_size = 14
-text = "▼"
-vertical_alignment = 1
-
-[node name="ElevationLabel" type="Label" parent="OverlayLayer/WorldClickMarker/Card/MarkerContent/ElevationRow"]
-layout_mode = 2
-mouse_filter = 2
-theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
-theme_override_font_sizes/font_size = 14
-text = "0FT"
-vertical_alignment = 1
-
-[node name="RightSpacer" type="Control" parent="OverlayLayer/WorldClickMarker/Card/MarkerContent/ElevationRow"]
-layout_mode = 2
-mouse_filter = 2
-size_flags_horizontal = 3
-
-[node name="PointerBorder" type="Polygon2D" parent="OverlayLayer/WorldClickMarker"]
-position = Vector2(43, 96)
-color = Color(1, 1, 1, 1)
-polygon = PackedVector2Array(-11, 0, 11, 0, 0, 24)
-
-[node name="PointerFill" type="Polygon2D" parent="OverlayLayer/WorldClickMarker"]
-position = Vector2(43, 98)
-color = Color(0.0431373, 0.180392, 0.309804, 0.8)
-polygon = PackedVector2Array(-8, 0, 8, 0, 0, 18)
+[node name="MarkerHUD" parent="OverlayLayer" instance=ExtResource("7_markerhud")]
 
 [node name="PlayerShotCard" type="VBoxContainer" parent="OverlayLayer" unique_id=1816653839]
 layout_mode = 0
@@ -335,12 +257,32 @@ visible = false
 custom_minimum_size = Vector2(170, 0)
 layout_mode = 2
 size_flags_vertical = 0
+theme_override_styles/normal = SubResource("StyleBoxFlat_controls_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_controls_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_controls_button")
+theme_override_styles/focus = SubResource("StyleBoxFlat_controls_button")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_controls_button")
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_focus_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_disabled_color = Color(0.96, 0.98, 1, 0.6)
 
 [node name="HitShotButton" type="Button" parent="OverlayLayer/CourseHeaderControlsRow" unique_id=1466247724]
 visible = false
 custom_minimum_size = Vector2(120, 0)
 layout_mode = 2
 size_flags_vertical = 0
+theme_override_styles/normal = SubResource("StyleBoxFlat_controls_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_controls_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_controls_button")
+theme_override_styles/focus = SubResource("StyleBoxFlat_controls_button")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_controls_button")
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_focus_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_disabled_color = Color(0.96, 0.98, 1, 0.6)
 theme_override_font_sizes/font_size = 18
 text = "Hit Shot"
 
@@ -352,6 +294,16 @@ size_flags_horizontal = 3
 custom_minimum_size = Vector2(120, 0)
 layout_mode = 2
 size_flags_vertical = 0
+theme_override_styles/normal = SubResource("StyleBoxFlat_controls_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_controls_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_controls_button")
+theme_override_styles/focus = SubResource("StyleBoxFlat_controls_button")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_controls_button")
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_focus_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_disabled_color = Color(0.96, 0.98, 1, 0.6)
 theme_override_font_sizes/font_size = 18
 text = "Panels"
 
