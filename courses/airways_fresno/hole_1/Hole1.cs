@@ -3,30 +3,12 @@ using Godot;
 using Godot.Collections;
 
 /// <summary>
-/// Main range scene controller.
+/// Main hole 1 scene controller.
 /// Manages the connection between TCP server, shot tracker, and UI.
 /// </summary>
-public partial class Range : Node3D
+public partial class Hole1 : Node3D
 {
 	private static readonly Vector3 BALL_START_POSITION = GolfBall.START_POSITION;
-
-	private Dictionary _displayData = new()
-	{
-		{ "Distance", "---" },
-		{ "Carry", "---" },
-		{ "Offline", "---" },
-		{ "Apex", "---" },
-		{ "VLA", "---" },
-		{ "HLA", "---" },
-		{ "Speed", "---" },
-		{ "BackSpin", "---" },
-		{ "SideSpin", "---" },
-		{ "TotalSpin", "---" },
-		{ "SpinAxis", "---" }
-	};
-
-	private Dictionary _rawBallData = new();
-	private Dictionary _lastDisplay = new();
 
 	private const float CLICK_RAY_DISTANCE = 5000.0f;
 	private const float ROUND_END_SCORE_DURATION_SECONDS = 4.0f;
@@ -49,13 +31,16 @@ public partial class Range : Node3D
 	private RangeSettings _rangeSettings;
 	private GameProgressStore _progressStore;
 	private string _sceneId = string.Empty;
-	private CourseCardInfo _courseCard = CourseCatalog.DefaultCourseCard;
-	private int _coursePar = CourseCatalog.DefaultPar;
-	private int _strokeCount = 0;
-	private bool _goalCompletionCountdownRunning = false;
 	private ShotMarkerController _shotMarkerController = new();
 	private bool _didLogMissingFlagPole = false;
 	private readonly System.Collections.Generic.List<CourseGoalZone> _goalZones = new();
+
+	private readonly ShotDisplaySession _displaySession = new();
+	private readonly HoleRoundState _holeRoundState = new();
+	private GoalCompletionFlow _goalCompletionFlow;
+	private TargetReferenceResolver _targetResolver;
+
+	private bool IsGoalCountdownRunning => _goalCompletionFlow != null && _goalCompletionFlow.IsRunning;
 
 	public override void _Ready()
 	{
@@ -79,6 +64,7 @@ public partial class Range : Node3D
 		_sceneId = GetSceneId();
 		ResolveCourseCard();
 		CacheTerrainData();
+		InitializeTargetResolver();
 		ResetBallToStart();
 		// Physics world may not have collision shapes ready in _Ready;
 		// re-snap once deferred so the terrain raycast succeeds.
@@ -101,10 +87,12 @@ public partial class Range : Node3D
 		_rangeSettings.CameraFollowMode.SettingChanged += OnCameraFollowChanged;
 		_rangeSettings.SurfaceType.SettingChanged += OnSurfaceChanged;
 		ConnectGoalZones();
+		InitializeGoalCompletionFlow();
+
 		// Always start fresh at the tee on scene load.
 		// Saved progress can be restored later through an explicit resume flow.
 		SetStrokeCount(0);
-		_rangeUi.SetStrokeCount(_strokeCount);
+		_rangeUi?.SetData(_displaySession.Current.ToDictionary());
 		_rangeUi.SetMarkerCamera(_mainCamera);
 		InitializeShotMarkerController();
 		InitializeShotCameraController();
@@ -133,6 +121,9 @@ public partial class Range : Node3D
 			_rangeSettings.CameraFollowMode.SettingChanged -= OnCameraFollowChanged;
 			_rangeSettings.SurfaceType.SettingChanged -= OnSurfaceChanged;
 		}
+
+		_resetCts?.Cancel();
+		_goalCompletionFlow?.Cancel();
 		_shotCameraController.CancelTransientTweens();
 		_goalZones.Clear();
 	}
@@ -160,7 +151,7 @@ public partial class Range : Node3D
 		if (@event is not InputEventMouseButton mouseButton
 			|| !mouseButton.Pressed
 			|| mouseButton.ButtonIndex != MouseButton.Left
-			|| _goalCompletionCountdownRunning)
+			|| IsGoalCountdownRunning)
 		{
 			return;
 		}
@@ -210,18 +201,17 @@ public partial class Range : Node3D
 		{
 			UpdateBallDisplay();
 
-			if (_goalCompletionCountdownRunning)
+			if (IsGoalCountdownRunning)
 			{
 				FreezeCameraOnBall();
 				return;
 			}
 
-			if (IsBallOnGoalZone())
+			if (_goalCompletionFlow != null && _goalCompletionFlow.TryStartIfBallOnGoal(this, ROUND_END_SCORE_DURATION_SECONDS))
 			{
-				PhysicsLogger.Info("Ball settled on GimmeCircle. Ending round in 3 seconds.");
-				_rangeUi?.SetFinalStrokeCount(_strokeCount);
+				PhysicsLogger.Info("Ball settled on goal zone. Ending round in 3 seconds.");
+				_rangeUi?.SetFinalStrokeCount(_holeRoundState.StrokeCount);
 				FreezeCameraOnBall();
-				StartGoalCompletionCountdown();
 				return;
 			}
 
@@ -251,8 +241,8 @@ public partial class Range : Node3D
 			// Auto-reset ball if enabled
 			if ((bool)_rangeSettings.AutoBallReset.Value)
 			{
-				ResetDisplayData();
-				_rangeUi.SetData(_displayData);
+				_displaySession.Reset();
+				_rangeUi.SetData(_displaySession.Current.ToDictionary());
 				_shotTracker.ResetBall();
 				CallDeferred(nameof(SetCameraToStartImmediate));
 			}
@@ -299,7 +289,7 @@ public partial class Range : Node3D
 
 	private void LaunchShot(Dictionary data, bool useTcpTracker, bool logPayload)
 	{
-		if (_goalCompletionCountdownRunning)
+		if (IsGoalCountdownRunning)
 			return;
 
 		_resetCts?.Cancel();
@@ -311,7 +301,7 @@ public partial class Range : Node3D
 		if (logPayload)
 			PhysicsLogger.Info($"Launch monitor payload: {Json.Stringify(data)}");
 
-		_rawBallData = data.Duplicate();
+		_displaySession.SetRawPayload(data);
 		UpdateBallDisplay();
 		PlayDriverHitAudio();
 		IncrementStrokeCount();
@@ -399,7 +389,7 @@ public partial class Range : Node3D
 			BallVelocityProvider = () => _ball.Velocity,
 			BallShotDirectionProvider = () => _ball.ShotDirection,
 			BallStateProvider = () => _shotTracker != null ? _shotTracker.GetBallState() : PhysicsEnums.BallState.Rest,
-			IsGoalCountdownProvider = () => _goalCompletionCountdownRunning,
+			IsGoalCountdownProvider = () => IsGoalCountdownRunning,
 			InitialYawTargetProvider = ResolveInitialYawTarget,
 			DefaultYawAnchorProvider = ResolveFlagReferencePoint,
 			ClickWorldPointResolver = ResolveClickWorldPoint,
@@ -419,10 +409,10 @@ public partial class Range : Node3D
 
 	private Vector3 SnapPointToTerrain(Vector3 worldPoint)
 	{
-		if (TrySampleTerrainHeight(worldPoint, out float terrainHeight))
-			return new Vector3(worldPoint.X, terrainHeight, worldPoint.Z);
+		if (_targetResolver == null)
+			return worldPoint;
 
-		return worldPoint;
+		return _targetResolver.SnapPointToTerrain(worldPoint);
 	}
 
 	private void ResetBallToStart()
@@ -447,44 +437,30 @@ public partial class Range : Node3D
 		}
 	}
 
-	private async void StartGoalCompletionCountdown()
+	private void InitializeGoalCompletionFlow()
 	{
-		if (_goalCompletionCountdownRunning)
-			return;
-
-		_goalCompletionCountdownRunning = true;
-		_resetCts?.Cancel();
-		_resetCts = new CancellationTokenSource();
-		var token = _resetCts.Token;
-		_rangeUi?.ShowRoundEndScore(GetRoundEndScoreOverlayText());
-
-		await ToSignal(GetTree().CreateTimer(ROUND_END_SCORE_DURATION_SECONDS), SceneTreeTimer.SignalName.Timeout);
-		if (token.IsCancellationRequested)
+		if (_goalZones.Count == 0)
 		{
-			_rangeUi?.HideRoundEndScore();
-			_goalCompletionCountdownRunning = false;
+			_goalCompletionFlow = null;
 			return;
 		}
 
-		_rangeUi?.HideRoundEndScore();
-		CompleteGoalRound();
-		_goalCompletionCountdownRunning = false;
-	}
-
-	private string GetRoundEndScoreOverlayText()
-	{
-		if (_strokeCount <= 0)
-			return "Par";
-
-		ScoreResult finalScore = ScoreMapper.MapScore(_strokeCount, _coursePar);
-		return finalScore.Label;
+		_goalCompletionFlow = new GoalCompletionFlow();
+		_goalCompletionFlow.Initialize(new GoalCompletionConfig
+		{
+			IsBallOnGoalProvider = IsBallOnGoalZone,
+			StrokeProvider = () => _holeRoundState.StrokeCount,
+			ParProvider = () => _holeRoundState.Par,
+			ShowOverlay = label => _rangeUi?.ShowRoundEndScore(label),
+			HideOverlay = () => _rangeUi?.HideRoundEndScore(),
+			OnCompleteRound = CompleteGoalRound
+		});
 	}
 
 	private void CompleteGoalRound()
 	{
-		if (_strokeCount > 0)
+		if (_holeRoundState.TryGetScore(out ScoreResult finalScore))
 		{
-			ScoreResult finalScore = ScoreMapper.MapScore(_strokeCount, _coursePar);
 			string relative = finalScore.RelativeToPar > 0 ? $"+{finalScore.RelativeToPar}" : finalScore.RelativeToPar.ToString();
 			PhysicsLogger.Info($"Goal countdown complete. Final score: {finalScore.Label} ({finalScore.Strokes} strokes, par {finalScore.Par}, {relative}). Starting a new round.");
 		}
@@ -492,6 +468,7 @@ public partial class Range : Node3D
 		{
 			PhysicsLogger.Info("Goal countdown complete. Starting a new round.");
 		}
+
 		ResetRoundView();
 		SetStrokeCount(0);
 		ClearRoundProgress();
@@ -529,7 +506,7 @@ public partial class Range : Node3D
 		{
 			SceneId = _sceneId,
 			BallPosition = _ball.GlobalPosition,
-			Strokes = _strokeCount,
+			Strokes = _holeRoundState.StrokeCount,
 			Completed = false
 		});
 	}
@@ -541,13 +518,13 @@ public partial class Range : Node3D
 
 	private void IncrementStrokeCount()
 	{
-		SetStrokeCount(_strokeCount + 1);
+		SetStrokeCount(_holeRoundState.StrokeCount + 1);
 	}
 
 	private void SetStrokeCount(int strokes)
 	{
-		_strokeCount = Mathf.Max(0, strokes);
-		_rangeUi?.SetStrokeCount(_strokeCount);
+		_holeRoundState.SetStrokes(strokes);
+		_rangeUi?.SetStrokeCount(_holeRoundState.StrokeCount);
 		UpdateScoreLabelFromStrokes();
 	}
 
@@ -555,11 +532,10 @@ public partial class Range : Node3D
 	{
 		_shotCameraController.OnRoundReset();
 		_resetCts?.Cancel();
-		_goalCompletionCountdownRunning = false;
-		_rangeUi?.HideRoundEndScore();
+		_goalCompletionFlow?.Cancel();
 		_shotMarkerController.OnRoundReset();
-		ResetDisplayData();
-		_rangeUi.SetData(_displayData);
+		_displaySession.Reset();
+		_rangeUi?.SetData(_displaySession.Current.ToDictionary());
 	}
 
 	private string GetSceneId()
@@ -573,18 +549,12 @@ public partial class Range : Node3D
 
 	private void ResolveCourseCard()
 	{
-		_courseCard = CourseCatalog.DefaultCourseCard;
-		if (CourseCatalog.TryGetCourseCard(_sceneId, out CourseCardInfo resolvedCard))
-		{
-			_courseCard = resolvedCard;
-		}
-		else
-		{
+		bool foundCourseCard = _holeRoundState.Initialize(_sceneId);
+		if (!foundCourseCard)
 			PhysicsLogger.Info($"No course header configured for scene '{_sceneId}'. Using defaults.");
-		}
 
-		_coursePar = _courseCard.Par;
-		_rangeUi?.SetCourseHeader(_courseCard.CourseName, _courseCard.HoleNumber, _courseCard.Par, _courseCard.Yardage);
+		CourseCardInfo courseCard = _holeRoundState.CourseCard;
+		_rangeUi?.SetCourseHeader(courseCard.CourseName, courseCard.HoleNumber, courseCard.Par, courseCard.Yardage);
 	}
 
 	private void UpdateScoreLabelFromStrokes()
@@ -592,13 +562,12 @@ public partial class Range : Node3D
 		if (_rangeUi == null)
 			return;
 
-		if (_strokeCount <= 0)
+		if (!_holeRoundState.TryGetScore(out ScoreResult score))
 		{
 			_rangeUi.SetScoreUnknown();
 			return;
 		}
 
-		ScoreResult score = ScoreMapper.MapScore(_strokeCount, _coursePar);
 		_rangeUi.SetScoreLabel(score.Label);
 	}
 
@@ -621,36 +590,12 @@ public partial class Range : Node3D
 		}
 	}
 
-	private void ResetDisplayData()
-	{
-		_rawBallData.Clear();
-		_lastDisplay.Clear();
-		_displayData["Distance"] = "---";
-		_displayData["Carry"] = "---";
-		_displayData["Offline"] = "---";
-		_displayData["Apex"] = "---";
-		_displayData["VLA"] = "---";
-		_displayData["HLA"] = "---";
-		_displayData["Speed"] = "---";
-		_displayData["BackSpin"] = "---";
-		_displayData["SideSpin"] = "---";
-		_displayData["TotalSpin"] = "---";
-		_displayData["SpinAxis"] = "---";
-	}
-
 	private void UpdateBallDisplay()
 	{
 		bool showDistance = true;
 		var units = (PhysicsEnums.Units)(int)_rangeSettings.RangeUnits.Value;
-		_displayData = ShotFormatter.FormatBallDisplay(
-			_rawBallData,
-			_shotTracker,
-			units,
-			showDistance,
-			_displayData
-		);
-		_lastDisplay = _displayData.Duplicate();
-		_rangeUi.SetData(_displayData);
+		ShotDisplaySnapshot snapshot = _displaySession.Refresh(_shotTracker, units, showDistance);
+		_rangeUi?.SetData(snapshot.ToDictionary());
 	}
 
 	private void InitializeShotMarkerController()
@@ -660,7 +605,7 @@ public partial class Range : Node3D
 			BallPositionProvider = () => _ball.GlobalPosition,
 			BallStateProvider = () => _shotTracker != null ? _shotTracker.GetBallState() : PhysicsEnums.BallState.Rest,
 			IsShotLaunchingProvider = () => _shotCameraController.IsShotLaunching,
-			IsGoalCountdownProvider = () => _goalCompletionCountdownRunning,
+			IsGoalCountdownProvider = () => IsGoalCountdownRunning,
 			FlagReferencePointProvider = ResolveFlagReferencePoint,
 			ClickWorldPointResolver = ResolveClickWorldPoint,
 			OnMarkerSnapshotChanged = ApplyMarkerSnapshot,
@@ -670,7 +615,10 @@ public partial class Range : Node3D
 
 	private Vector3? ResolveFlagReferencePoint()
 	{
-		if (!TryGetTargetMarkerPoint(out Vector3 worldPoint))
+		if (_targetResolver == null)
+			return null;
+
+		if (!_targetResolver.TryGetDistanceReferencePoint(out Vector3 worldPoint))
 			return null;
 
 		return worldPoint;
@@ -678,7 +626,10 @@ public partial class Range : Node3D
 
 	private Vector3? ResolveClickWorldPoint(Vector2 mousePosition)
 	{
-		if (!TryGetWorldClickPoint(mousePosition, out Vector3 worldPoint))
+		if (_targetResolver == null)
+			return null;
+
+		if (!_targetResolver.TryGetWorldClickPoint(mousePosition, out Vector3 worldPoint))
 			return null;
 
 		return worldPoint;
@@ -692,44 +643,6 @@ public partial class Range : Node3D
 		_rangeUi.ApplyMarkerSnapshot(snapshot);
 	}
 
-	private bool TryGetWorldClickPoint(Vector2 mousePosition, out Vector3 worldPoint)
-	{
-		worldPoint = Vector3.Zero;
-		if (_mainCamera == null)
-			return false;
-
-		var world = GetWorld3D();
-		if (world == null)
-			return false;
-
-		Vector3 rayOrigin = _mainCamera.ProjectRayOrigin(mousePosition);
-		Vector3 rayDirection = _mainCamera.ProjectRayNormal(mousePosition);
-		var query = PhysicsRayQueryParameters3D.Create(rayOrigin, rayOrigin + rayDirection * CLICK_RAY_DISTANCE);
-		query.CollideWithBodies = true;
-		query.CollideWithAreas = true;
-
-		if (_ball != null)
-		{
-			var exclude = new Godot.Collections.Array<Rid>();
-			exclude.Add(_ball.GetRid());
-			query.Exclude = exclude;
-		}
-
-		Dictionary hit = world.DirectSpaceState.IntersectRay(query);
-		if (hit.Count > 0 && hit.ContainsKey("position"))
-		{
-			worldPoint = (Vector3)hit["position"];
-			return true;
-		}
-
-		return TryResolveTerrainPointFromRay(mousePosition, out worldPoint);
-	}
-
-	private bool TryGetTargetMarkerPoint(out Vector3 worldPoint)
-	{
-		return TryGetDistanceReferencePoint(out worldPoint);
-	}
-
 	private void QueueFlagMarkerResetToTarget()
 	{
 		CallDeferred(nameof(RefreshShotMarkerController));
@@ -741,25 +654,21 @@ public partial class Range : Node3D
 		_shotMarkerController.Tick();
 	}
 
-	private bool TryGetDistanceReferencePoint(out Vector3 worldPoint)
+	private Vector3? ResolveSceneDistanceReferencePoint()
 	{
-		if (TryGetFlagPoleBottomPoint(out worldPoint))
-		{
-			return true;
-		}
+		if (TryGetFlagPoleBottomPoint(out Vector3 worldPoint))
+			return worldPoint;
 
 		if (!_didLogMissingFlagPole)
 		{
-			PhysicsLogger.Info("Range: flag_pole not found. Falling back to GimmeCircle/BasicGreen for distance/elevation reference.");
+			PhysicsLogger.Info("Hole1: flag_pole not found. Falling back to GimmeCircle/BasicGreen for distance/elevation reference.");
 			_didLogMissingFlagPole = true;
 		}
 
-		worldPoint = Vector3.Zero;
 		if (_basicGreenTarget == null)
-			return false;
+			return null;
 
-		worldPoint = _basicGreenTarget.GlobalPosition;
-		return true;
+		return _basicGreenTarget.GlobalPosition;
 	}
 
 	private bool TryGetFlagPoleBottomPoint(out Vector3 worldPoint)
@@ -782,28 +691,31 @@ public partial class Range : Node3D
 		);
 
 		Vector3 bottomWorldPoint = _flagPoleTarget.ToGlobal(localBottomCenter);
-		if (TrySampleTerrainHeight(bottomWorldPoint, out float terrainHeight))
+		if (_targetResolver != null && _targetResolver.TrySampleTerrainHeight(bottomWorldPoint, out float terrainHeight))
 			bottomWorldPoint.Y = terrainHeight;
 
 		worldPoint = bottomWorldPoint;
 		return true;
 	}
 
-	private bool TrySampleTerrainHeight(Vector3 worldPoint, out float terrainHeight)
+	private void InitializeTargetResolver()
 	{
-		terrainHeight = 0.0f;
+		_targetResolver = new TargetReferenceResolver(
+			ball: _ball,
+			camera: _mainCamera,
+			worldProvider: GetWorld3D,
+			terrainDataProvider: GetTerrainData,
+			distanceReferencePointProvider: ResolveSceneDistanceReferencePoint,
+			clickRayDistance: CLICK_RAY_DISTANCE
+		);
+	}
+
+	private GodotObject GetTerrainData()
+	{
 		if (_terrainData == null)
 			CacheTerrainData();
 
-		if (_terrainData == null)
-			return false;
-
-		float height = (float)_terrainData.Call("get_height", worldPoint);
-		if (float.IsNaN(height))
-			return false;
-
-		terrainHeight = height;
-		return true;
+		return _terrainData;
 	}
 
 	private void CacheTerrainData()
@@ -820,38 +732,6 @@ public partial class Range : Node3D
 			_terrainData = obj;
 	}
 
-	private bool TryResolveTerrainPointFromRay(Vector2 mousePosition, out Vector3 worldPoint)
-	{
-		worldPoint = Vector3.Zero;
-		if (_mainCamera == null || _ball == null)
-			return false;
-
-		if (_terrainData == null)
-			CacheTerrainData();
-
-		if (_terrainData == null)
-			return false;
-
-		Vector3 rayOrigin = _mainCamera.ProjectRayOrigin(mousePosition);
-		Vector3 rayDirection = _mainCamera.ProjectRayNormal(mousePosition);
-		if (Mathf.Abs(rayDirection.Y) < 0.00001f)
-			return false;
-
-		// Intersect the click ray with the ball-height horizontal plane,
-		// then sample actual terrain height at that X/Z.
-		float t = (_ball.GlobalPosition.Y - rayOrigin.Y) / rayDirection.Y;
-		if (t <= 0.0f)
-			return false;
-
-		Vector3 planePoint = rayOrigin + rayDirection * t;
-		float height = (float)_terrainData.Call("get_height", planePoint);
-		if (float.IsNaN(height))
-			return false;
-
-		worldPoint = new Vector3(planePoint.X, height, planePoint.Z);
-		return true;
-	}
-
 	private void RefreshTargetHud()
 	{
 		UpdateTargetYardageDisplay();
@@ -863,13 +743,12 @@ public partial class Range : Node3D
 		if (_rangeUi == null)
 			return;
 
-		if (_ball == null || !TryGetDistanceReferencePoint(out Vector3 referencePoint))
+		if (_targetResolver == null || !_targetResolver.TryGetTargetDistanceText(out string distanceText))
 		{
 			_rangeUi.SetTargetYardageUnknown();
 			return;
 		}
 
-		string distanceText = MeasurementUtils.FormatHorizontalDistanceShortAware(_ball.GlobalPosition, referencePoint);
 		_rangeUi.SetTargetDistanceText(distanceText);
 	}
 
@@ -878,7 +757,7 @@ public partial class Range : Node3D
 		if (_rangeUi == null)
 			return;
 
-		if (!TryGetTargetElevationFeet(out int feet))
+		if (_targetResolver == null || !_targetResolver.TryGetTargetElevationFeet(out int feet))
 		{
 			_rangeUi.SetTargetElevationUnknown();
 			return;
@@ -886,15 +765,4 @@ public partial class Range : Node3D
 
 		_rangeUi.SetTargetElevationFeet(feet);
 	}
-
-	private bool TryGetTargetElevationFeet(out int feet)
-	{
-		feet = 0;
-		if (_ball == null || !TryGetDistanceReferencePoint(out Vector3 referencePoint))
-			return false;
-
-		feet = MeasurementUtils.VerticalDeltaFeet(_ball.GlobalPosition, referencePoint);
-		return true;
-	}
-
 }

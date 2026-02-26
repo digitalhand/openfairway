@@ -9,8 +9,8 @@ public static class CourseCatalog
 
     private static readonly Dictionary<string, CourseCardInfo> CourseCardByKey = new(StringComparer.OrdinalIgnoreCase)
     {
-        { "res://courses/Range/range.tscn", new CourseCardInfo("Airways", 1, 3, 203) },
-        { "range", new CourseCardInfo("Airways", 1, 3, 203) }
+        { "res://courses/airways_fresno/hole_1/hole_1.tscn", new CourseCardInfo("Airways", 1, 3, 203) },
+        { "hole_1", new CourseCardInfo("Airways", 1, 3, 203) }
     };
 
     public static bool TryGetPar(string sceneId, out int par)

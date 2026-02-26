@@ -38,18 +38,18 @@ namespace OpenFairway.Tests
         }
 
         [Test]
-        public void CourseCatalog_RangeScene_UsesPar3()
+        public void CourseCatalog_Hole1Scene_UsesPar3()
         {
-            bool found = CourseCatalog.TryGetPar("res://courses/Range/range.tscn", out int par);
+            bool found = CourseCatalog.TryGetPar("res://courses/airways_fresno/hole_1/hole_1.tscn", out int par);
 
             Assert.That(found, Is.True);
             Assert.That(par, Is.EqualTo(3));
         }
 
         [Test]
-        public void CourseCatalog_RangeScene_UsesExpectedCardMetadata()
+        public void CourseCatalog_Hole1Scene_UsesExpectedCardMetadata()
         {
-            bool found = CourseCatalog.TryGetCourseCard("res://courses/Range/range.tscn", out CourseCardInfo courseCard);
+            bool found = CourseCatalog.TryGetCourseCard("res://courses/airways_fresno/hole_1/hole_1.tscn", out CourseCardInfo courseCard);
 
             Assert.That(found, Is.True);
             Assert.That(courseCard.CourseName, Is.EqualTo("Airways"));
