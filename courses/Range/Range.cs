@@ -61,6 +61,7 @@ public partial class Range : Node3D
 	private Node3D _phantomCamera;
 	private Camera3D _mainCamera;
 	private Node3D _basicGreenTarget;
+	private MeshInstance3D _flagPoleTarget;
 	private GodotObject _terrainData;
 	private GolfBall _ball;
 	private AudioStreamPlayer3D _audioDriverHit;
@@ -73,8 +74,9 @@ public partial class Range : Node3D
 	private int _coursePar = CourseCatalog.DefaultPar;
 	private int _strokeCount = 0;
 	private bool _goalCompletionCountdownRunning = false;
-	private bool _hasMarkerSelection = false;
-	private Vector3 _selectedMarkerWorldPoint = Vector3.Zero;
+	private bool _hasPlayerMarkerSelection = false;
+	private Vector3 _selectedPlayerMarkerWorldPoint = Vector3.Zero;
+	private bool _didLogMissingFlagPole = false;
 	private readonly System.Collections.Generic.List<CourseGoalZone> _goalZones = new();
 
 	public override void _Ready()
@@ -83,7 +85,12 @@ public partial class Range : Node3D
 		_rangeUi = GetNode<RangeUI>("RangeUI");
 		_phantomCamera = GetNode<Node3D>("PhantomCamera3D");
 		_mainCamera = GetNodeOrNull<Camera3D>("Camera3D");
-		_basicGreenTarget = GetNodeOrNull<Node3D>("BasicGreen");
+		_basicGreenTarget = GetNodeOrNull<Node3D>("GimmeCircle");
+		if (_basicGreenTarget == null)
+			_basicGreenTarget = GetNodeOrNull<Node3D>("BasicGreen");
+		_flagPoleTarget = GetNodeOrNull<MeshInstance3D>("flag_osg_Imported/flag_pole");
+		if (_flagPoleTarget == null)
+			_flagPoleTarget = GetNodeOrNull<MeshInstance3D>("flag_osg_Imported/Cylinder");
 		_ball = GetNode<GolfBall>("ShotTracker/Ball");
 		_audioDriverHit = GetNodeOrNull<AudioStreamPlayer3D>("audio_iron_hit");
 		_audioBackgroundBirds = GetNodeOrNull<AudioStreamPlayer3D>("audio_background_birds");
@@ -126,7 +133,8 @@ public partial class Range : Node3D
 		SetCameraToStartImmediate();
 		OnCameraFollowChanged(_rangeSettings.CameraFollowMode.Value);
 		ApplySurfaceToBall();
-		ShowWorldClickMarkerOnTarget();
+		ShowFlagMarkerOnTarget();
+		HidePlayerMarker();
 	}
 
 	public override void _ExitTree()
@@ -156,7 +164,7 @@ public partial class Range : Node3D
 			SetStrokeCount(0);
 			ClearRoundProgress();
 			CallDeferred(nameof(SetCameraToStartImmediate));
-			QueueMarkerResetToTarget();
+			QueueFlagMarkerResetToTarget();
 			return;
 		}
 	}
@@ -175,7 +183,10 @@ public partial class Range : Node3D
 		if (GetViewport()?.GuiGetHoveredControl() != null)
 			return;
 
-		HandleWorldClickMarkerPlacement(mouseButton.Position);
+		if (!IsBallAtRestForMarkers())
+			return;
+
+		HandlePlayerMarkerPlacement(mouseButton.Position);
 	}
 
 	public override void _Process(double delta)
@@ -186,6 +197,8 @@ public partial class Range : Node3D
 		if (_isShotLaunching || _shotTracker.GetBallState() != PhysicsEnums.BallState.Rest)
 		{
 			HideAimMarker();
+			HideFlagMarker();
+			HidePlayerMarker();
 			UpdateBallDisplay();
 			return;
 		}
@@ -224,22 +237,25 @@ public partial class Range : Node3D
 
 			if (_goalCompletionCountdownRunning)
 			{
-				HideWorldClickMarker();
+				HideFlagMarker();
+				HidePlayerMarker();
 				FreezeCameraOnBall();
 				return;
 			}
 
 			if (IsBallOnGoalZone())
 			{
-				PhysicsLogger.Info("Ball settled on BasicGreen. Ending round in 3 seconds.");
+				PhysicsLogger.Info("Ball settled on GimmeCircle. Ending round in 3 seconds.");
 				_rangeUi?.SetFinalStrokeCount(_strokeCount);
-				HideWorldClickMarker();
+				HideFlagMarker();
+				HidePlayerMarker();
 				FreezeCameraOnBall();
 				StartGoalCompletionCountdown();
 				return;
 			}
 
-			ShowWorldClickMarkerForRestState();
+			ShowFlagMarkerForRestState();
+			ShowPlayerMarkerForRestState();
 			SaveRoundProgress();
 
 			// Freeze camera at its current spot on rest to avoid drift/overshoot
@@ -317,7 +333,9 @@ public partial class Range : Node3D
 			return;
 
 		_resetCts?.Cancel();
-		HideWorldClickMarker();
+		HideFlagMarker();
+		HidePlayerMarker();
+		ClearPlayerMarkerSelection();
 		HideAimMarker();
 		PrepareShotLaunchOrientation(data);
 		DisableCameraFollow();
@@ -608,7 +626,7 @@ public partial class Range : Node3D
 		ClearRoundProgress();
 		_shotTracker.ResetBall();
 		CallDeferred(nameof(SetCameraToStartImmediate));
-		QueueMarkerResetToTarget();
+		QueueFlagMarkerResetToTarget();
 	}
 
 	private bool IsBallOnGoalZone()
@@ -668,7 +686,9 @@ public partial class Range : Node3D
 		_goalCompletionCountdownRunning = false;
 		_isShotLaunching = false;
 		_rangeUi?.HideRoundEndScore();
-		HideWorldClickMarker();
+		HideFlagMarker();
+		HidePlayerMarker();
+		ClearPlayerMarkerSelection();
 		HideAimMarker();
 		ResetDisplayData();
 		_rangeUi.SetData(_displayData);
@@ -915,17 +935,14 @@ public partial class Range : Node3D
 		_rangeUi.SetData(_displayData);
 	}
 
-	private void HandleWorldClickMarkerPlacement(Vector2 mousePosition)
+	private void HandlePlayerMarkerPlacement(Vector2 mousePosition)
 	{
 		if (!TryGetWorldClickPoint(mousePosition, out Vector3 worldPoint))
 			return;
 
-		_selectedMarkerWorldPoint = worldPoint;
-		_hasMarkerSelection = true;
-
-		bool ballAtRest = _shotTracker != null && _shotTracker.GetBallState() == PhysicsEnums.BallState.Rest;
-		if (ballAtRest && !_isShotLaunching && !_goalCompletionCountdownRunning)
-			ShowWorldClickMarkerAt(worldPoint);
+		_selectedPlayerMarkerWorldPoint = worldPoint;
+		_hasPlayerMarkerSelection = true;
+		ShowPlayerMarkerAt(worldPoint);
 	}
 
 	private bool TryGetWorldClickPoint(Vector2 mousePosition, out Vector3 worldPoint)
@@ -961,49 +978,124 @@ public partial class Range : Node3D
 		return TryResolveTerrainPointFromRay(mousePosition, out worldPoint);
 	}
 
-	private void ShowWorldClickMarkerForRestState()
+	private bool IsBallAtRestForMarkers()
+	{
+		return _shotTracker != null
+			&& _shotTracker.GetBallState() == PhysicsEnums.BallState.Rest
+			&& !_isShotLaunching
+			&& !_goalCompletionCountdownRunning;
+	}
+
+	private void ShowFlagMarkerForRestState()
 	{
 		if (_goalCompletionCountdownRunning)
 		{
-			HideWorldClickMarker();
+			HideFlagMarker();
 			return;
 		}
 
-		if (!TryResolveWorldClickMarkerPoint(out Vector3 worldPoint))
+		if (!TryGetTargetMarkerPoint(out Vector3 worldPoint))
 		{
-			HideWorldClickMarker();
+			HideFlagMarker();
 			return;
 		}
 
-		ShowWorldClickMarkerAt(worldPoint);
+		ShowFlagMarkerAt(worldPoint);
 	}
 
-	private void ShowWorldClickMarkerOnTarget()
+	private void ShowFlagMarkerOnTarget()
 	{
-		_hasMarkerSelection = false;
 		if (!TryGetTargetMarkerPoint(out Vector3 targetPoint))
 		{
-			HideWorldClickMarker();
+			HideFlagMarker();
 			return;
 		}
 
-		_selectedMarkerWorldPoint = targetPoint;
-		ShowWorldClickMarkerAt(targetPoint);
+		ShowFlagMarkerAt(targetPoint);
 	}
 
-	private bool TryResolveWorldClickMarkerPoint(out Vector3 worldPoint)
+	private void ShowPlayerMarkerForRestState()
 	{
-		if (_hasMarkerSelection)
+		if (!IsBallAtRestForMarkers())
 		{
-			worldPoint = _selectedMarkerWorldPoint;
-			return true;
+			HidePlayerMarker();
+			return;
 		}
 
-		return TryGetTargetMarkerPoint(out worldPoint);
+		if (!_hasPlayerMarkerSelection)
+		{
+			HidePlayerMarker();
+			return;
+		}
+
+		ShowPlayerMarkerAt(_selectedPlayerMarkerWorldPoint);
 	}
 
 	private bool TryGetTargetMarkerPoint(out Vector3 worldPoint)
 	{
+		return TryGetDistanceReferencePoint(out worldPoint);
+	}
+
+	private void HideFlagMarker()
+	{
+		_rangeUi?.HideFlagMarker();
+	}
+
+	private void ShowFlagMarkerAt(Vector3 worldPoint)
+	{
+		if (_rangeUi == null || _ball == null)
+			return;
+
+		int elevationFeet = GetElevationFeetFromBall(worldPoint);
+		_rangeUi.ShowFlagMarker(
+			worldPoint,
+			FormatWorldClickMarkerDistance(worldPoint),
+			elevationFeet
+		);
+	}
+
+	private void HidePlayerMarker()
+	{
+		_rangeUi?.HidePlayerMarker();
+	}
+
+	private void ShowPlayerMarkerAt(Vector3 worldPoint)
+	{
+		if (_rangeUi == null || _ball == null)
+			return;
+
+		int elevationFeet = GetElevationFeetFromBall(worldPoint);
+		_rangeUi.ShowPlayerMarker(
+			worldPoint,
+			FormatWorldClickMarkerDistance(worldPoint),
+			elevationFeet
+		);
+	}
+
+	private void ClearPlayerMarkerSelection()
+	{
+		_hasPlayerMarkerSelection = false;
+		_selectedPlayerMarkerWorldPoint = Vector3.Zero;
+	}
+
+	private void QueueFlagMarkerResetToTarget()
+	{
+		CallDeferred(nameof(ShowFlagMarkerOnTarget));
+	}
+
+	private bool TryGetDistanceReferencePoint(out Vector3 worldPoint)
+	{
+		if (TryGetFlagPoleBottomPoint(out worldPoint))
+		{
+			return true;
+		}
+
+		if (!_didLogMissingFlagPole)
+		{
+			PhysicsLogger.Info("Range: flag_pole not found. Falling back to GimmeCircle/BasicGreen for distance/elevation reference.");
+			_didLogMissingFlagPole = true;
+		}
+
 		worldPoint = Vector3.Zero;
 		if (_basicGreenTarget == null)
 			return false;
@@ -1012,28 +1104,48 @@ public partial class Range : Node3D
 		return true;
 	}
 
-	private void HideWorldClickMarker()
+	private bool TryGetFlagPoleBottomPoint(out Vector3 worldPoint)
 	{
-		_rangeUi?.HideWorldClickMarker();
-	}
+		worldPoint = Vector3.Zero;
+		if (_flagPoleTarget == null)
+			return false;
 
-	private void ShowWorldClickMarkerAt(Vector3 worldPoint)
-	{
-		if (_rangeUi == null || _ball == null)
-			return;
+		if (_flagPoleTarget.Mesh == null)
+		{
+			worldPoint = _flagPoleTarget.GlobalPosition;
+			return true;
+		}
 
-		int elevationFeet = GetElevationFeetFromBall(worldPoint);
-		_rangeUi.ShowWorldClickMarker(
-			worldPoint,
-			FormatWorldClickMarkerDistance(worldPoint),
-			elevationFeet
+		Aabb localBounds = _flagPoleTarget.Mesh.GetAabb();
+		Vector3 localBottomCenter = new Vector3(
+			localBounds.Position.X + (localBounds.Size.X * 0.5f),
+			localBounds.Position.Y,
+			localBounds.Position.Z + (localBounds.Size.Z * 0.5f)
 		);
+
+		Vector3 bottomWorldPoint = _flagPoleTarget.ToGlobal(localBottomCenter);
+		if (TrySampleTerrainHeight(bottomWorldPoint, out float terrainHeight))
+			bottomWorldPoint.Y = terrainHeight;
+
+		worldPoint = bottomWorldPoint;
+		return true;
 	}
 
-	private void QueueMarkerResetToTarget()
+	private bool TrySampleTerrainHeight(Vector3 worldPoint, out float terrainHeight)
 	{
-		_hasMarkerSelection = false;
-		CallDeferred(nameof(ShowWorldClickMarkerOnTarget));
+		terrainHeight = 0.0f;
+		if (_terrainData == null)
+			CacheTerrainData();
+
+		if (_terrainData == null)
+			return false;
+
+		float height = (float)_terrainData.Call("get_height", worldPoint);
+		if (float.IsNaN(height))
+			return false;
+
+		terrainHeight = height;
+		return true;
 	}
 
 	private string FormatWorldClickMarkerDistance(Vector3 worldPoint)
@@ -1134,18 +1246,18 @@ public partial class Range : Node3D
 	private bool TryGetTargetElevationFeet(out int feet)
 	{
 		feet = 0;
-		if (_basicGreenTarget == null || _ball == null)
+		if (_ball == null || !TryGetDistanceReferencePoint(out Vector3 referencePoint))
 			return false;
 
-		feet = MeasurementUtils.VerticalDeltaFeet(_ball.GlobalPosition, _basicGreenTarget.GlobalPosition);
+		feet = MeasurementUtils.VerticalDeltaFeet(_ball.GlobalPosition, referencePoint);
 		return true;
 	}
 
 	private float GetYardsToTarget()
 	{
-		if (_basicGreenTarget == null || _ball == null)
+		if (_ball == null || !TryGetDistanceReferencePoint(out Vector3 referencePoint))
 			return -1.0f;
 
-		return MeasurementUtils.HorizontalDistanceYardsFloat(_ball.GlobalPosition, _basicGreenTarget.GlobalPosition);
+		return MeasurementUtils.HorizontalDistanceYardsFloat(_ball.GlobalPosition, referencePoint);
 	}
 }

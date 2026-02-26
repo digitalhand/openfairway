@@ -45,7 +45,7 @@
 [ext_resource type="AudioStream" uid="uid://dfnfnnag7f8yx" path="res://assets/sounds/iron_shot.wav" id="41_auytd"]
 [ext_resource type="AudioStream" uid="uid://bwtjdtynrya6q" path="res://assets/sounds/birds_chirping.wav" id="41_kvf51"]
 [ext_resource type="AudioStream" uid="uid://b4napiey6vofb" path="res://assets/sounds/golf_ball_landing.wav" id="42_kvf51"]
-[ext_resource type="PackedScene" uid="uid://bbbci0q1y1bq5" path="res://courses/greens/basic_green.tscn" id="44_kvf51"]
+[ext_resource type="PackedScene" uid="uid://bbbci0q1y1bq5" path="res://courses/greens/gimme_circle.tscn" id="44_kvf51"]
 [ext_resource type="PackedScene" uid="uid://cio4rx16su2am" path="res://assets/flag_osg.gltf" id="47_ff4pe"]
 [ext_resource type="Texture2D" uid="uid://cf6x6ew4vnul6" path="res://assets/OSG_Logo.png" id="48_4svp1"]
 
@@ -898,7 +898,7 @@ stream = ExtResource("41_auytd")
 [node name="audio_golf_ball_landing" type="AudioStreamPlayer3D" parent="." unique_id=1634654361]
 stream = ExtResource("42_kvf51")
 
-[node name="BasicGreen" parent="." unique_id=1788780328 instance=ExtResource("44_kvf51")]
+[node name="GimmeCircle" parent="." unique_id=1788780328 instance=ExtResource("44_kvf51")]
 transform = Transform3D(6, 0, 0, 0, 6, 0, 0, 0, 6, 184.33914, 0.6439762, -26.257303)
 
 [node name="flag_osg" parent="." unique_id=1690264842 instance=ExtResource("47_ff4pe")]
@@ -908,12 +908,12 @@ metadata/run = false
 [node name="flag_osg_Imported" type="Node3D" parent="." unique_id=93235357]
 metadata/run = false
 
-[node name="OSG_Logo" type="MeshInstance3D" parent="flag_osg_Imported" unique_id=100998678]
+[node name="flag" type="MeshInstance3D" parent="flag_osg_Imported" unique_id=100998678]
 transform = Transform3D(0, 0.45020556, 0, 0, 0, -0.45020556, -0.45020556, 0, 0, 184.0463, 2.9172254, -26.078962)
 mesh = SubResource("ArrayMesh_tba0d")
 skeleton = NodePath("")
 
-[node name="Cylinder" type="MeshInstance3D" parent="flag_osg_Imported" unique_id=965469347]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 184.04437, 2.0791407, -25.755774)
+[node name="flag_pole" type="MeshInstance3D" parent="flag_osg_Imported" unique_id=965469347]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 184.04437, 2.0791407, -26.357153)
 mesh = SubResource("ArrayMesh_vwjc8")
 skeleton = NodePath("")
