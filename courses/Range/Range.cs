@@ -1,7 +1,6 @@
 using System.Threading;
 using Godot;
 using Godot.Collections;
-using PhantomCamera;
 
 /// <summary>
 /// Main range scene controller.
@@ -29,32 +28,16 @@ public partial class Range : Node3D
 	private Dictionary _rawBallData = new();
 	private Dictionary _lastDisplay = new();
 
-// Moving it forward a bit to not enable another array block in terrain3d behind it. 
-	private const float CAMERA_FOLLOW_BACK = 8.5f; 
-	private const float CAMERA_FOLLOW_HEIGHT = 2.0f;
-	private static readonly Vector3 CAMERA_LOOK_OFFSET = new Vector3(0.0f, 1.5f, 0.0f);
 	private const float CLICK_RAY_DISTANCE = 5000.0f;
-
-	// Orbit camera constants
-	private const float CAMERA_ORBIT_RADIUS = 2.5f;
-	private const float CAMERA_ORBIT_HEIGHT = 1.5f;
-	private const float CAMERA_ORBIT_SPEED = 60.0f; // degrees per second
-	private const float YAW_INDICATOR_DISTANCE = 30.0f;
-	private const float CLICK_LOOK_TWEEN_DURATION = 0.24f;
-	private const float CAMERA_RESET_TWEEN_DURATION = 1.2f;
 	private const float ROUND_END_SCORE_DURATION_SECONDS = 4.0f;
 
-	// Current horizontal aim angle in degrees; 0 = directly behind ball
-	private float _cameraYaw = 0.0f;
-	private Vector3 _launchFollowDirection = Vector3.Right;
 	private CancellationTokenSource _resetCts;
-	private bool _isShotLaunching = false;
-	private Tween _clickLookTween;
-	private Vector3 _pendingFollowOffset = new Vector3(-CAMERA_FOLLOW_BACK, CAMERA_FOLLOW_HEIGHT, 0.0f);
 
 	private ShotTracker _shotTracker;
 	private RangeUI _rangeUi;
 	private Node3D _phantomCamera;
+	private IShotCameraRig _shotCameraRig;
+	private ShotCameraController _shotCameraController = new();
 	private Camera3D _mainCamera;
 	private Node3D _basicGreenTarget;
 	private MeshInstance3D _flagPoleTarget;
@@ -79,6 +62,7 @@ public partial class Range : Node3D
 		_shotTracker = GetNode<ShotTracker>("ShotTracker");
 		_rangeUi = GetNode<RangeUI>("RangeUI");
 		_phantomCamera = GetNode<Node3D>("PhantomCamera3D");
+		_shotCameraRig = new PhantomShotCameraRig(_phantomCamera);
 		_mainCamera = GetNodeOrNull<Camera3D>("Camera3D");
 		_basicGreenTarget = GetNodeOrNull<Node3D>("GimmeCircle");
 		if (_basicGreenTarget == null)
@@ -123,6 +107,7 @@ public partial class Range : Node3D
 		_rangeUi.SetStrokeCount(_strokeCount);
 		_rangeUi.SetMarkerCamera(_mainCamera);
 		InitializeShotMarkerController();
+		InitializeShotCameraController();
 		RefreshTargetHud();
 
 		SetCameraToStartImmediate();
@@ -148,6 +133,7 @@ public partial class Range : Node3D
 			_rangeSettings.CameraFollowMode.SettingChanged -= OnCameraFollowChanged;
 			_rangeSettings.SurfaceType.SettingChanged -= OnSurfaceChanged;
 		}
+		_shotCameraController.CancelTransientTweens();
 		_goalZones.Clear();
 	}
 
@@ -155,17 +141,22 @@ public partial class Range : Node3D
 	{
 		if (@event.IsActionPressed("reset"))
 		{
-			ResetRoundView();
-			SetStrokeCount(0);
-			ClearRoundProgress();
-			CallDeferred(nameof(SetCameraToStartImmediate));
-			QueueFlagMarkerResetToTarget();
+			TriggerRoundReset();
 			return;
 		}
 	}
 
 	public override void _Input(InputEvent @event)
 	{
+		if (@event is InputEventKey keyEvent
+			&& keyEvent.Pressed
+			&& !keyEvent.Echo
+			&& keyEvent.Keycode == Key.Tab)
+		{
+			TriggerRoundReset();
+			return;
+		}
+
 		if (@event is not InputEventMouseButton mouseButton
 			|| !mouseButton.Pressed
 			|| mouseButton.ButtonIndex != MouseButton.Left
@@ -178,11 +169,16 @@ public partial class Range : Node3D
 		if (GetViewport()?.GuiGetHoveredControl() != null)
 			return;
 
-		if (!TryGetWorldClickPoint(mouseButton.Position, out Vector3 worldPoint))
-			return;
+		_shotCameraController.TryHandleLeftClick(mouseButton.Position);
+	}
 
-		if (_shotMarkerController.SetPlayerSelection(worldPoint))
-			CenterCameraOnPoint(worldPoint);
+	private void TriggerRoundReset()
+	{
+		ResetRoundView();
+		SetStrokeCount(0);
+		ClearRoundProgress();
+		CallDeferred(nameof(SetCameraToStartImmediate));
+		QueueFlagMarkerResetToTarget();
 	}
 
 	public override void _Process(double delta)
@@ -190,31 +186,17 @@ public partial class Range : Node3D
 		RefreshTargetHud();
 		_shotMarkerController.Tick();
 
-		if (_isShotLaunching || _shotTracker.GetBallState() != PhysicsEnums.BallState.Rest)
+		if (_shotCameraController.IsShotLaunching || _shotTracker.GetBallState() != PhysicsEnums.BallState.Rest)
 		{
 			UpdateBallDisplay();
 			return;
 		}
 
-		bool moved = false;
-		if (Input.IsActionPressed("ui_left"))
-		{
-			_cameraYaw += CAMERA_ORBIT_SPEED * (float)delta;
-			moved = true;
-		}
-		if (Input.IsActionPressed("ui_right"))
-		{
-			_cameraYaw -= CAMERA_ORBIT_SPEED * (float)delta;
-			moved = true;
-		}
-		if (moved)
-		{
-			_cameraYaw = Mathf.Wrap(_cameraYaw, -180f, 180f);
-			_phantomCamera.Set("global_position", GetOrbitPosition());
-			_phantomCamera.Call("look_at", _ball.GlobalPosition + CAMERA_LOOK_OFFSET, Vector3.Up);
-			SyncMainCameraToPhantom();
-			UpdatePlayerMarkerFromYaw();
-		}
+		_shotCameraController.Tick(
+			delta,
+			Input.IsActionPressed("ui_left"),
+			Input.IsActionPressed("ui_right")
+		);
 	}
 
 	private void OnTcpClientHitBall(Dictionary data)
@@ -320,11 +302,11 @@ public partial class Range : Node3D
 		if (_goalCompletionCountdownRunning)
 			return;
 
-		StopClickCenterTween();
 		_resetCts?.Cancel();
 		_shotMarkerController.OnShotLaunched();
-		PrepareShotLaunchOrientation(data);
-		DisableCameraFollow();
+		float shotHlaDeg = data.ContainsKey("HLA") ? (float)data["HLA"] : 0.0f;
+		ShotCameraLaunchData launchCameraData = _shotCameraController.BeginShotLaunch(shotHlaDeg);
+		_ball.AimYawOffsetDeg = launchCameraData.WorldYawOffsetDeg;
 
 		if (logPayload)
 			PhysicsLogger.Info($"Launch monitor payload: {Json.Stringify(data)}");
@@ -340,7 +322,7 @@ public partial class Range : Node3D
 			_shotTracker.OnRangeUiHitShot(data);
 
 		// Enable follow after deferred HitFromData has applied launch state.
-		EnableCameraFollowDeferred();
+		_ = _shotCameraController.EnableFollowDeferredAsync();
 	}
 
 	private void ConfigureConsistentAudioLevels()
@@ -373,171 +355,74 @@ public partial class Range : Node3D
 		_audioGolfBallLanding.Play();
 	}
 
-	private void PrepareShotLaunchOrientation(Dictionary data)
-	{
-		float worldYawOffsetDeg = -GetCameraAimHla();
-		_ball.AimYawOffsetDeg = worldYawOffsetDeg;
-		_launchFollowDirection = GetLaunchFollowDirection(data, worldYawOffsetDeg);
-	}
-
-	private float GetCameraAimHla()
-	{
-		Vector3 forward = -_phantomCamera.GlobalBasis.Z;
-		Vector3 flatForward = new Vector3(forward.X, 0.0f, forward.Z);
-		if (flatForward.LengthSquared() < 0.000001f)
-		{
-			return -_cameraYaw;
-		}
-
-		flatForward = flatForward.Normalized();
-		return Mathf.RadToDeg(Mathf.Atan2(flatForward.Z, flatForward.X));
-	}
-
 	private void OnCameraFollowChanged(Variant value)
 	{
-		if ((bool)value)
-			EnableCameraFollow();
-		else
-			DisableCameraFollow();
-	}
-
-	private void EnableCameraFollow()
-	{
-		StartCameraFollow();
-	}
-
-	private async void EnableCameraFollowDeferred()
-	{
-		_isShotLaunching = true;
-
-		// ShotTracker uses CallDeferred(HitFromData), so wait until launch state exists.
-		for (int i = 0; i < 4; i++)
-		{
-			await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
-			if (_ball.State != PhysicsEnums.BallState.Rest || _ball.Velocity.LengthSquared() > 0.0001f)
-			{
-				break;
-			}
-		}
-
-		_pendingFollowOffset = ComputeFollowOffset();
-		StartCameraFollow();
-		_isShotLaunching = false;
-	}
-
-	private void DisableCameraFollow()
-	{
-		_phantomCamera.Set("follow_mode", (int)FollowMode3D.None);
+		_shotCameraController.SetFollowEnabled((bool)value);
 	}
 
 	private async System.Threading.Tasks.Task ResetCameraToStart()
 	{
-		StopClickCenterTween();
-		_isShotLaunching = false;
 		_ball.AimYawOffsetDeg = 0.0f;
-
-		// Keep the ball at the current lie; only reset on explicit new-round actions.
-		_phantomCamera.Set("follow_mode", (int)FollowMode3D.None);
-		_phantomCamera.Set("look_at_mode", (int)LookAtMode.None);
-
-		Vector3 ballStartGlobal = GetBallStartGlobalPosition();
-		AlignCameraYawToTarget(ballStartGlobal);
-		Vector3 startPos = GetOrbitPosition(ballStartGlobal);
-		Vector3 endLookPos = ballStartGlobal + CAMERA_LOOK_OFFSET;
-		Vector3 startLookPos = _phantomCamera.GlobalPosition + (-_phantomCamera.GlobalBasis.Z * 15.0f);
-
-		var tween = CreateTween();
-		tween.SetTrans(Tween.TransitionType.Cubic);
-		tween.SetEase(Tween.EaseType.InOut);
-		tween.Parallel().TweenProperty(_phantomCamera, "global_position", startPos, CAMERA_RESET_TWEEN_DURATION);
-		tween.Parallel().TweenMethod(Callable.From<Vector3>((lookPos) =>
-		{
-			_phantomCamera.Call("look_at", lookPos, Vector3.Up);
-		}), startLookPos, endLookPos, CAMERA_RESET_TWEEN_DURATION);
-
-		await ToSignal(tween, Tween.SignalName.Finished);
-		_phantomCamera.Call("look_at", endLookPos, Vector3.Up);
-	}
-
-	private void StartCameraFollow()
-	{
-		Vector3 offset = _pendingFollowOffset;
-		if (offset.LengthSquared() < 0.000001f)
-		{
-			offset = ComputeFollowOffset();
-		}
-
-		// Snap the camera to the follow position before enabling follow mode.
-		// Without this, damping causes the camera to visibly drift backwards
-		// (or swing around) from the orbit position to the follow offset.
-		_phantomCamera.Set("follow_mode", (int)FollowMode3D.None);
-		_phantomCamera.Set("look_at_mode", (int)LookAtMode.None);
-		_phantomCamera.Set("global_position", _ball.GlobalPosition + offset);
-		_phantomCamera.Call("look_at", _ball.GlobalPosition + CAMERA_LOOK_OFFSET, Vector3.Up);
-		SyncMainCameraToPhantom();
-
-		_phantomCamera.Set("follow_mode", (int)FollowMode3D.Simple);
-		_phantomCamera.Set("follow_target", _ball);
-		_phantomCamera.Set("follow_offset", offset);
-		_phantomCamera.Set("follow_damping", false);
-		_phantomCamera.Set("look_at_mode", (int)LookAtMode.Simple);
-		_phantomCamera.Set("look_at_target", _ball);
-		_phantomCamera.Call("teleport_position");
-		SyncMainCameraToPhantom();
-	}
-
-	private Vector3 ComputeFollowOffset()
-	{
-		Vector3 dir = _ball.Velocity;
-		if (dir.Length() < 0.5f)
-		{
-			dir = _launchFollowDirection;
-		}
-		if (dir.Length() < 0.5f)
-		{
-			dir = _ball.ShotDirection;
-		}
-		dir.Y = 0.0f;
-		if (dir.LengthSquared() < 0.000001f)
-		{
-			dir = Vector3.Right;
-		}
-		dir = dir.Normalized();
-
-		Vector3 back = -dir * CAMERA_FOLLOW_BACK;
-		Vector3 up = Vector3.Up * CAMERA_FOLLOW_HEIGHT;
-		return back + up;
-	}
-
-	private Vector3 GetLaunchFollowDirection(Dictionary data, float worldYawOffsetDeg)
-	{
-		float shotHlaDeg = data.ContainsKey("HLA") ? (float)data["HLA"] : 0.0f;
-		float worldHlaDeg = shotHlaDeg + worldYawOffsetDeg;
-		float hlaRad = Mathf.DegToRad(worldHlaDeg);
-		Vector3 dir = new Vector3(Mathf.Cos(hlaRad), 0.0f, Mathf.Sin(hlaRad));
-		if (dir.LengthSquared() < 0.000001f)
-		{
-			return Vector3.Right;
-		}
-		return dir.Normalized();
+		await _shotCameraController.ResetToStartAsync();
 	}
 
 	private void FreezeCameraOnBall()
 	{
-		_phantomCamera.Set("follow_mode", (int)FollowMode3D.None);
-		_phantomCamera.Set("look_at_mode", (int)LookAtMode.None);
+		_shotCameraController.Freeze();
 	}
 
 	private void SetCameraToStartImmediate()
 	{
-		StopClickCenterTween();
-		Vector3 ballStartGlobal = GetBallStartGlobalPosition();
-		AlignCameraYawToTarget(ballStartGlobal);
-		_phantomCamera.Set("follow_mode", (int)FollowMode3D.None);
-		_phantomCamera.Set("look_at_mode", (int)LookAtMode.None);
-		_phantomCamera.Set("global_position", GetOrbitPosition(ballStartGlobal));
-		_phantomCamera.Call("look_at", ballStartGlobal + CAMERA_LOOK_OFFSET, Vector3.Up);
-		SyncMainCameraToPhantom();
+		_shotCameraController.SetToStartImmediate();
+	}
+
+	private void InitializeShotCameraController()
+	{
+		_shotCameraController.Initialize(new ShotCameraInit
+		{
+			TweenHost = this,
+			CameraRig = _shotCameraRig,
+			Config = new ShotCameraConfig
+			{
+				FollowBack = 8.5f,
+				FollowHeight = 2.0f,
+				CameraLookOffset = new Vector3(0.0f, 1.5f, 0.0f),
+				OrbitRadius = 2.5f,
+				OrbitHeight = 1.5f,
+				OrbitSpeedDegPerSec = 30.0f,
+				YawIndicatorDistance = 30.0f,
+				ClickLookTweenDuration = 0.24f,
+				ResetTweenDuration = 1.2f
+			},
+			BallNode = _ball,
+			BallPositionProvider = () => _ball.GlobalPosition,
+			BallVelocityProvider = () => _ball.Velocity,
+			BallShotDirectionProvider = () => _ball.ShotDirection,
+			BallStateProvider = () => _shotTracker != null ? _shotTracker.GetBallState() : PhysicsEnums.BallState.Rest,
+			IsGoalCountdownProvider = () => _goalCompletionCountdownRunning,
+			InitialYawTargetProvider = ResolveInitialYawTarget,
+			DefaultYawAnchorProvider = ResolveFlagReferencePoint,
+			ClickWorldPointResolver = ResolveClickWorldPoint,
+			GroundSnapper = SnapPointToTerrain,
+			PlayerMarkerSelectionSetter = worldPoint => _shotMarkerController.SetPlayerSelection(worldPoint),
+			SyncMainCamera = SyncMainCameraToPhantom
+		});
+	}
+
+	private Vector3? ResolveInitialYawTarget()
+	{
+		if (_basicGreenTarget == null)
+			return null;
+
+		return _basicGreenTarget.GlobalPosition;
+	}
+
+	private Vector3 SnapPointToTerrain(Vector3 worldPoint)
+	{
+		if (TrySampleTerrainHeight(worldPoint, out float terrainHeight))
+			return new Vector3(worldPoint.X, terrainHeight, worldPoint.Z);
+
+		return worldPoint;
 	}
 
 	private void ResetBallToStart()
@@ -668,15 +553,13 @@ public partial class Range : Node3D
 
 	private void ResetRoundView()
 	{
-		StopClickCenterTween();
+		_shotCameraController.OnRoundReset();
 		_resetCts?.Cancel();
 		_goalCompletionCountdownRunning = false;
-		_isShotLaunching = false;
 		_rangeUi?.HideRoundEndScore();
 		_shotMarkerController.OnRoundReset();
 		ResetDisplayData();
 		_rangeUi.SetData(_displayData);
-		_launchFollowDirection = Vector3.Right;
 	}
 
 	private string GetSceneId()
@@ -717,116 +600,6 @@ public partial class Range : Node3D
 
 		ScoreResult score = ScoreMapper.MapScore(_strokeCount, _coursePar);
 		_rangeUi.SetScoreLabel(score.Label);
-	}
-
-	private Vector3 GetBallStartGlobalPosition()
-	{
-		return _ball.GlobalPosition;
-	}
-
-	private void UpdatePlayerMarkerFromYaw()
-	{
-		if (!TryGetYawIndicatorPoint(out Vector3 worldPoint))
-			return;
-
-		_shotMarkerController.SetPlayerSelection(worldPoint);
-	}
-
-	private bool TryGetYawIndicatorPoint(out Vector3 worldPoint)
-	{
-		worldPoint = Vector3.Zero;
-		if (_ball == null)
-			return false;
-
-		Vector3 worldAimPoint = GetBallStartGlobalPosition() + (GetCurrentAimDirection() * YAW_INDICATOR_DISTANCE);
-		if (TrySampleTerrainHeight(worldAimPoint, out float terrainHeight))
-			worldAimPoint.Y = terrainHeight;
-
-		worldPoint = worldAimPoint;
-		return true;
-	}
-
-	private void CenterCameraOnPoint(Vector3 worldPoint)
-	{
-		if (_phantomCamera == null)
-			return;
-
-		Vector3 toTarget = worldPoint - _phantomCamera.GlobalPosition;
-		if (toTarget.LengthSquared() < 0.000001f)
-			return;
-
-		StopClickCenterTween();
-		_phantomCamera.Set("follow_mode", (int)FollowMode3D.None);
-		_phantomCamera.Set("look_at_mode", (int)LookAtMode.None);
-
-		float startLookDistance = Mathf.Max(4.0f, toTarget.Length());
-		Vector3 startLookPoint = _phantomCamera.GlobalPosition + (-_phantomCamera.GlobalBasis.Z * startLookDistance);
-		_clickLookTween = CreateTween();
-		_clickLookTween.SetTrans(Tween.TransitionType.Cubic);
-		_clickLookTween.SetEase(Tween.EaseType.Out);
-		_clickLookTween.TweenMethod(Callable.From<Vector3>((lookPoint) =>
-		{
-			_phantomCamera.Call("look_at", lookPoint, Vector3.Up);
-			SyncMainCameraToPhantom();
-		}), startLookPoint, worldPoint, CLICK_LOOK_TWEEN_DURATION);
-		_clickLookTween.TweenCallback(Callable.From(() =>
-		{
-			_clickLookTween = null;
-		}));
-	}
-
-	private void StopClickCenterTween()
-	{
-		_clickLookTween?.Kill();
-		_clickLookTween = null;
-	}
-
-	private Vector3 GetCurrentAimDirection()
-	{
-		float aimHlaRad = Mathf.DegToRad(GetCameraAimHla());
-		Vector3 dir = new Vector3(Mathf.Cos(aimHlaRad), 0.0f, Mathf.Sin(aimHlaRad));
-		if (dir.LengthSquared() < 0.000001f)
-			return Vector3.Right;
-		return dir.Normalized();
-	}
-
-	private void AlignCameraYawToTarget(Vector3 ballPos)
-	{
-		_cameraYaw = GetTargetAlignedYawDeg(ballPos);
-	}
-
-	private float GetTargetAlignedYawDeg(Vector3 ballPos)
-	{
-		if (_basicGreenTarget == null)
-			return 0.0f;
-
-		Vector3 toTarget = _basicGreenTarget.GlobalPosition - ballPos;
-		toTarget.Y = 0.0f;
-		if (toTarget.LengthSquared() < 0.000001f)
-			return 0.0f;
-
-		float targetAimDeg = Mathf.RadToDeg(Mathf.Atan2(toTarget.Z, toTarget.X));
-		return Mathf.Wrap(-targetAimDeg, -180.0f, 180.0f);
-	}
-
-	/// <summary>
-	/// Computes the camera orbit position around the ball tee for the current yaw angle.
-	/// At yaw=0 the camera sits directly behind the ball (the default start position).
-	/// Left/right arrow keys decrement/increment yaw, orbiting the camera horizontally.
-	/// </summary>
-	private Vector3 GetOrbitPosition()
-	{
-		return GetOrbitPosition(_ball.GlobalPosition);
-	}
-
-	private Vector3 GetOrbitPosition(Vector3 center)
-	{
-		float rad = Mathf.DegToRad(_cameraYaw);
-		return center + new Vector3(
-			-Mathf.Cos(rad) * CAMERA_ORBIT_RADIUS,
-			CAMERA_ORBIT_HEIGHT,
-			Mathf.Sin(rad) * CAMERA_ORBIT_RADIUS
-		);
 	}
 
 	private void SyncMainCameraToPhantom()
@@ -886,7 +659,7 @@ public partial class Range : Node3D
 		{
 			BallPositionProvider = () => _ball.GlobalPosition,
 			BallStateProvider = () => _shotTracker != null ? _shotTracker.GetBallState() : PhysicsEnums.BallState.Rest,
-			IsShotLaunchingProvider = () => _isShotLaunching,
+			IsShotLaunchingProvider = () => _shotCameraController.IsShotLaunching,
 			IsGoalCountdownProvider = () => _goalCompletionCountdownRunning,
 			FlagReferencePointProvider = ResolveFlagReferencePoint,
 			ClickWorldPointResolver = ResolveClickWorldPoint,
@@ -1090,14 +863,14 @@ public partial class Range : Node3D
 		if (_rangeUi == null)
 			return;
 
-		float yards = GetYardsToTarget();
-		if (yards < 0.0f)
+		if (_ball == null || !TryGetDistanceReferencePoint(out Vector3 referencePoint))
 		{
 			_rangeUi.SetTargetYardageUnknown();
 			return;
 		}
 
-		_rangeUi.SetTargetYardage(yards);
+		string distanceText = MeasurementUtils.FormatHorizontalDistanceShortAware(_ball.GlobalPosition, referencePoint);
+		_rangeUi.SetTargetDistanceText(distanceText);
 	}
 
 	private void UpdateTargetElevationDisplay()
@@ -1124,11 +897,4 @@ public partial class Range : Node3D
 		return true;
 	}
 
-	private float GetYardsToTarget()
-	{
-		if (_ball == null || !TryGetDistanceReferencePoint(out Vector3 referencePoint))
-			return -1.0f;
-
-		return MeasurementUtils.HorizontalDistanceYardsFloat(_ball.GlobalPosition, referencePoint);
-	}
 }

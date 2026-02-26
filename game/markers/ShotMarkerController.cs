@@ -178,8 +178,11 @@ public sealed class ShotMarkerController
 		if (_init.DistanceFormatter != null)
 			return _init.DistanceFormatter(worldPoint);
 
-		int yards = MeasurementUtils.HorizontalDistanceYards(_init.BallPositionProvider(), worldPoint);
-		return yards.ToString();
+		return MeasurementUtils.FormatHorizontalDistanceShortAware(
+			_init.BallPositionProvider(),
+			worldPoint,
+			includeYardsSuffix: false
+		);
 	}
 
 	private int GetElevationFeet(Vector3 worldPoint)

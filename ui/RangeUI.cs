@@ -214,6 +214,14 @@ public partial class RangeUI : MarginContainer
         _targetYardageLabel.Text = $"{Mathf.Max(0.0f, yards):F1} YDS";
     }
 
+    public void SetTargetDistanceText(string text)
+    {
+        if (_targetYardageLabel == null)
+            return;
+
+        _targetYardageLabel.Text = string.IsNullOrWhiteSpace(text) ? "--.- YDS" : text.Trim().ToUpperInvariant();
+    }
+
     public void SetTargetYardageUnknown()
     {
         if (_targetYardageLabel == null)

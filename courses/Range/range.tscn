@@ -49,29 +49,6 @@
 [ext_resource type="PackedScene" uid="uid://cio4rx16su2am" path="res://assets/flag_osg.gltf" id="47_ff4pe"]
 [ext_resource type="Texture2D" uid="uid://cf6x6ew4vnul6" path="res://assets/OSG_Logo.png" id="48_4svp1"]
 
-[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_ckxn6"]
-sky_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
-ground_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
-
-[sub_resource type="Sky" id="Sky_r68e1"]
-sky_material = SubResource("ProceduralSkyMaterial_ckxn6")
-
-[sub_resource type="Environment" id="Environment_3l5n3"]
-background_mode = 2
-sky = SubResource("Sky_r68e1")
-sky_custom_fov = 49.0
-ambient_light_source = 3
-reflected_light_source = 2
-tonemap_mode = 2
-fog_density = 0.001
-fog_height = -485.52
-fog_height_density = 0.6897
-
-[sub_resource type="CameraAttributesPractical" id="CameraAttributesPractical_mxct8"]
-
-[sub_resource type="Resource" id="Resource_hbh3r"]
-script = ExtResource("18_gqfs3")
-
 [sub_resource type="Gradient" id="Gradient_c2xig"]
 offsets = PackedFloat32Array(0.2, 1)
 colors = PackedColorArray(1, 1, 1, 1, 0, 0, 0, 1)
@@ -297,6 +274,29 @@ uv_scale = 0.6
 [sub_resource type="Terrain3DAssets" id="Terrain3DAssets_ffeua"]
 mesh_list = Array[Terrain3DMeshAsset]([SubResource("Terrain3DMeshAsset_mwif0"), SubResource("Terrain3DMeshAsset_prv2u"), SubResource("Terrain3DMeshAsset_cujyd"), SubResource("Terrain3DMeshAsset_ckxn6"), SubResource("Terrain3DMeshAsset_4svp1")])
 texture_list = Array[Terrain3DTextureAsset]([SubResource("Terrain3DTextureAsset_bmyup"), SubResource("Terrain3DTextureAsset_87hcm"), SubResource("Terrain3DTextureAsset_khikb"), SubResource("Terrain3DTextureAsset_qaub7"), SubResource("Terrain3DTextureAsset_okatj"), SubResource("Terrain3DTextureAsset_e04qn"), SubResource("Terrain3DTextureAsset_mxct8"), SubResource("Terrain3DTextureAsset_8p87j"), SubResource("Terrain3DTextureAsset_r68e1"), SubResource("Terrain3DTextureAsset_qye8d"), SubResource("Terrain3DTextureAsset_auytd")])
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_ckxn6"]
+sky_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
+ground_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
+
+[sub_resource type="Sky" id="Sky_r68e1"]
+sky_material = SubResource("ProceduralSkyMaterial_ckxn6")
+
+[sub_resource type="Environment" id="Environment_3l5n3"]
+background_mode = 2
+sky = SubResource("Sky_r68e1")
+sky_custom_fov = 49.0
+ambient_light_source = 3
+reflected_light_source = 2
+tonemap_mode = 2
+fog_density = 0.001
+fog_height = -485.52
+fog_height_density = 0.6897
+
+[sub_resource type="CameraAttributesPractical" id="CameraAttributesPractical_mxct8"]
+
+[sub_resource type="Resource" id="Resource_hbh3r"]
+script = ExtResource("18_gqfs3")
 
 [sub_resource type="Resource" id="Resource_vcr6a"]
 script = ExtResource("20_k0egi")
@@ -653,6 +653,13 @@ shadow_mesh = SubResource("ArrayMesh_7inxy")
 [node name="Range" type="Node3D" unique_id=2143757499]
 script = ExtResource("1_sunpe")
 
+[node name="Terrain3D" type="Terrain3D" parent="." unique_id=394964337]
+data_directory = "res://utils/terrain/"
+material = SubResource("Terrain3DMaterial_736u6")
+assets = SubResource("Terrain3DAssets_ffeua")
+top_level = true
+metadata/_edit_lock_ = true
+
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=633229090]
 environment = SubResource("Environment_3l5n3")
 camera_attributes = SubResource("CameraAttributesPractical_mxct8")
@@ -689,13 +696,6 @@ top_level = true
 process_priority = 300
 process_physics_priority = 300
 script = ExtResource("19_gqfs3")
-
-[node name="Terrain3D" type="Terrain3D" parent="." unique_id=394964337]
-data_directory = "res://utils/terrain/"
-material = SubResource("Terrain3DMaterial_736u6")
-assets = SubResource("Terrain3DAssets_ffeua")
-top_level = true
-metadata/_edit_lock_ = true
 
 [node name="trees" type="Node3D" parent="." unique_id=626236560]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.305649, 0, -21.806234)
