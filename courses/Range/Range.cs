@@ -39,11 +39,8 @@ public partial class Range : Node3D
 	private const float CAMERA_ORBIT_RADIUS = 2.5f;
 	private const float CAMERA_ORBIT_HEIGHT = 1.5f;
 	private const float CAMERA_ORBIT_SPEED = 60.0f; // degrees per second
-	private const float AIM_MARKER_DISTANCE = 30.0f;
-	private const float AIM_MARKER_Y_OFFSET = 0.10f;
-	private const float AIM_MARKER_RADIUS = 0.90f;
-	private const float AIM_MARKER_THICKNESS = 0.04f;
-	private const float AIM_MARKER_HOLD_TIME = 0.18f;
+	private const float YAW_INDICATOR_DISTANCE = 30.0f;
+	private const float CLICK_LOOK_TWEEN_DURATION = 0.24f;
 	private const float CAMERA_RESET_TWEEN_DURATION = 1.2f;
 	private const float ROUND_END_SCORE_DURATION_SECONDS = 4.0f;
 
@@ -52,8 +49,7 @@ public partial class Range : Node3D
 	private Vector3 _launchFollowDirection = Vector3.Right;
 	private CancellationTokenSource _resetCts;
 	private bool _isShotLaunching = false;
-	private Node3D _aimMarker;
-	private float _aimMarkerTimer = 0.0f;
+	private Tween _clickLookTween;
 	private Vector3 _pendingFollowOffset = new Vector3(-CAMERA_FOLLOW_BACK, CAMERA_FOLLOW_HEIGHT, 0.0f);
 
 	private ShotTracker _shotTracker;
@@ -120,7 +116,6 @@ public partial class Range : Node3D
 		_rangeSettings = GetNode<GlobalSettings>("/root/GlobalSettings").RangeSettings;
 		_rangeSettings.CameraFollowMode.SettingChanged += OnCameraFollowChanged;
 		_rangeSettings.SurfaceType.SettingChanged += OnSurfaceChanged;
-		CreateAimMarker();
 		ConnectGoalZones();
 		// Always start fresh at the tee on scene load.
 		// Saved progress can be restored later through an explicit resume flow.
@@ -183,18 +178,20 @@ public partial class Range : Node3D
 		if (GetViewport()?.GuiGetHoveredControl() != null)
 			return;
 
-		_shotMarkerController.OnLeftClick(mouseButton.Position);
+		if (!TryGetWorldClickPoint(mouseButton.Position, out Vector3 worldPoint))
+			return;
+
+		if (_shotMarkerController.SetPlayerSelection(worldPoint))
+			CenterCameraOnPoint(worldPoint);
 	}
 
 	public override void _Process(double delta)
 	{
-		UpdateAimMarkerTimer((float)delta);
 		RefreshTargetHud();
 		_shotMarkerController.Tick();
 
 		if (_isShotLaunching || _shotTracker.GetBallState() != PhysicsEnums.BallState.Rest)
 		{
-			HideAimMarker();
 			UpdateBallDisplay();
 			return;
 		}
@@ -216,7 +213,7 @@ public partial class Range : Node3D
 			_phantomCamera.Set("global_position", GetOrbitPosition());
 			_phantomCamera.Call("look_at", _ball.GlobalPosition + CAMERA_LOOK_OFFSET, Vector3.Up);
 			SyncMainCameraToPhantom();
-			ShowAimMarker();
+			UpdatePlayerMarkerFromYaw();
 		}
 	}
 
@@ -323,9 +320,9 @@ public partial class Range : Node3D
 		if (_goalCompletionCountdownRunning)
 			return;
 
+		StopClickCenterTween();
 		_resetCts?.Cancel();
 		_shotMarkerController.OnShotLaunched();
-		HideAimMarker();
 		PrepareShotLaunchOrientation(data);
 		DisableCameraFollow();
 
@@ -412,7 +409,6 @@ public partial class Range : Node3D
 	private async void EnableCameraFollowDeferred()
 	{
 		_isShotLaunching = true;
-		HideAimMarker();
 
 		// ShotTracker uses CallDeferred(HitFromData), so wait until launch state exists.
 		for (int i = 0; i < 4; i++)
@@ -436,9 +432,9 @@ public partial class Range : Node3D
 
 	private async System.Threading.Tasks.Task ResetCameraToStart()
 	{
+		StopClickCenterTween();
 		_isShotLaunching = false;
 		_ball.AimYawOffsetDeg = 0.0f;
-		HideAimMarker();
 
 		// Keep the ball at the current lie; only reset on explicit new-round actions.
 		_phantomCamera.Set("follow_mode", (int)FollowMode3D.None);
@@ -534,6 +530,7 @@ public partial class Range : Node3D
 
 	private void SetCameraToStartImmediate()
 	{
+		StopClickCenterTween();
 		Vector3 ballStartGlobal = GetBallStartGlobalPosition();
 		AlignCameraYawToTarget(ballStartGlobal);
 		_phantomCamera.Set("follow_mode", (int)FollowMode3D.None);
@@ -671,12 +668,12 @@ public partial class Range : Node3D
 
 	private void ResetRoundView()
 	{
+		StopClickCenterTween();
 		_resetCts?.Cancel();
 		_goalCompletionCountdownRunning = false;
 		_isShotLaunching = false;
 		_rangeUi?.HideRoundEndScore();
 		_shotMarkerController.OnRoundReset();
-		HideAimMarker();
 		ResetDisplayData();
 		_rangeUi.SetData(_displayData);
 		_launchFollowDirection = Vector3.Right;
@@ -727,100 +724,61 @@ public partial class Range : Node3D
 		return _ball.GlobalPosition;
 	}
 
-	private void CreateAimMarker()
+	private void UpdatePlayerMarkerFromYaw()
 	{
-		_aimMarker = GetNodeOrNull<Node3D>("AimMarker");
-		if (_aimMarker != null)
-		{
-			HideAimMarker();
-			return;
-		}
-
-		var markerMaterial = new StandardMaterial3D
-		{
-			AlbedoColor = new Color(1.0f, 0.45f, 0.15f, 1.0f),
-			EmissionEnabled = true,
-			Emission = new Color(1.0f, 0.45f, 0.15f),
-			EmissionEnergyMultiplier = 6.0f,
-			ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
-			Transparency = BaseMaterial3D.TransparencyEnum.Disabled
-		};
-
-		var markerRoot = new Node3D
-		{
-			Name = "AimMarker",
-			TopLevel = true
-		};
-
-		var markerDisc = new MeshInstance3D
-		{
-			Name = "Disc",
-			Mesh = new CylinderMesh
-			{
-				TopRadius = AIM_MARKER_RADIUS,
-				BottomRadius = AIM_MARKER_RADIUS,
-				Height = AIM_MARKER_THICKNESS
-			},
-			MaterialOverride = markerMaterial,
-			CastShadow = GeometryInstance3D.ShadowCastingSetting.Off
-		};
-
-		// Add a small cross on top of the disc for easier aiming visibility.
-		var crossX = new MeshInstance3D
-		{
-			Mesh = new BoxMesh
-			{
-				Size = new Vector3(AIM_MARKER_RADIUS * 1.7f, AIM_MARKER_THICKNESS * 0.9f, AIM_MARKER_THICKNESS * 0.35f)
-			},
-			MaterialOverride = markerMaterial,
-			CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
-			Position = Vector3.Up * (AIM_MARKER_THICKNESS * 0.8f)
-		};
-		var crossZ = new MeshInstance3D
-		{
-			Mesh = new BoxMesh
-			{
-				Size = new Vector3(AIM_MARKER_THICKNESS * 0.35f, AIM_MARKER_THICKNESS * 0.9f, AIM_MARKER_RADIUS * 1.7f)
-			},
-			MaterialOverride = markerMaterial,
-			CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
-			Position = Vector3.Up * (AIM_MARKER_THICKNESS * 0.8f)
-		};
-
-		markerRoot.AddChild(markerDisc);
-		markerRoot.AddChild(crossX);
-		markerRoot.AddChild(crossZ);
-		AddChild(markerRoot);
-		_aimMarker = markerRoot;
-		HideAimMarker();
-	}
-
-	private void ShowAimMarker()
-	{
-		if (_aimMarker == null)
+		if (!TryGetYawIndicatorPoint(out Vector3 worldPoint))
 			return;
 
-		Vector3 aimDir = GetCurrentAimDirection();
-		_aimMarker.GlobalPosition = GetBallStartGlobalPosition() + aimDir * AIM_MARKER_DISTANCE + Vector3.Up * AIM_MARKER_Y_OFFSET;
-		_aimMarker.Visible = true;
-		_aimMarkerTimer = AIM_MARKER_HOLD_TIME;
+		_shotMarkerController.SetPlayerSelection(worldPoint);
 	}
 
-	private void HideAimMarker()
+	private bool TryGetYawIndicatorPoint(out Vector3 worldPoint)
 	{
-		_aimMarkerTimer = 0.0f;
-		if (_aimMarker != null)
-			_aimMarker.Visible = false;
+		worldPoint = Vector3.Zero;
+		if (_ball == null)
+			return false;
+
+		Vector3 worldAimPoint = GetBallStartGlobalPosition() + (GetCurrentAimDirection() * YAW_INDICATOR_DISTANCE);
+		if (TrySampleTerrainHeight(worldAimPoint, out float terrainHeight))
+			worldAimPoint.Y = terrainHeight;
+
+		worldPoint = worldAimPoint;
+		return true;
 	}
 
-	private void UpdateAimMarkerTimer(float delta)
+	private void CenterCameraOnPoint(Vector3 worldPoint)
 	{
-		if (_aimMarkerTimer <= 0.0f)
+		if (_phantomCamera == null)
 			return;
 
-		_aimMarkerTimer -= delta;
-		if (_aimMarkerTimer <= 0.0f && _aimMarker != null)
-			_aimMarker.Visible = false;
+		Vector3 toTarget = worldPoint - _phantomCamera.GlobalPosition;
+		if (toTarget.LengthSquared() < 0.000001f)
+			return;
+
+		StopClickCenterTween();
+		_phantomCamera.Set("follow_mode", (int)FollowMode3D.None);
+		_phantomCamera.Set("look_at_mode", (int)LookAtMode.None);
+
+		float startLookDistance = Mathf.Max(4.0f, toTarget.Length());
+		Vector3 startLookPoint = _phantomCamera.GlobalPosition + (-_phantomCamera.GlobalBasis.Z * startLookDistance);
+		_clickLookTween = CreateTween();
+		_clickLookTween.SetTrans(Tween.TransitionType.Cubic);
+		_clickLookTween.SetEase(Tween.EaseType.Out);
+		_clickLookTween.TweenMethod(Callable.From<Vector3>((lookPoint) =>
+		{
+			_phantomCamera.Call("look_at", lookPoint, Vector3.Up);
+			SyncMainCameraToPhantom();
+		}), startLookPoint, worldPoint, CLICK_LOOK_TWEEN_DURATION);
+		_clickLookTween.TweenCallback(Callable.From(() =>
+		{
+			_clickLookTween = null;
+		}));
+	}
+
+	private void StopClickCenterTween()
+	{
+		_clickLookTween?.Kill();
+		_clickLookTween = null;
 	}
 
 	private Vector3 GetCurrentAimDirection()

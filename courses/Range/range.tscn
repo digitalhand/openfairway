@@ -72,22 +72,6 @@ fog_height_density = 0.6897
 [sub_resource type="Resource" id="Resource_hbh3r"]
 script = ExtResource("18_gqfs3")
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_aim_marker"]
-cull_mode = 2
-shading_mode = 0
-albedo_color = Color(1, 0.4, 0.08, 1)
-
-[sub_resource type="CylinderMesh" id="CylinderMesh_aim_disc"]
-top_radius = 0.9
-bottom_radius = 0.9
-height = 0.04
-
-[sub_resource type="BoxMesh" id="BoxMesh_aim_cross_x"]
-size = Vector3(1.9, 0.03, 0.24)
-
-[sub_resource type="BoxMesh" id="BoxMesh_aim_cross_z"]
-size = Vector3(0.24, 0.03, 1.9)
-
 [sub_resource type="Gradient" id="Gradient_c2xig"]
 offsets = PackedFloat32Array(0.2, 1)
 colors = PackedColorArray(1, 1, 1, 1, 0, 0, 0, 1)
@@ -705,27 +689,6 @@ top_level = true
 process_priority = 300
 process_physics_priority = 300
 script = ExtResource("19_gqfs3")
-
-[node name="AimMarker" type="Node3D" parent="." unique_id=301140439]
-top_level = true
-visible = false
-
-[node name="Disc" type="MeshInstance3D" parent="AimMarker" unique_id=830750386]
-material_override = SubResource("StandardMaterial3D_aim_marker")
-cast_shadow = 0
-mesh = SubResource("CylinderMesh_aim_disc")
-
-[node name="CrossX" type="MeshInstance3D" parent="AimMarker" unique_id=208343245]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.03, 0)
-material_override = SubResource("StandardMaterial3D_aim_marker")
-cast_shadow = 0
-mesh = SubResource("BoxMesh_aim_cross_x")
-
-[node name="CrossZ" type="MeshInstance3D" parent="AimMarker" unique_id=1093060119]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.03, 0)
-material_override = SubResource("StandardMaterial3D_aim_marker")
-cast_shadow = 0
-mesh = SubResource("BoxMesh_aim_cross_z")
 
 [node name="Terrain3D" type="Terrain3D" parent="." unique_id=394964337]
 data_directory = "res://utils/terrain/"

@@ -58,16 +58,25 @@ public sealed class ShotMarkerController
 
 	public void OnLeftClick(Vector2 screenPosition)
 	{
-		if (!_isInitialized || !CanPlacePlayerMarker())
+		if (!_isInitialized || !CanShowPlayerMarker() || _init.ClickWorldPointResolver == null)
 			return;
 
 		Vector3? point = _init.ClickWorldPointResolver?.Invoke(screenPosition);
 		if (!point.HasValue)
 			return;
 
-		_playerSelection = point.Value;
+		SetPlayerSelection(point.Value);
+	}
+
+	public bool SetPlayerSelection(Vector3 worldPoint)
+	{
+		if (!_isInitialized || !CanShowPlayerMarker())
+			return false;
+
+		_playerSelection = worldPoint;
 		_hasPlayerSelection = true;
 		PublishIfChanged();
+		return true;
 	}
 
 	public void OnShotLaunched()
@@ -107,11 +116,10 @@ public sealed class ShotMarkerController
 		PublishIfChanged();
 	}
 
-	private bool CanPlacePlayerMarker()
+	private bool CanShowPlayerMarker()
 	{
 		return !_suppressUntilRest
-			&& IsAtRestState()
-			&& _init.ClickWorldPointResolver != null;
+			&& IsAtRestState();
 	}
 
 	private bool IsAtRestState()
