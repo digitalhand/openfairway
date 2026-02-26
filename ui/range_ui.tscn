@@ -17,6 +17,22 @@ corner_radius_top_right = 12
 corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_controls_button"]
+bg_color = Color(0.0431373, 0.180392, 0.309804, 0.8)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.25)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+content_margin_left = 10.0
+content_margin_top = 4.0
+content_margin_right = 10.0
+content_margin_bottom = 4.0
+
 [node name="RangeUI" type="MarginContainer" unique_id=1754073492]
 anchors_preset = 15
 anchor_right = 1.0
@@ -335,12 +351,32 @@ visible = false
 custom_minimum_size = Vector2(170, 0)
 layout_mode = 2
 size_flags_vertical = 0
+theme_override_styles/normal = SubResource("StyleBoxFlat_controls_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_controls_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_controls_button")
+theme_override_styles/focus = SubResource("StyleBoxFlat_controls_button")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_controls_button")
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_focus_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_disabled_color = Color(0.96, 0.98, 1, 0.6)
 
 [node name="HitShotButton" type="Button" parent="OverlayLayer/CourseHeaderControlsRow" unique_id=1466247724]
 visible = false
 custom_minimum_size = Vector2(120, 0)
 layout_mode = 2
 size_flags_vertical = 0
+theme_override_styles/normal = SubResource("StyleBoxFlat_controls_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_controls_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_controls_button")
+theme_override_styles/focus = SubResource("StyleBoxFlat_controls_button")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_controls_button")
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_focus_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_disabled_color = Color(0.96, 0.98, 1, 0.6)
 theme_override_font_sizes/font_size = 18
 text = "Hit Shot"
 
@@ -352,6 +388,16 @@ size_flags_horizontal = 3
 custom_minimum_size = Vector2(120, 0)
 layout_mode = 2
 size_flags_vertical = 0
+theme_override_styles/normal = SubResource("StyleBoxFlat_controls_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_controls_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_controls_button")
+theme_override_styles/focus = SubResource("StyleBoxFlat_controls_button")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_controls_button")
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_focus_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_disabled_color = Color(0.96, 0.98, 1, 0.6)
 theme_override_font_sizes/font_size = 18
 text = "Panels"
 

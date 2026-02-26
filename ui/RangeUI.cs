@@ -7,6 +7,8 @@ public partial class RangeUI : MarginContainer
     [Signal]
     public delegate void HitShotEventHandler(Dictionary data);
 
+    private static readonly Color ControlsThemeColor = new Color(0.0431373f, 0.180392f, 0.309804f, 0.8f);
+    private static readonly Color ControlsFontColor = new Color(0.96f, 0.98f, 1.0f, 1.0f);
     private const string DefaultPlayerName = "JesseInCode";
     private const string DefaultCourseName = "Airways";
     private const int DefaultHoleNumber = 1;
@@ -107,6 +109,7 @@ public partial class RangeUI : MarginContainer
 
         PopulateShotTypes();
         SetupPanelsMenu();
+        ApplyDropdownThemes();
         SetShotControlsVisible(true);
     }
 
@@ -440,6 +443,59 @@ public partial class RangeUI : MarginContainer
 
         _panelsPopup.IdPressed += OnPanelsMenuIdPressed;
         _panelsMenu.Pressed += OnPanelsMenuPressed;
+    }
+
+    private void ApplyDropdownThemes()
+    {
+        ApplyPopupTheme(_shotTypeOption.GetPopup());
+        ApplyPopupTheme(_panelsPopup);
+    }
+
+    private void ApplyPopupTheme(PopupMenu popup)
+    {
+        if (popup == null)
+            return;
+
+        popup.AddThemeStyleboxOverride("panel", CreatePopupPanelStyle());
+        popup.AddThemeStyleboxOverride("hover", CreatePopupHoverStyle());
+        popup.AddThemeColorOverride("font_color", ControlsFontColor);
+        popup.AddThemeColorOverride("font_hover_color", ControlsFontColor);
+        popup.AddThemeColorOverride("font_separator_color", ControlsFontColor);
+        popup.AddThemeColorOverride("font_disabled_color", new Color(ControlsFontColor.R, ControlsFontColor.G, ControlsFontColor.B, 0.6f));
+    }
+
+    private static StyleBoxFlat CreatePopupPanelStyle()
+    {
+        return new StyleBoxFlat
+        {
+            BgColor = ControlsThemeColor,
+            BorderWidthLeft = 1,
+            BorderWidthTop = 1,
+            BorderWidthRight = 1,
+            BorderWidthBottom = 1,
+            BorderColor = new Color(1, 1, 1, 0.25f),
+            CornerRadiusTopLeft = 6,
+            CornerRadiusTopRight = 6,
+            CornerRadiusBottomRight = 6,
+            CornerRadiusBottomLeft = 6
+        };
+    }
+
+    private static StyleBoxFlat CreatePopupHoverStyle()
+    {
+        return new StyleBoxFlat
+        {
+            BgColor = ControlsThemeColor,
+            BorderWidthLeft = 1,
+            BorderWidthTop = 1,
+            BorderWidthRight = 1,
+            BorderWidthBottom = 1,
+            BorderColor = new Color(1, 1, 1, 0.5f),
+            CornerRadiusTopLeft = 4,
+            CornerRadiusTopRight = 4,
+            CornerRadiusBottomRight = 4,
+            CornerRadiusBottomLeft = 4
+        };
     }
 
     private void OnPanelsMenuIdPressed(long id)

@@ -624,7 +624,8 @@ follow_damping_value = Vector3(0.4, 0.1, 0.1)
 dead_zone_height = 0.204
 
 [node name="Camera3D" type="Camera3D" parent="." unique_id=1480788570]
-transform = Transform3D(0.40544468, -0.09237752, -0.90943986, -2.3673017e-09, 0.99488086, -0.10105629, 0.9141195, 0.040972736, 0.40336916, -5.404267, 3, -0.15142012)
+physics_interpolation_mode = 2
+transform = Transform3D(0.40544474, -0.09237753, -0.90944, -3.7252903e-09, 0.99488074, -0.10105628, 0.91411966, 0.04097274, 0.40336913, -5.404267, 3, -0.15142012)
 top_level = true
 
 [node name="PhantomCameraHost" type="Node" parent="Camera3D" unique_id=2087986484]
