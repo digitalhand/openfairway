@@ -1,3 +1,4 @@
+using System;
 using System.Text;
 using Godot;
 using Godot.Collections;
@@ -11,6 +12,12 @@ public partial class TcpServer : Node
     private bool _tcpConnected;
     private string _tcpString = string.Empty;
     private Dictionary _shotData = new();
+    private GlobalSettings _globalSettings;
+    private Setting _tcpPortSetting;
+    private string _currentDeviceId = string.Empty;
+    private bool _hasIdentifiedDevice;
+    private bool _lastPublishedConnected;
+    private string _lastPublishedDeviceId = string.Empty;
 
     private readonly Dictionary _resp200 = new() { { "Code", 200 } };
     private readonly Dictionary _resp201 = new() { { "Code", 201 }, { "Message", "Player Information" } };
@@ -31,14 +38,38 @@ public partial class TcpServer : Node
 
     [Signal]
     public delegate void HitBallEventHandler(Dictionary data);
+    [Signal]
+    public delegate void ConnectionStatusChangedEventHandler(bool connected, string deviceId);
+
+    public bool HasIdentifiedDevice => _tcpConnected && _hasIdentifiedDevice && !string.IsNullOrWhiteSpace(_currentDeviceId);
+    public string ConnectedDeviceId => HasIdentifiedDevice ? _currentDeviceId : string.Empty;
 
     public override void _Ready()
     {
-        _tcpServer.Listen((ushort)Port);
+        BindTcpPortSetting();
+        int configuredPort = _tcpPortSetting != null ? (int)_tcpPortSetting.Value : Port;
+        ApplyListenPort(configuredPort);
+    }
+
+    public override void _ExitTree()
+    {
+        if (_tcpPortSetting != null)
+            _tcpPortSetting.SettingChanged -= OnTcpPortSettingChanged;
+
+        ShutdownServer("TCP server shutting down with scene exit.");
     }
 
     public override void _Process(double delta)
     {
+        if (!_tcpConnected && !_tcpServer.IsListening())
+            return;
+
+        if (_tcpConnected && _tcpConnection == null)
+        {
+            _tcpConnected = false;
+            return;
+        }
+
         // Accept new connection
         if (!_tcpConnected)
         {
@@ -48,6 +79,7 @@ public partial class TcpServer : Node
                 PhysicsLogger.Info($"We have a tcp connection at {_tcpConnection.GetConnectedHost()}");
                 _tcpConnected = true;
                 _lastActivityTimeMs = Time.GetTicksMsec();
+                ClearIdentifiedDevice();
             }
             return;
         }
@@ -58,10 +90,7 @@ public partial class TcpServer : Node
 
         if (status == StreamPeerTcp.Status.None)
         {
-            _tcpConnected = false;
-            _tcpConnection = null;
-            _shotData.Clear();
-            PhysicsLogger.Info("tcp disconnected");
+            HandleDisconnected("tcp disconnected");
             return;
         }
 
@@ -71,11 +100,7 @@ public partial class TcpServer : Node
         // M2: Check for idle timeout
         if (Time.GetTicksMsec() - _lastActivityTimeMs > CONNECTION_TIMEOUT_MS)
         {
-            PhysicsLogger.Info("tcp connection timed out after inactivity");
-            _tcpConnection.DisconnectFromHost();
-            _tcpConnected = false;
-            _tcpConnection = null;
-            _shotData.Clear();
+            HandleDisconnected("tcp connection timed out after inactivity");
             return;
         }
 
@@ -114,6 +139,7 @@ public partial class TcpServer : Node
 
         var dict = data.AsGodotDictionary();
         _shotData = dict;
+        CaptureDeviceIdentity(dict);
 
         // M3: Log truncated payload after validation
         string logPayload = _tcpString.Length > 200 ? _tcpString[..200] + "..." : _tcpString;
@@ -132,8 +158,7 @@ public partial class TcpServer : Node
 
         if (status == StreamPeerTcp.Status.None)
         {
-            _tcpConnected = false;
-            _tcpConnection = null;
+            HandleDisconnected();
             return;
         }
 
@@ -157,8 +182,7 @@ public partial class TcpServer : Node
 
         if (status == StreamPeerTcp.Status.None)
         {
-            _tcpConnected = false;
-            _tcpConnection = null;
+            HandleDisconnected();
             return;
         }
 
@@ -210,5 +234,118 @@ public partial class TcpServer : Node
 
         // C4: Send success response to launch monitor
         RespondSuccess();
+    }
+
+    public void SetListenPort(int port)
+    {
+        ApplyListenPort(port);
+    }
+
+    private void ApplyListenPort(int port)
+    {
+        int sanitizedPort = Mathf.Clamp(port, 1, 65535);
+        Port = sanitizedPort;
+        ShutdownServer();
+
+        Error listenError = _tcpServer.Listen((ushort)Port);
+        if (listenError != Error.Ok)
+            PhysicsLogger.Error($"TCP server failed to listen on port {Port}. Error: {listenError}");
+    }
+
+    private void ShutdownServer(string logMessage = null)
+    {
+        if (!string.IsNullOrWhiteSpace(logMessage))
+            PhysicsLogger.Info(logMessage);
+
+        if (_tcpConnection != null)
+        {
+            _tcpConnection.DisconnectFromHost();
+            _tcpConnection = null;
+        }
+
+        _tcpConnected = false;
+        _shotData.Clear();
+        _tcpString = string.Empty;
+        ClearIdentifiedDevice();
+        PublishConnectionStatus(false, string.Empty);
+
+        if (_tcpServer.IsListening())
+            _tcpServer.Stop();
+    }
+
+    private void HandleDisconnected(string logMessage = null)
+    {
+        if (!string.IsNullOrWhiteSpace(logMessage))
+            PhysicsLogger.Info(logMessage);
+
+        if (_tcpConnection != null)
+        {
+            _tcpConnection.DisconnectFromHost();
+            _tcpConnection = null;
+        }
+
+        _tcpConnected = false;
+        _shotData.Clear();
+        _tcpString = string.Empty;
+        ClearIdentifiedDevice();
+        PublishConnectionStatus(false, string.Empty);
+    }
+
+    private void CaptureDeviceIdentity(Dictionary payload)
+    {
+        if (!_tcpConnected || payload == null)
+            return;
+
+        if (!payload.TryGetValue("DeviceID", out Variant deviceIdValue) || deviceIdValue.VariantType != Variant.Type.String)
+            return;
+
+        string deviceId = deviceIdValue.AsString().Trim();
+        if (string.IsNullOrWhiteSpace(deviceId))
+            return;
+
+        _currentDeviceId = deviceId;
+        _hasIdentifiedDevice = true;
+        PublishConnectionStatus(true, deviceId);
+    }
+
+    private void ClearIdentifiedDevice()
+    {
+        _currentDeviceId = string.Empty;
+        _hasIdentifiedDevice = false;
+    }
+
+    private void PublishConnectionStatus(bool connected, string deviceId)
+    {
+        string safeDeviceId = connected ? (deviceId ?? string.Empty).Trim() : string.Empty;
+        bool hasConnectionIdentity = connected && !string.IsNullOrWhiteSpace(safeDeviceId);
+
+        if (_lastPublishedConnected == hasConnectionIdentity
+            && string.Equals(_lastPublishedDeviceId, safeDeviceId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _lastPublishedConnected = hasConnectionIdentity;
+        _lastPublishedDeviceId = safeDeviceId;
+        EmitSignal(SignalName.ConnectionStatusChanged, hasConnectionIdentity, safeDeviceId);
+    }
+
+    private void BindTcpPortSetting()
+    {
+        _globalSettings = GetNodeOrNull<GlobalSettings>("/root/GlobalSettings");
+        _tcpPortSetting = _globalSettings?.AppSettings?.TcpPort;
+        if (_tcpPortSetting != null)
+            _tcpPortSetting.SettingChanged += OnTcpPortSettingChanged;
+    }
+
+    private void OnTcpPortSettingChanged(Variant value)
+    {
+        int nextPort = Port;
+        if (value.VariantType == Variant.Type.Int)
+            nextPort = (int)value;
+        else if (value.VariantType == Variant.Type.Float)
+            nextPort = Mathf.RoundToInt((float)value);
+
+        SetListenPort(nextPort);
     }
 }

@@ -8,8 +8,6 @@ public partial class CourseHud : Control
 
     private static readonly Color ControlsThemeColor = new Color(0.0431373f, 0.180392f, 0.309804f, 0.8f);
     private static readonly Color ControlsFontColor = new Color(0.96f, 0.98f, 1.0f, 1.0f);
-    private const int SettingsOpenSettingsId = 0;
-    private const int SettingsMainMenuId = 1;
     private const string MainMenuScenePath = "res://ui/main_menu.tscn";
     private const string DefaultPlayerName = "JesseInCode";
     private const string DefaultCourseName = "Airways";
@@ -19,11 +17,9 @@ public partial class CourseHud : Control
 
     private string _selectedShotPath = TestShots.DefaultShot;
     private GridCanvas _gridCanvas;
-    private Button _panelsMenu;
-    private PopupMenu _panelsPopup;
     private Button _settingsMenu;
-    private PopupMenu _settingsPopup;
     private SettingsPanel _settingsPanel;
+    private ShotInjector _shotInjector;
     private OptionButton _shotTypeOption;
     private Button _hitShotButton;
     private Label _courseNameLabel;
@@ -37,8 +33,10 @@ public partial class CourseHud : Control
     private Label _roundEndScoreOverlay;
     private Tween _roundEndScoreTween;
     private bool _shotControlsVisible;
-    private readonly System.Collections.Generic.Dictionary<int, string> _panelMenuIndexToName = new();
+    private bool _isLeavingScene;
+    private readonly System.Collections.Generic.List<DataPanel> _hudPanels = new();
     private Setting _shotInjectorSetting;
+    private Setting _testShotsEnabledSetting;
     private Setting _playerNameSetting;
 
     private DataPanel _panelDistance;
@@ -55,17 +53,22 @@ public partial class CourseHud : Control
 
     public override void _Ready()
     {
+        _isLeavingScene = false;
+
         _gridCanvas = GetNode<GridCanvas>("GridCanvas");
         _settingsPanel = GetNodeOrNull<SettingsPanel>("SettingsPanel");
         GlobalSettings globalSettings = GetNode<GlobalSettings>("/root/GlobalSettings");
         _shotInjectorSetting = globalSettings.GameSettings.ShotInjectorEnabled;
+        _testShotsEnabledSetting = globalSettings.AppSettings?.TestShotsEnabled;
         _playerNameSetting = globalSettings.AppSettings?.PlayerName;
-        _shotInjectorSetting.SettingChanged += ToggleShotInjector;
+        _shotInjectorSetting.SettingChanged += OnShotInjectorSettingChanged;
+        if (_testShotsEnabledSetting != null)
+            _testShotsEnabledSetting.SettingChanged += OnTestShotsEnabledSettingChanged;
         if (_playerNameSetting != null)
             _playerNameSetting.SettingChanged += OnPlayerNameSettingChanged;
 
-        var shotInjector = GetNode<ShotInjector>("ShotInjector");
-        shotInjector.Inject += OnShotInjectorInject;
+        _shotInjector = GetNode<ShotInjector>("ShotInjector");
+        _shotInjector.Inject += OnShotInjectorInject;
 
         _hitShotButton = GetNode<Button>("OverlayLayer/CourseHeaderControlsRow/HitShotButton");
         _hitShotButton.Pressed += OnHitShotPressed;
@@ -101,9 +104,14 @@ public partial class CourseHud : Control
         _panelSpinAxis = GetNode<DataPanel>("GridCanvas/SpinAxis");
         _panelVLA = GetNode<DataPanel>("GridCanvas/VLA");
         _panelHLA = GetNode<DataPanel>("GridCanvas/HLA");
+        InitializeHudPanels();
+        ConnectPanelContextSignals();
+        _settingsPanel?.BindHudPanels(_gridCanvas, _hudPanels);
+        _settingsPanel?.SetMainMenuButtonVisible(true);
+        if (_settingsPanel != null)
+            _settingsPanel.MainMenuRequested += OnSettingsPanelMainMenuRequested;
 
         PopulateShotTypes();
-        SetupPanelsMenu();
         SetupSettingsMenu();
         ApplyDropdownThemes();
         SetShotControlsVisible(true);
@@ -112,21 +120,22 @@ public partial class CourseHud : Control
     public override void _ExitTree()
     {
         if (_shotInjectorSetting != null)
-            _shotInjectorSetting.SettingChanged -= ToggleShotInjector;
+            _shotInjectorSetting.SettingChanged -= OnShotInjectorSettingChanged;
+        if (_testShotsEnabledSetting != null)
+            _testShotsEnabledSetting.SettingChanged -= OnTestShotsEnabledSettingChanged;
         if (_playerNameSetting != null)
             _playerNameSetting.SettingChanged -= OnPlayerNameSettingChanged;
+        if (_shotInjector != null)
+            _shotInjector.Inject -= OnShotInjectorInject;
         if (_shotTypeOption != null)
             _shotTypeOption.ItemSelected -= OnShotTypeSelected;
         if (_hitShotButton != null)
             _hitShotButton.Pressed -= OnHitShotPressed;
-        if (_panelsPopup != null)
-            _panelsPopup.IdPressed -= OnPanelsMenuIdPressed;
-        if (_panelsMenu != null)
-            _panelsMenu.Pressed -= OnPanelsMenuPressed;
-        if (_settingsPopup != null)
-            _settingsPopup.IdPressed -= OnSettingsMenuIdPressed;
         if (_settingsMenu != null)
             _settingsMenu.Pressed -= OnSettingsMenuPressed;
+        if (_settingsPanel != null)
+            _settingsPanel.MainMenuRequested -= OnSettingsPanelMainMenuRequested;
+        DisconnectPanelContextSignals();
     }
 
     public override void _Input(InputEvent @event)
@@ -324,12 +333,47 @@ public partial class CourseHud : Control
 
     private void OnShotInjectorInject(Dictionary data)
     {
+        if (!IsTestShotsEnabled())
+            return;
+
         EmitSignal(SignalName.HitShot, data);
     }
 
-    private void ToggleShotInjector(Variant value)
+    private void OnShotInjectorSettingChanged(Variant _value)
     {
-        GetNode("ShotInjector").Set("visible", value);
+        ApplyTestShotVisibility();
+    }
+
+    private void OnTestShotsEnabledSettingChanged(Variant _value)
+    {
+        ApplyTestShotVisibility();
+    }
+
+    private bool IsTestShotsEnabled()
+    {
+        if (_testShotsEnabledSetting == null)
+            return AppSettings.DefaultTestShotsEnabled;
+
+        return (bool)_testShotsEnabledSetting.Value;
+    }
+
+    private void ApplyTestShotVisibility()
+    {
+        bool testShotsEnabled = IsTestShotsEnabled();
+        bool showTopControls = testShotsEnabled && _shotControlsVisible;
+
+        if (_shotTypeOption != null)
+            _shotTypeOption.Visible = showTopControls;
+        if (_hitShotButton != null)
+            _hitShotButton.Visible = showTopControls;
+
+        if (_shotInjector != null)
+        {
+            bool showShotInjector = testShotsEnabled
+                && _shotInjectorSetting != null
+                && (bool)_shotInjectorSetting.Value;
+            _shotInjector.Visible = showShotInjector;
+        }
     }
 
     private void ToggleFullscreen()
@@ -366,6 +410,9 @@ public partial class CourseHud : Control
 
     private void OnHitShotPressed()
     {
+        if (!IsTestShotsEnabled())
+            return;
+
         var data = ShotLoader.LoadShotFromFile(_selectedShotPath);
 
         if (data.Count == 0)
@@ -378,35 +425,42 @@ public partial class CourseHud : Control
         EmitSignal(SignalName.HitShot, data);
     }
 
-    private void SetupPanelsMenu()
+    private void InitializeHudPanels()
     {
-        _panelsMenu = GetNode<Button>("OverlayLayer/CourseHeaderControlsRow/PanelsMenu");
-        _panelsPopup = GetNode<PopupMenu>("OverlayLayer/CourseHeaderControlsRow/PanelsMenu/PanelsPopup");
-        _panelsPopup.Clear();
-        _panelMenuIndexToName.Clear();
+        _hudPanels.Clear();
+        _hudPanels.Add(_panelDistance);
+        _hudPanels.Add(_panelCarry);
+        _hudPanels.Add(_panelSide);
+        _hudPanels.Add(_panelApex);
+        _hudPanels.Add(_panelSpeed);
+        _hudPanels.Add(_panelBackSpin);
+        _hudPanels.Add(_panelSideSpin);
+        _hudPanels.Add(_panelTotalSpin);
+        _hudPanels.Add(_panelSpinAxis);
+        _hudPanels.Add(_panelVLA);
+        _hudPanels.Add(_panelHLA);
+    }
 
-        int index = 0;
-        foreach (var child in _gridCanvas.GetChildren())
-        {
-            if (child is DataPanel panel)
-            {
-                string label = string.IsNullOrWhiteSpace(panel.Label) ? panel.Name : panel.Label;
-                _panelsPopup.AddCheckItem(label, index);
-                _panelsPopup.SetItemChecked(index, panel.Visible);
-                _panelMenuIndexToName[index] = panel.Name;
-                index++;
-            }
-        }
+    private void ConnectPanelContextSignals()
+    {
+        foreach (DataPanel panel in _hudPanels)
+            panel.PanelContextRequested += OnPanelContextRequested;
+    }
 
-        _panelsPopup.IdPressed += OnPanelsMenuIdPressed;
-        _panelsMenu.Pressed += OnPanelsMenuPressed;
+    private void DisconnectPanelContextSignals()
+    {
+        foreach (DataPanel panel in _hudPanels)
+            panel.PanelContextRequested -= OnPanelContextRequested;
+    }
+
+    private void OnPanelContextRequested(DataPanel _panel)
+    {
+        _settingsPanel?.ShowPanel(SettingsPanel.SettingsTab.Panels);
     }
 
     private void ApplyDropdownThemes()
     {
         ApplyPopupTheme(_shotTypeOption.GetPopup());
-        ApplyPopupTheme(_panelsPopup);
-        ApplyPopupTheme(_settingsPopup);
     }
 
     private void ApplyPopupTheme(PopupMenu popup)
@@ -456,58 +510,39 @@ public partial class CourseHud : Control
         };
     }
 
-    private void OnPanelsMenuIdPressed(long id)
-    {
-        int index = (int)id;
-        if (!_panelMenuIndexToName.TryGetValue(index, out var panelName))
-            return;
-
-        var panel = _gridCanvas.GetNode<DataPanel>(panelName);
-        bool newVisible = !panel.Visible;
-        panel.Visible = newVisible;
-        _panelsPopup.SetItemChecked(index, newVisible);
-        _gridCanvas.SaveLayout();
-    }
-
-    private void OnPanelsMenuPressed()
-    {
-        var popupPos = _panelsMenu.GlobalPosition + new Vector2(0, _panelsMenu.Size.Y);
-        _panelsPopup.Position = new Vector2I((int)popupPos.X, (int)popupPos.Y);
-        _panelsPopup.Popup();
-    }
-
     private void SetupSettingsMenu()
     {
         _settingsMenu = GetNode<Button>("OverlayLayer/CourseHeaderCard/SettingsBox/SettingsMenu");
-        _settingsPopup = GetNode<PopupMenu>("OverlayLayer/CourseHeaderCard/SettingsBox/SettingsMenu/SettingsPopup");
-        _settingsPopup.Clear();
-        _settingsPopup.AddItem("Settings", SettingsOpenSettingsId);
-        _settingsPopup.AddItem("Main Menu", SettingsMainMenuId);
-        _settingsPopup.IdPressed += OnSettingsMenuIdPressed;
         _settingsMenu.Pressed += OnSettingsMenuPressed;
     }
 
     private void OnSettingsMenuPressed()
     {
-        var popupPos = _settingsMenu.GlobalPosition + new Vector2(0, _settingsMenu.Size.Y);
-        _settingsPopup.Position = new Vector2I((int)popupPos.X, (int)popupPos.Y);
-        _settingsPopup.Popup();
+        if (_isLeavingScene)
+            return;
+
+        _settingsPanel?.ShowPanel(SettingsPanel.SettingsTab.Player);
     }
 
-    private void OnSettingsMenuIdPressed(long id)
+    private void OnSettingsPanelMainMenuRequested()
     {
-        if (id == SettingsOpenSettingsId)
-        {
-            _settingsPanel?.ShowPanel();
+        if (_isLeavingScene)
             return;
-        }
 
-        if (id != SettingsMainMenuId)
-            return;
+        _isLeavingScene = true;
+        if (_settingsMenu != null)
+            _settingsMenu.Disabled = true;
+
+        _settingsPanel?.HidePanel();
 
         Error error = GetTree().ChangeSceneToFile(MainMenuScenePath);
         if (error != Error.Ok)
+        {
+            _isLeavingScene = false;
+            if (_settingsMenu != null)
+                _settingsMenu.Disabled = false;
             GD.PushError($"Settings menu: failed to load main menu scene '{MainMenuScenePath}'. Error: {error}");
+        }
     }
 
     private void OnPlayerNameSettingChanged(Variant value)
@@ -518,7 +553,6 @@ public partial class CourseHud : Control
     private void SetShotControlsVisible(bool visible)
     {
         _shotControlsVisible = visible;
-        _shotTypeOption.Visible = visible;
-        _hitShotButton.Visible = visible;
+        ApplyTestShotVisibility();
     }
 }
