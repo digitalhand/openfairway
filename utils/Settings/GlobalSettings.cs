@@ -8,14 +8,13 @@ public partial class GlobalSettings : Node
     [Signal]
     public delegate void SettingsChangedEventHandler();
 
-    // Range Settings
-    public RangeSettings RangeSettings { get; private set; }
+    public GameSettings GameSettings { get; private set; }
     public AppSettings AppSettings { get; private set; }
 
     public override void _Ready()
     {
         PhysicsLogger.LogLevel = PhysicsLogger.Level.Info;
-        RangeSettings = new RangeSettings();
+        GameSettings = new GameSettings();
         AppSettings = new AppSettings();
         AppSettingsPersistenceService.LoadInto(AppSettings);
         ConnectAppSettingsSignals();
@@ -27,9 +26,9 @@ public partial class GlobalSettings : Node
         DisconnectAppSettingsSignals();
     }
 
-    public void ResetDefaults()
+    public void ResetAllSettingsToDefaults()
     {
-        RangeSettings.ResetDefaults();
+        GameSettings.ResetDefaults();
         AppSettings.ResetDefaults();
         AppSettingsPersistenceService.Save(AppSettings);
         EmitSignal(SignalName.SettingsChanged);

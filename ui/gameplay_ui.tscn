@@ -1,10 +1,10 @@
 [gd_scene format=3 uid="uid://da1vsfwmbk8vw"]
 
-[ext_resource type="Script" uid="uid://81pmo36d7km5" path="res://ui/RangeUI.cs" id="1_kur1t"]
+[ext_resource type="Script" uid="uid://81pmo36d7km5" path="res://ui/GameplayUI.cs" id="1_kur1t"]
 [ext_resource type="PackedScene" path="res://ui/course_hud.tscn" id="2_coursehud"]
 [ext_resource type="PackedScene" path="res://ui/marker_hud.tscn" id="7_markerhud"]
 
-[node name="RangeUI" type="MarginContainer" unique_id=1754073492]
+[node name="GameplayUI" type="MarginContainer" unique_id=1754073492]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0

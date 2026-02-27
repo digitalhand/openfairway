@@ -16,7 +16,7 @@ public partial class Hole1 : Node3D
 	private CancellationTokenSource _resetCts;
 
 	private ShotTracker _shotTracker;
-	private RangeUI _rangeUi;
+	private GameplayUI _gameplayUi;
 	private Node3D _phantomCamera;
 	private IShotCameraRig _shotCameraRig;
 	private ShotCameraController _shotCameraController = new();
@@ -28,7 +28,7 @@ public partial class Hole1 : Node3D
 	private AudioStreamPlayer3D _audioDriverHit;
 	private AudioStreamPlayer3D _audioBackgroundBirds;
 	private AudioStreamPlayer3D _audioGolfBallLanding;
-	private RangeSettings _rangeSettings;
+	private GameSettings _gameSettings;
 	private AppSettings _appSettings;
 	private Setting _cameraOrbitDistanceSetting;
 	private Setting _cameraFollowDelaySetting;
@@ -48,7 +48,7 @@ public partial class Hole1 : Node3D
 	public override void _Ready()
 	{
 		_shotTracker = GetNode<ShotTracker>("ShotTracker");
-		_rangeUi = GetNode<RangeUI>("RangeUI");
+		_gameplayUi = GetNode<GameplayUI>("GameplayUI");
 		_phantomCamera = GetNode<Node3D>("PhantomCamera3D");
 		_shotCameraRig = new PhantomShotCameraRig(_phantomCamera);
 		_mainCamera = GetNodeOrNull<Camera3D>("Camera3D");
@@ -76,7 +76,7 @@ public partial class Hole1 : Node3D
 		// Connect signals
 		_ball.BallAtRest += OnGolfBallRest;
 		_ball.BallLanded += OnGolfBallLanded;
-		_rangeUi.HitShot += OnRangeUiHitShot;
+		_gameplayUi.HitShot += OnGameplayUiHitShot;
 		_shotTracker.TestHitRequested += OnTestHitRequested;
 
 		// Connect TCP server signal if it exists
@@ -87,10 +87,10 @@ public partial class Hole1 : Node3D
 		}
 
 		var globalSettings = GetNode<GlobalSettings>("/root/GlobalSettings");
-		_rangeSettings = globalSettings.RangeSettings;
+		_gameSettings = globalSettings.GameSettings;
 		_appSettings = globalSettings.AppSettings;
-		_rangeSettings.CameraFollowMode.SettingChanged += OnCameraFollowChanged;
-		_rangeSettings.SurfaceType.SettingChanged += OnSurfaceChanged;
+		_gameSettings.CameraFollowMode.SettingChanged += OnCameraFollowChanged;
+		_gameSettings.SurfaceType.SettingChanged += OnSurfaceChanged;
 		_cameraOrbitDistanceSetting = _appSettings?.CameraOrbitDistance;
 		_cameraFollowDelaySetting = _appSettings?.CameraFollowDelaySeconds;
 		if (_cameraOrbitDistanceSetting != null)
@@ -103,14 +103,14 @@ public partial class Hole1 : Node3D
 		// Always start fresh at the tee on scene load.
 		// Saved progress can be restored later through an explicit resume flow.
 		SetStrokeCount(0);
-		_rangeUi?.SetData(_displaySession.Current.ToDictionary());
-		_rangeUi.SetMarkerCamera(_mainCamera);
+		_gameplayUi?.SetData(_displaySession.Current.ToDictionary());
+		_gameplayUi.SetMarkerCamera(_mainCamera);
 		InitializeShotMarkerController();
 		InitializeShotCameraController();
 		RefreshTargetHud();
 
 		SetCameraToStartImmediate();
-		OnCameraFollowChanged(_rangeSettings.CameraFollowMode.Value);
+		OnCameraFollowChanged(_gameSettings.CameraFollowMode.Value);
 		ApplySurfaceToBall();
 		_shotMarkerController.OnRoundReset();
 		_shotMarkerController.Tick();
@@ -123,14 +123,14 @@ public partial class Hole1 : Node3D
 			_ball.BallAtRest -= OnGolfBallRest;
 			_ball.BallLanded -= OnGolfBallLanded;
 		}
-		if (_rangeUi != null)
-			_rangeUi.HitShot -= OnRangeUiHitShot;
+		if (_gameplayUi != null)
+			_gameplayUi.HitShot -= OnGameplayUiHitShot;
 		if (_shotTracker != null)
 			_shotTracker.TestHitRequested -= OnTestHitRequested;
-		if (_rangeSettings != null)
+		if (_gameSettings != null)
 		{
-			_rangeSettings.CameraFollowMode.SettingChanged -= OnCameraFollowChanged;
-			_rangeSettings.SurfaceType.SettingChanged -= OnSurfaceChanged;
+			_gameSettings.CameraFollowMode.SettingChanged -= OnCameraFollowChanged;
+			_gameSettings.SurfaceType.SettingChanged -= OnSurfaceChanged;
 		}
 		if (_cameraOrbitDistanceSetting != null)
 			_cameraOrbitDistanceSetting.SettingChanged -= OnCameraOrbitDistanceChanged;
@@ -225,7 +225,7 @@ public partial class Hole1 : Node3D
 			if (_goalCompletionFlow != null && _goalCompletionFlow.TryStartIfBallOnGoal(this, ROUND_END_SCORE_DURATION_SECONDS))
 			{
 				PhysicsLogger.Info("Ball settled on goal zone. Ending round in 3 seconds.");
-				_rangeUi?.SetFinalStrokeCount(_holeRoundState.StrokeCount);
+				_gameplayUi?.SetFinalStrokeCount(_holeRoundState.StrokeCount);
 				FreezeCameraOnBall();
 				return;
 			}
@@ -242,7 +242,7 @@ public partial class Hole1 : Node3D
 			var token = _resetCts.Token;
 
 			// Reset camera after delay
-			float delay = (float)_rangeSettings.BallResetTimer.Value;
+			float delay = (float)_gameSettings.BallResetTimer.Value;
 			await ToSignal(GetTree().CreateTimer(delay), SceneTreeTimer.SignalName.Timeout);
 
 			if (token.IsCancellationRequested)
@@ -254,10 +254,10 @@ public partial class Hole1 : Node3D
 				return;
 
 			// Auto-reset ball if enabled
-			if ((bool)_rangeSettings.AutoBallReset.Value)
+			if ((bool)_gameSettings.AutoBallReset.Value)
 			{
 				_displaySession.Reset();
-				_rangeUi.SetData(_displaySession.Current.ToDictionary());
+				_gameplayUi.SetData(_displaySession.Current.ToDictionary());
 				_shotTracker.ResetBall();
 				CallDeferred(nameof(SetCameraToStartImmediate));
 			}
@@ -273,7 +273,7 @@ public partial class Hole1 : Node3D
 		PlayGolfBallLandingAudio();
 	}
 
-	private void OnRangeUiHitShot(Dictionary data)
+	private void OnGameplayUiHitShot(Dictionary data)
 	{
 		LaunchShot(data, useTcpTracker: false, logPayload: false);
 	}
@@ -324,7 +324,7 @@ public partial class Hole1 : Node3D
 		if (useTcpTracker)
 			_shotTracker.OnTcpClientHitBall(data);
 		else
-			_shotTracker.OnRangeUiHitShot(data);
+			_shotTracker.OnGameplayUiHitShot(data);
 
 		// Enable follow after deferred HitFromData has applied launch state.
 		_ = _shotCameraController.EnableFollowDeferredAsync();
@@ -491,8 +491,8 @@ public partial class Hole1 : Node3D
 			IsBallOnGoalProvider = IsBallOnGoalZone,
 			StrokeProvider = () => _holeRoundState.StrokeCount,
 			ParProvider = () => _holeRoundState.Par,
-			ShowOverlay = label => _rangeUi?.ShowRoundEndScore(label),
-			HideOverlay = () => _rangeUi?.HideRoundEndScore(),
+			ShowOverlay = label => _gameplayUi?.ShowRoundEndScore(label),
+			HideOverlay = () => _gameplayUi?.HideRoundEndScore(),
 			OnCompleteRound = CompleteGoalRound
 		});
 	}
@@ -564,7 +564,7 @@ public partial class Hole1 : Node3D
 	private void SetStrokeCount(int strokes)
 	{
 		_holeRoundState.SetStrokes(strokes);
-		_rangeUi?.SetStrokeCount(_holeRoundState.StrokeCount);
+		_gameplayUi?.SetStrokeCount(_holeRoundState.StrokeCount);
 		UpdateScoreLabelFromStrokes();
 	}
 
@@ -575,7 +575,7 @@ public partial class Hole1 : Node3D
 		_goalCompletionFlow?.Cancel();
 		_shotMarkerController.OnRoundReset();
 		_displaySession.Reset();
-		_rangeUi?.SetData(_displaySession.Current.ToDictionary());
+		_gameplayUi?.SetData(_displaySession.Current.ToDictionary());
 	}
 
 	private string GetSceneId()
@@ -594,21 +594,21 @@ public partial class Hole1 : Node3D
 			PhysicsLogger.Info($"No course header configured for scene '{_sceneId}'. Using defaults.");
 
 		CourseCardInfo courseCard = _holeRoundState.CourseCard;
-		_rangeUi?.SetCourseHeader(courseCard.CourseName, courseCard.HoleNumber, courseCard.Par, courseCard.Yardage);
+		_gameplayUi?.SetCourseHeader(courseCard.CourseName, courseCard.HoleNumber, courseCard.Par, courseCard.Yardage);
 	}
 
 	private void UpdateScoreLabelFromStrokes()
 	{
-		if (_rangeUi == null)
+		if (_gameplayUi == null)
 			return;
 
 		if (!_holeRoundState.TryGetScore(out ScoreResult score))
 		{
-			_rangeUi.SetScoreUnknown();
+			_gameplayUi.SetScoreUnknown();
 			return;
 		}
 
-		_rangeUi.SetScoreLabel(score.Label);
+		_gameplayUi.SetScoreLabel(score.Label);
 	}
 
 	private void SyncMainCameraToPhantom()
@@ -635,7 +635,7 @@ public partial class Hole1 : Node3D
 	{
 		if (_shotTracker != null && _shotTracker.HasNode("Ball"))
 		{
-			var surfaceType = (PhysicsEnums.SurfaceType)(int)_rangeSettings.SurfaceType.Value;
+			var surfaceType = (PhysicsEnums.SurfaceType)(int)_gameSettings.SurfaceType.Value;
 			_ball.SetSurface(surfaceType);
 		}
 	}
@@ -643,9 +643,9 @@ public partial class Hole1 : Node3D
 	private void UpdateBallDisplay()
 	{
 		bool showDistance = true;
-		var units = (PhysicsEnums.Units)(int)_rangeSettings.RangeUnits.Value;
+		var units = (PhysicsEnums.Units)(int)_gameSettings.GameUnits.Value;
 		ShotDisplaySnapshot snapshot = _displaySession.Refresh(_shotTracker, units, showDistance);
-		_rangeUi?.SetData(snapshot.ToDictionary());
+		_gameplayUi?.SetData(snapshot.ToDictionary());
 	}
 
 	private void InitializeShotMarkerController()
@@ -687,10 +687,10 @@ public partial class Hole1 : Node3D
 
 	private void ApplyMarkerSnapshot(MarkerSnapshot snapshot)
 	{
-		if (_rangeUi == null)
+		if (_gameplayUi == null)
 			return;
 
-		_rangeUi.ApplyMarkerSnapshot(snapshot);
+		_gameplayUi.ApplyMarkerSnapshot(snapshot);
 	}
 
 	private void QueueFlagMarkerResetToTarget()
@@ -790,29 +790,29 @@ public partial class Hole1 : Node3D
 
 	private void UpdateTargetYardageDisplay()
 	{
-		if (_rangeUi == null)
+		if (_gameplayUi == null)
 			return;
 
 		if (_targetResolver == null || !_targetResolver.TryGetTargetDistanceText(out string distanceText))
 		{
-			_rangeUi.SetTargetYardageUnknown();
+			_gameplayUi.SetTargetYardageUnknown();
 			return;
 		}
 
-		_rangeUi.SetTargetDistanceText(distanceText);
+		_gameplayUi.SetTargetDistanceText(distanceText);
 	}
 
 	private void UpdateTargetElevationDisplay()
 	{
-		if (_rangeUi == null)
+		if (_gameplayUi == null)
 			return;
 
 		if (_targetResolver == null || !_targetResolver.TryGetTargetElevationFeet(out int feet))
 		{
-			_rangeUi.SetTargetElevationUnknown();
+			_gameplayUi.SetTargetElevationUnknown();
 			return;
 		}
 
-		_rangeUi.SetTargetElevationFeet(feet);
+		_gameplayUi.SetTargetElevationFeet(feet);
 	}
 }

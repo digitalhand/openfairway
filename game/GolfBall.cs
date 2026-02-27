@@ -41,7 +41,7 @@ public partial class GolfBall : CharacterBody3D
 	public Vector3 FloorNormal { get; set; } = Vector3.Up;
 
 	// Settings reference for signal cleanup
-	private RangeSettings _rangeSettings;
+	private GameSettings _gameSettings;
 
 	// Terrain3D data reference for height queries (cached on _Ready)
 	private GodotObject _terrainData;
@@ -88,32 +88,32 @@ public partial class GolfBall : CharacterBody3D
 
 	private void ConnectSettings()
 	{
-		_rangeSettings = GetNode<GlobalSettings>("/root/GlobalSettings").RangeSettings;
-		_rangeSettings.Temperature.SettingChanged += OnEnvironmentChanged;
-		_rangeSettings.Altitude.SettingChanged += OnEnvironmentChanged;
-		_rangeSettings.RangeUnits.SettingChanged += OnEnvironmentChanged;
-		_rangeSettings.DragScale.SettingChanged += OnDragScaleChanged;
-		_rangeSettings.LiftScale.SettingChanged += OnLiftScaleChanged;
-		_dragScale = (float)_rangeSettings.DragScale.Value;
-		_liftScale = (float)_rangeSettings.LiftScale.Value;
+		_gameSettings = GetNode<GlobalSettings>("/root/GlobalSettings").GameSettings;
+		_gameSettings.Temperature.SettingChanged += OnEnvironmentChanged;
+		_gameSettings.Altitude.SettingChanged += OnEnvironmentChanged;
+		_gameSettings.GameUnits.SettingChanged += OnEnvironmentChanged;
+		_gameSettings.DragScale.SettingChanged += OnDragScaleChanged;
+		_gameSettings.LiftScale.SettingChanged += OnLiftScaleChanged;
+		_dragScale = (float)_gameSettings.DragScale.Value;
+		_liftScale = (float)_gameSettings.LiftScale.Value;
 	}
 
 	public override void _ExitTree()
 	{
-		if (_rangeSettings != null)
+		if (_gameSettings != null)
 		{
-			_rangeSettings.Temperature.SettingChanged -= OnEnvironmentChanged;
-			_rangeSettings.Altitude.SettingChanged -= OnEnvironmentChanged;
-			_rangeSettings.RangeUnits.SettingChanged -= OnEnvironmentChanged;
-			_rangeSettings.DragScale.SettingChanged -= OnDragScaleChanged;
-			_rangeSettings.LiftScale.SettingChanged -= OnLiftScaleChanged;
+			_gameSettings.Temperature.SettingChanged -= OnEnvironmentChanged;
+			_gameSettings.Altitude.SettingChanged -= OnEnvironmentChanged;
+			_gameSettings.GameUnits.SettingChanged -= OnEnvironmentChanged;
+			_gameSettings.DragScale.SettingChanged -= OnDragScaleChanged;
+			_gameSettings.LiftScale.SettingChanged -= OnLiftScaleChanged;
 		}
 	}
 
 	private void UpdateEnvironment()
 	{
-		var settings = GetNode<GlobalSettings>("/root/GlobalSettings").RangeSettings;
-		var units = (PhysicsEnums.Units)(int)settings.RangeUnits.Value;
+		var settings = GetNode<GlobalSettings>("/root/GlobalSettings").GameSettings;
+		var units = (PhysicsEnums.Units)(int)settings.GameUnits.Value;
 		_airDensity = _aerodynamics.GetAirDensity(
 			(float)settings.Altitude.Value,
 			(float)settings.Temperature.Value,
@@ -132,12 +132,12 @@ public partial class GolfBall : CharacterBody3D
 
 	private void OnDragScaleChanged(Variant value)
 	{
-		_dragScale = (float)GetNode<GlobalSettings>("/root/GlobalSettings").RangeSettings.DragScale.Value;
+		_dragScale = (float)GetNode<GlobalSettings>("/root/GlobalSettings").GameSettings.DragScale.Value;
 	}
 
 	private void OnLiftScaleChanged(Variant value)
 	{
-		_liftScale = (float)GetNode<GlobalSettings>("/root/GlobalSettings").RangeSettings.LiftScale.Value;
+		_liftScale = (float)GetNode<GlobalSettings>("/root/GlobalSettings").GameSettings.LiftScale.Value;
 	}
 
 	/// <summary>
@@ -181,8 +181,8 @@ public partial class GolfBall : CharacterBody3D
 
 	private PhysicsEnums.SurfaceType GetConfiguredSurfaceType()
 	{
-		if (_rangeSettings != null)
-			return (PhysicsEnums.SurfaceType)(int)_rangeSettings.SurfaceType.Value;
+		if (_gameSettings != null)
+			return (PhysicsEnums.SurfaceType)(int)_gameSettings.SurfaceType.Value;
 
 		return PhysicsEnums.SurfaceType.Fairway;
 	}

@@ -15,11 +15,13 @@ Realistic golf ball physics engine for Godot 4.5+ (.NET/C#). Provides force, tor
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
-- [Camera Updates (Range Scene)](#camera-updates-range-scene)
+- [Camera Updates (Hole Scene)](#camera-updates-hole-scene)
+- [Marker Controls](#marker-controls)
 - [Keyboard Shortcuts](#keyboard-shortcuts)
-- [Range HUD Reusable Components](#range-hud-reusable-components)
+- [Hole HUD Reusable Components](#hole-hud-reusable-components)
 - [Surface Zones (Local Terrain Overrides)](#surface-zones-local-terrain-overrides)
 - [Distance Benchmarks](#distance-benchmarks)
+- [Known Feature Gaps](#known-feature-gaps)
 - [Addon Classes](#addon-classes)
 - [Addon Structure](#addon-structure)
 - [Documentation](#documentation)
@@ -106,9 +108,9 @@ var result = adapter.SimulateShotFromJson(new Godot.Collections.Dictionary
 // result["carry_yd"], result["total_yd"]
 ```
 
-## Camera Updates (Range Scene)
+## Camera Updates (Hole Scene)
 
-The default range scene now uses an orbit + follow workflow:
+The primary gameplay scene (`res://courses/airways_fresno/hole_1/hole_1.tscn`) uses `ShotCameraController` for an orbit + follow workflow:
 
 - At rest, use `ui_left` / `ui_right` (left/right arrows by default) to orbit the camera around the ball.
 - A temporary ground aim marker appears while orbiting to show the current launch direction.
@@ -118,17 +120,28 @@ The default range scene now uses an orbit + follow workflow:
 
 Keyboard controls are listed in [Keyboard Shortcuts](#keyboard-shortcuts).
 
+## Marker Controls
+
+Marker rendering is driven by `ShotMarkerController` and displayed by `ui/MarkerHUD.cs`.
+
+- Left-click on terrain (not over UI) while the ball is at rest to place a player marker.
+- A placed marker immediately reorients camera yaw to the selected point.
+- Flag marker position comes from the active target reference (flag pole if present, otherwise fallback target nodes).
+- Markers are suppressed during shot launch/flight and during goal countdown.
+- Round reset clears player marker selection and repopulates the flag marker snapshot.
+
 ## Keyboard Shortcuts
 
 - `F` toggles fullscreen/windowed mode.
 - `P` toggles shot controls visibility.
 - `H` (`hit`) injects a local test shot.
 - `R` (`reset`) resets shot display/camera/ball state.
+- `Tab` triggers the same round reset behavior as `R`.
 - `ui_left` / `ui_right` (left/right arrows by default) orbit around the ball at rest.
 
-## Range HUD Reusable Components
+## Hole HUD Reusable Components
 
-Recent range-scene updates moved shared formatting and persistence logic into reusable components:
+Current hole-scene HUD logic is composed from reusable components:
 
 - `utils/MeasurementUtils.cs`
   - Centralized distance/elevation conversions (`meters -> yards`, `meters -> feet`).
@@ -140,13 +153,16 @@ Recent range-scene updates moved shared formatting and persistence logic into re
   - Centralized panel layout save/load/apply behavior.
   - Persists panel position and visibility in `user://layout.cfg` for reusable layout management.
 
-Range scene integration points:
+Hole scene integration points:
 
-- `courses/Range/Range.cs`
-  - Shared shot-launch path (`LaunchShot(...)`) used by TCP shots, UI shots, and test shots.
-  - Shared HUD refresh flow (`RefreshTargetHud()`).
-- `ui/RangeUI.cs`
-  - Uses `ElevationPresenter` for both top-left target elevation and world-click marker elevation.
+- `courses/airways_fresno/hole_1/Hole1.cs`
+  - Orchestrates shot launch, target refresh, marker snapshots, and score/stroke updates.
+- `game/camera/ShotCameraController.cs`
+  - Handles orbit/follow behavior and click-to-aim camera recentering.
+- `game/markers/ShotMarkerController.cs`
+  - Builds flag/player marker snapshots and publishes updates.
+- `ui/GameplayUI.cs`, `ui/CourseHud.cs`, `ui/MarkerHUD.cs`
+  - Render shot data, elevation visuals, score card state, and world markers.
 
 The reusable scoring label mapper for per-course par logic remains in `game/scoring/ScoreMapper.cs` and course header metadata is defined in `game/scoring/CourseCatalog.cs`.
 
@@ -156,20 +172,31 @@ The reusable scoring label mapper for per-course par logic remains in `game/scor
 @startuml
 skinparam monochrome true
 
-class Range
-class RangeUI
+class GameplayUI
+class CourseHud
+class MarkerHUD
+class ShotCameraController
+class ShotMarkerController
+class TargetReferenceResolver
 class MeasurementUtils
 class ElevationPresenter
 class LayoutPersistenceService
+class GridCanvas
 class ScoreMapper
 class CourseCatalog
-class GridCanvas
+class Hole1
 
-Range --> RangeUI : updates HUD + marker
-Range --> MeasurementUtils : yards/feet math
-Range --> ScoreMapper : round-end label
-Range --> CourseCatalog : course card data
-RangeUI --> ElevationPresenter : elevation visuals
+Hole1 --> ShotCameraController : orbit + follow + launch yaw
+Hole1 --> ShotMarkerController : marker state + snapshots
+Hole1 --> TargetReferenceResolver : terrain and target queries
+Hole1 --> GameplayUI : HUD + marker updates
+Hole1 --> ScoreMapper : round-end label
+Hole1 --> CourseCatalog : course card data
+ShotCameraController --> ShotMarkerController : click/yaw marker selection
+ShotMarkerController --> MeasurementUtils : distance/elevation math
+GameplayUI --> CourseHud : shot + target + score rendering
+GameplayUI --> MarkerHUD : apply marker snapshot
+CourseHud --> ElevationPresenter : elevation text + color
 GridCanvas --> LayoutPersistenceService : panel layout save/load
 
 @enduml
@@ -189,7 +216,7 @@ Behavior details:
 
 - Entering a zone applies that zone's `SurfaceType` immediately.
 - Exiting restores the previous active zone surface (stacked overlap support).
-- If no zone is active, the ball falls back to the global range `SurfaceType` setting.
+- If no zone is active, the ball falls back to the active hole `SurfaceType` setting.
 
 Current surface tuning intent:
 
@@ -206,6 +233,13 @@ godot --headless --script run_benchmarks.gd
 ```
 
 This is the standard way to validate physics changes. See `tests/PhysicsTests/README.md` for baseline distances and the full testing workflow.
+
+## Known Feature Gaps
+
+- Main menu has a visual `RangeTile`, but only `CoursesTile` is currently actionable (`MainMenu.cs` wires only `CoursesButton`).
+- `CourseCatalog` is hardcoded for a single hole/course card and does not yet support multi-course discovery or progression.
+- Marker UX currently has no dedicated clear-marker input, no save/restore across scene transitions, and no marker-specific tests.
+- Tracked backlog: `docs/feature-gaps.md`.
 
 ## Addon Classes
 

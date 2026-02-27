@@ -58,7 +58,7 @@ public partial class CourseHud : Control
         _gridCanvas = GetNode<GridCanvas>("GridCanvas");
         _settingsPanel = GetNodeOrNull<SettingsPanel>("SettingsPanel");
         GlobalSettings globalSettings = GetNode<GlobalSettings>("/root/GlobalSettings");
-        _shotInjectorSetting = globalSettings.RangeSettings.ShotInjectorEnabled;
+        _shotInjectorSetting = globalSettings.GameSettings.ShotInjectorEnabled;
         _playerNameSetting = globalSettings.AppSettings?.PlayerName;
         _shotInjectorSetting.SettingChanged += ToggleShotInjector;
         if (_playerNameSetting != null)
@@ -146,7 +146,7 @@ public partial class CourseHud : Control
 
     public void SetData(Dictionary data)
     {
-        var units = (PhysicsEnums.Units)(int)GetNode<GlobalSettings>("/root/GlobalSettings").RangeSettings.RangeUnits.Value;
+        var units = (PhysicsEnums.Units)(int)GetNode<GlobalSettings>("/root/GlobalSettings").GameSettings.GameUnits.Value;
         string speedUnit = units == PhysicsEnums.Units.Imperial ? "mph" : "m/s";
 
         _panelDistance.SetData(data["Distance"].ToString());
