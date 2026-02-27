@@ -155,8 +155,10 @@ Current hole-scene HUD logic is composed from reusable components:
 
 Hole scene integration points:
 
+- `game/hole/HoleSceneControllerBase.cs`
+  - Reusable hole gameplay orchestration (shot launch, target refresh, marker snapshots, score/stroke updates, reset flow, and goal completion flow wiring).
 - `courses/airways_fresno/hole_1/Hole1.cs`
-  - Orchestrates shot launch, target refresh, marker snapshots, and score/stroke updates.
+  - Thin hole-specific scene controller that inherits `HoleSceneControllerBase`.
 - `game/camera/ShotCameraController.cs`
   - Handles orbit/follow behavior and click-to-aim camera recentering.
 - `game/markers/ShotMarkerController.cs`
@@ -184,14 +186,16 @@ class LayoutPersistenceService
 class GridCanvas
 class ScoreMapper
 class CourseCatalog
+class HoleSceneControllerBase
 class Hole1
 
-Hole1 --> ShotCameraController : orbit + follow + launch yaw
-Hole1 --> ShotMarkerController : marker state + snapshots
-Hole1 --> TargetReferenceResolver : terrain and target queries
-Hole1 --> GameplayUI : HUD + marker updates
-Hole1 --> ScoreMapper : round-end label
-Hole1 --> CourseCatalog : course card data
+Hole1 --|> HoleSceneControllerBase
+HoleSceneControllerBase --> ShotCameraController : orbit + follow + launch yaw
+HoleSceneControllerBase --> ShotMarkerController : marker state + snapshots
+HoleSceneControllerBase --> TargetReferenceResolver : terrain and target queries
+HoleSceneControllerBase --> GameplayUI : HUD + marker updates
+HoleSceneControllerBase --> ScoreMapper : round-end label
+HoleSceneControllerBase --> CourseCatalog : course card data
 ShotCameraController --> ShotMarkerController : click/yaw marker selection
 ShotMarkerController --> MeasurementUtils : distance/elevation math
 GameplayUI --> CourseHud : shot + target + score rendering
