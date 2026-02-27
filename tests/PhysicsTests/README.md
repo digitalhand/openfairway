@@ -53,9 +53,11 @@ Produces a table with carry/total/rollout for every shot. Compare output against
 
 ### 3. Distance Regression Tests (`Category=DistanceBenchmark`)
 
-These tests in `DistanceBenchmarkTests.cs` also use `PhysicsAdapter` but are structured as NUnit tests. They are an alternative to `run_benchmarks.gd` but require Godot runtime via `dotnet test`.
+These tests in `DistanceBenchmarkTests.cs` also use `PhysicsAdapter` but are structured as NUnit tests. They are an alternative to `run_benchmarks.gd` and require Godot runtime via `dotnet test`.
 
-### 3. Core Physics Tests ⚠️ Requires Godot Runtime (Local Only)
+Historical manual baselines are documented in `RolloutPhysicsTests.cs` under `ShotDistanceRegressionTests` (explicit/manual category only).
+
+### 4. Core Physics Tests ⚠️ Requires Godot Runtime (Local Only)
 
 Other test files in this directory require Godot runtime and **cannot run in CI**:
 - `AerodynamicsTests.cs` - Drag/lift coefficient calculations
@@ -118,8 +120,9 @@ python parse_shot_debug.py < debug_output.txt
 
 If distances changed intentionally:
 1. Update the baseline table in this README
-2. Update expected values in `RolloutPhysicsTests.cs` and `ShotDistanceRegressionTests.cs`
-3. Include both code changes and test updates in the same commit
+2. Update expected values in `DistanceBenchmarkTests.cs`
+3. If preserving historical manual notes, update `ShotDistanceRegressionTests` comments in `RolloutPhysicsTests.cs`
+4. Include both code changes and test updates in the same commit
 
 ## Key Physics Parameters (Validated)
 
@@ -163,4 +166,4 @@ This warning is expected when running tests outside Godot. It doesn't affect for
 
 ### Distance Regression Baselines Out of Date
 
-Re-run all test shots in Godot and update the baselines in `ShotDistanceRegressionTests.cs` with the new validated values and date.
+Re-run all test shots in Godot and update the baselines in `DistanceBenchmarkTests.cs` and this README table with the new validated values and date.

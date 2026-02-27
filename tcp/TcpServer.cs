@@ -27,7 +27,7 @@ public partial class TcpServer : Node
     private const double CONNECTION_TIMEOUT_MS = 60000.0;
     private ulong _lastActivityTimeMs;
 
-    [Export] public int Port { get; set; } = 49152;
+    [Export] public int Port { get; set; } = 55000;
 
     [Signal]
     public delegate void HitBallEventHandler(Dictionary data);

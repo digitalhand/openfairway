@@ -6,6 +6,7 @@ public sealed class ShotCameraConfig
 {
 	public float FollowBack { get; set; } = 8.5f;
 	public float FollowHeight { get; set; } = 2.0f;
+	public float FollowStartDelaySeconds { get; set; } = 0.0f;
 	public Vector3 CameraLookOffset { get; set; } = new(0.0f, 1.5f, 0.0f);
 	public float OrbitRadius { get; set; } = 2.5f;
 	public float OrbitHeight { get; set; } = 1.5f;
@@ -183,6 +184,12 @@ public sealed class ShotCameraController
 			return;
 		}
 
+		if (_init.Config.FollowStartDelaySeconds > 0.0f)
+		{
+			SceneTreeTimer delayTimer = tree.CreateTimer(_init.Config.FollowStartDelaySeconds);
+			await _init.TweenHost.ToSignal(delayTimer, SceneTreeTimer.SignalName.Timeout);
+		}
+
 		for (int i = 0; i < 4; i++)
 		{
 			await _init.TweenHost.ToSignal(tree, SceneTree.SignalName.ProcessFrame);
@@ -195,6 +202,23 @@ public sealed class ShotCameraController
 		_pendingFollowOffset = ComputeFollowOffset();
 		StartCameraFollow();
 		_isShotLaunching = false;
+	}
+
+	public void UpdateRuntimeSettings(float orbitRadius, float followStartDelaySeconds)
+	{
+		if (!_isInitialized)
+			return;
+
+		_init.Config.OrbitRadius = orbitRadius;
+		_init.Config.FollowStartDelaySeconds = followStartDelaySeconds;
+
+		if (_isShotLaunching || _init.BallStateProvider() != PhysicsEnums.BallState.Rest)
+			return;
+
+		Vector3 ballPosition = _init.BallPositionProvider();
+		_init.CameraRig.GlobalPosition = GetOrbitPosition(ballPosition);
+		_init.CameraRig.LookAt(ballPosition + _init.Config.CameraLookOffset, Vector3.Up);
+		SyncMainCamera();
 	}
 
 	public async Task ResetToStartAsync()

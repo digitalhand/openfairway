@@ -1,7 +1,7 @@
 using Godot;
 using Godot.Collections;
 
-public partial class RangeUI : MarginContainer
+public partial class GameplayUI : MarginContainer
 {
     [Signal]
     public delegate void HitShotEventHandler(Dictionary data);

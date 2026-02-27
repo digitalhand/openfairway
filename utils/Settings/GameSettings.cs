@@ -1,11 +1,11 @@
 using Godot.Collections;
 
 /// <summary>
-/// Range/practice session settings.
+/// Global gameplay settings shared across course/hole scenes.
 /// </summary>
-public partial class RangeSettings : SettingCollector
+public partial class GameSettings : SettingCollector
 {
-    public Setting RangeUnits { get; private set; }
+    public Setting GameUnits { get; private set; }
     public Setting CameraFollowMode { get; private set; }
     public Setting ShotInjectorEnabled { get; private set; }
     public Setting AutoBallReset { get; private set; }
@@ -17,9 +17,9 @@ public partial class RangeSettings : SettingCollector
     public Setting SurfaceType { get; private set; }
     public Setting ShotTracerCount { get; private set; }
 
-    public RangeSettings()
+    public GameSettings()
     {
-        RangeUnits = new Setting((int)PhysicsEnums.Units.Imperial);
+        GameUnits = new Setting((int)PhysicsEnums.Units.Imperial);
         CameraFollowMode = new Setting(false);
         ShotInjectorEnabled = new Setting(false);
         AutoBallReset = new Setting(false);
@@ -33,7 +33,7 @@ public partial class RangeSettings : SettingCollector
 
         Settings = new Dictionary<string, Setting>
         {
-            { "range_units", RangeUnits },
+            { "game_units", GameUnits },
             { "camera_follow_mode", CameraFollowMode },
             { "shot_injector_enabled", ShotInjectorEnabled },
             { "auto_ball_reset", AutoBallReset },

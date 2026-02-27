@@ -42,7 +42,7 @@ public partial class ShotTracker : Node3D
 	{
 		_ball = GetNode<GolfBall>("Ball");
 		_ball.BallAtRest += OnBallRest;
-		_shotTracerCountSetting = GetNode<GlobalSettings>("/root/GlobalSettings").RangeSettings.ShotTracerCount;
+		_shotTracerCountSetting = GetNode<GlobalSettings>("/root/GlobalSettings").GameSettings.ShotTracerCount;
 		MaxTracers = (int)_shotTracerCountSetting.Value;
 		_shotTracerCountSetting.SettingChanged += OnTracerCountChanged;
 	}
@@ -243,7 +243,7 @@ public partial class ShotTracker : Node3D
 	/// <summary>
 	/// Handle locally injected shot from UI
 	/// </summary>
-	public void OnRangeUiHitShot(Variant data)
+	public void OnGameplayUiHitShot(Variant data)
 	{
 		ShotData = ((Dictionary)data).Duplicate();
 		PhysicsLogger.Info($"Local shot injection payload: {Json.Stringify(ShotData)}");

@@ -59,13 +59,13 @@ public partial class GridCanvas : Control
         }
     }
 
-    private Setting _rangeUnitsSetting;
+    private Setting _gameUnitsSetting;
 
     public override void _Ready()
     {
         LoadLayout();
-        _rangeUnitsSetting = GetNode<GlobalSettings>("/root/GlobalSettings").RangeSettings.RangeUnits;
-        _rangeUnitsSetting.SettingChanged += SetUnits;
+        _gameUnitsSetting = GetNode<GlobalSettings>("/root/GlobalSettings").GameSettings.GameUnits;
+        _gameUnitsSetting.SettingChanged += SetUnits;
 
         // Connect DataPanel drag signals
         ConnectPanelSignals("Distance");
@@ -192,8 +192,8 @@ public partial class GridCanvas : Control
 
     public override void _ExitTree()
     {
-        if (_rangeUnitsSetting != null)
-            _rangeUnitsSetting.SettingChanged -= SetUnits;
+        if (_gameUnitsSetting != null)
+            _gameUnitsSetting.SettingChanged -= SetUnits;
     }
 
     public override void _Notification(int what)

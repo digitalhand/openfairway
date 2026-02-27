@@ -203,11 +203,10 @@ namespace OpenFairway.Tests
         public void ChipShot_Distance_Baseline()
         {
             // chip_test_shot.json: 24.7 mph, 3204 RPM, 17.94° VLA
-            // Validated: 2024-02-11
-            // Expected: 7.6 yd carry / 13.1 yd total (target 13.0 yd)
-            // Error: +0.8%
+            // Validated: 2026-02-18
+            // Expected: 7.8 yd carry / 16.5 yd total
 
-            Assert.Pass("Baseline: 7.6/13.1 yd (chip_test_shot.json)");
+            Assert.Pass("Baseline: 7.8/16.5 yd (chip_test_shot.json)");
         }
 
         [Test]
@@ -215,12 +214,11 @@ namespace OpenFairway.Tests
         [Category("DistanceBenchmark")]
         public void BumpShot_Distance_Baseline()
         {
-            // bump_test_shot.json: 78.3 mph, 1702 RPM, 5.57° VLA
-            // Validated: 2024-02-11
-            // Expected: 38.1 yd carry / 89.7 yd total (target 85 yd)
-            // Error: +5.5%
+            // bump_test_shot.json: 78.3 mph, 1850 RPM, 5.57° VLA
+            // Validated: 2026-02-18
+            // Expected: 39.0 yd carry / 88.6 yd total
 
-            Assert.Pass("Baseline: 38.1/89.7 yd (bump_test_shot.json)");
+            Assert.Pass("Baseline: 39.0/88.6 yd (bump_test_shot.json)");
         }
 
         [Test]
@@ -229,11 +227,10 @@ namespace OpenFairway.Tests
         public void WoodLowShot_Distance_Baseline()
         {
             // wood_low_test_shot.json: 114.5 mph, 1933 RPM, 6.95° VLA
-            // Validated: 2024-02-11
-            // Expected: 121.7 yd carry / 194.7 yd total (target 198 yd)
-            // Error: -1.7%
+            // Validated: 2026-02-18
+            // Expected: 122.5 yd carry / 180.1 yd total
 
-            Assert.Pass("Baseline: 121.7/194.7 yd (wood_low_test_shot.json)");
+            Assert.Pass("Baseline: 122.5/180.1 yd (wood_low_test_shot.json)");
         }
 
         [Test]
@@ -241,12 +238,11 @@ namespace OpenFairway.Tests
         [Category("DistanceBenchmark")]
         public void ApproachShot_Distance_Baseline()
         {
-            // approach_test_shot.json: 81 mph, 10478 RPM, 30.5° VLA
-            // Validated: 2024-02-11
-            // Expected: 105.6 yd carry / 108.3 yd total (target 108 yd)
-            // Error: +0.3%
+            // approach_test_shot.json: 81.1 mph, 10490 RPM, 30.5° VLA
+            // Validated: 2026-02-18
+            // Expected: 106.4 yd carry / 108.9 yd total
 
-            Assert.Pass("Baseline: 105.6/108.3 yd (approach_test_shot.json)");
+            Assert.Pass("Baseline: 106.4/108.9 yd (approach_test_shot.json)");
         }
 
         [Test]
@@ -255,10 +251,10 @@ namespace OpenFairway.Tests
         public void FlopShot_Distance_Baseline()
         {
             // flop_test_shot.json
-            // Validated: 2024-02-11
-            // Expected: 66.2 yd carry / 66.7 yd total (minimal rollout)
+            // Validated: 2026-02-18
+            // Expected: 66.7 yd carry / 67.1 yd total (minimal rollout)
 
-            Assert.Pass("Baseline: 66.2/66.7 yd (flop_test_shot.json)");
+            Assert.Pass("Baseline: 66.7/67.1 yd (flop_test_shot.json)");
         }
     }
 }

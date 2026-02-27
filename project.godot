@@ -16,7 +16,7 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 
 config/name="OpenFairway"
 config/version="1.0.3"
-run/main_scene="uid://b1idtxfp7eoke"
+run/main_scene="res://ui/main_menu.tscn"
 config/features=PackedStringArray("4.6", "C#", "Mobile")
 
 [autoload]

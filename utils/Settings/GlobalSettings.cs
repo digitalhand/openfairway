@@ -8,18 +8,69 @@ public partial class GlobalSettings : Node
     [Signal]
     public delegate void SettingsChangedEventHandler();
 
-    // Range Settings
-    public RangeSettings RangeSettings { get; private set; }
+    public GameSettings GameSettings { get; private set; }
+    public AppSettings AppSettings { get; private set; }
 
     public override void _Ready()
     {
         PhysicsLogger.LogLevel = PhysicsLogger.Level.Info;
-        RangeSettings = new RangeSettings();
+        GameSettings = new GameSettings();
+        AppSettings = new AppSettings();
+        AppSettingsPersistenceService.LoadInto(AppSettings);
+        ConnectAppSettingsSignals();
+        AppSettingsDisplayService.Apply(AppSettings, GetWindow());
     }
 
-    public void ResetDefaults()
+    public override void _ExitTree()
     {
-        RangeSettings.ResetDefaults();
+        DisconnectAppSettingsSignals();
+    }
+
+    public void ResetAllSettingsToDefaults()
+    {
+        GameSettings.ResetDefaults();
+        AppSettings.ResetDefaults();
+        AppSettingsPersistenceService.Save(AppSettings);
         EmitSignal(SignalName.SettingsChanged);
+    }
+
+    public void SaveAppSettings()
+    {
+        AppSettingsPersistenceService.Save(AppSettings);
+    }
+
+    private void ConnectAppSettingsSignals()
+    {
+        if (AppSettings?.Settings == null)
+            return;
+
+        foreach (Setting setting in AppSettings.Settings.Values)
+            setting.SettingChanged += OnAnyAppSettingChanged;
+
+        AppSettings.DisplayResolutionPreset.SettingChanged += OnDisplaySettingChanged;
+        AppSettings.DisplayFullscreen.SettingChanged += OnDisplaySettingChanged;
+    }
+
+    private void DisconnectAppSettingsSignals()
+    {
+        if (AppSettings?.Settings == null)
+            return;
+
+        foreach (Setting setting in AppSettings.Settings.Values)
+            setting.SettingChanged -= OnAnyAppSettingChanged;
+
+        AppSettings.DisplayResolutionPreset.SettingChanged -= OnDisplaySettingChanged;
+        AppSettings.DisplayFullscreen.SettingChanged -= OnDisplaySettingChanged;
+    }
+
+    private void OnAnyAppSettingChanged(Variant _value)
+    {
+        AppSettingsPersistenceService.Save(AppSettings);
+        EmitSignal(SignalName.SettingsChanged);
+    }
+
+    private void OnDisplaySettingChanged(Variant _value)
+    {
+        AppSettingsDisplayService.Apply(AppSettings, GetWindow());
     }
 }
