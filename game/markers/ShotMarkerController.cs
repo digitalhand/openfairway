@@ -58,16 +58,25 @@ public sealed class ShotMarkerController
 
 	public void OnLeftClick(Vector2 screenPosition)
 	{
-		if (!_isInitialized || !CanPlacePlayerMarker())
+		if (!_isInitialized || !CanShowPlayerMarker() || _init.ClickWorldPointResolver == null)
 			return;
 
 		Vector3? point = _init.ClickWorldPointResolver?.Invoke(screenPosition);
 		if (!point.HasValue)
 			return;
 
-		_playerSelection = point.Value;
+		SetPlayerSelection(point.Value);
+	}
+
+	public bool SetPlayerSelection(Vector3 worldPoint)
+	{
+		if (!_isInitialized || !CanShowPlayerMarker())
+			return false;
+
+		_playerSelection = worldPoint;
 		_hasPlayerSelection = true;
 		PublishIfChanged();
+		return true;
 	}
 
 	public void OnShotLaunched()
@@ -107,11 +116,10 @@ public sealed class ShotMarkerController
 		PublishIfChanged();
 	}
 
-	private bool CanPlacePlayerMarker()
+	private bool CanShowPlayerMarker()
 	{
 		return !_suppressUntilRest
-			&& IsAtRestState()
-			&& _init.ClickWorldPointResolver != null;
+			&& IsAtRestState();
 	}
 
 	private bool IsAtRestState()
@@ -170,8 +178,11 @@ public sealed class ShotMarkerController
 		if (_init.DistanceFormatter != null)
 			return _init.DistanceFormatter(worldPoint);
 
-		int yards = MeasurementUtils.HorizontalDistanceYards(_init.BallPositionProvider(), worldPoint);
-		return yards.ToString();
+		return MeasurementUtils.FormatHorizontalDistanceShortAware(
+			_init.BallPositionProvider(),
+			worldPoint,
+			includeYardsSuffix: false
+		);
 	}
 
 	private int GetElevationFeet(Vector3 worldPoint)

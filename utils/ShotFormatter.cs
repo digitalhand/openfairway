@@ -54,6 +54,31 @@ public static class ShotFormatter
         return ballData;
     }
 
+    public static ShotDisplaySnapshot FormatBallDisplaySnapshot(
+        Dictionary rawBallData,
+        ShotTracker shotTracker,
+        PhysicsEnums.Units units,
+        bool showDistance,
+        ShotDisplaySnapshot prevSnapshot = default)
+    {
+        if (shotTracker == null)
+            return ShotDisplaySnapshot.Empty;
+
+        Dictionary previousData = string.IsNullOrWhiteSpace(prevSnapshot.Distance)
+            ? ShotDisplaySnapshot.Empty.ToDictionary()
+            : prevSnapshot.ToDictionary();
+
+        Dictionary formatted = FormatBallDisplay(
+            rawBallData ?? new Dictionary(),
+            shotTracker,
+            units,
+            showDistance,
+            previousData
+        );
+
+        return ShotDisplaySnapshot.FromDictionary(formatted);
+    }
+
     private static Dictionary FormatImperial(
         Dictionary rawData,
         Node tracker,
