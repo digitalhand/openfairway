@@ -12,6 +12,9 @@ public partial class DataPanel : PanelContainer
     [Signal]
     public delegate void DragEndedEventHandler(DataPanel panel);
 
+    [Signal]
+    public delegate void PanelContextRequestedEventHandler(DataPanel panel);
+
     [Export] public string Label { get; set; } = "Label";
     [Export] public string Data { get; set; } = "---";
     [Export] public string Units { get; set; } = "units";
@@ -55,7 +58,25 @@ public partial class DataPanel : PanelContainer
     public override void _GuiInput(InputEvent @event)
     {
         if (!_editable)
+        {
+            if (@event is InputEventMouseButton readOnlyMouseButton
+                && readOnlyMouseButton.ButtonIndex == MouseButton.Right
+                && readOnlyMouseButton.Pressed)
+            {
+                EmitSignal(SignalName.PanelContextRequested, this);
+                AcceptEvent();
+            }
             return;
+        }
+
+        if (@event is InputEventMouseButton contextMouseButton
+            && contextMouseButton.ButtonIndex == MouseButton.Right
+            && contextMouseButton.Pressed)
+        {
+            EmitSignal(SignalName.PanelContextRequested, this);
+            AcceptEvent();
+            return;
+        }
 
         if (@event is InputEventMouseButton mouseButton && mouseButton.ButtonIndex == MouseButton.Left)
         {

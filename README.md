@@ -19,6 +19,9 @@ Realistic golf ball physics engine for Godot 4.5+ (.NET/C#). Provides force, tor
 - [Marker Controls](#marker-controls)
 - [Keyboard Shortcuts](#keyboard-shortcuts)
 - [Hole HUD Reusable Components](#hole-hud-reusable-components)
+- [Panel Visibility Settings](#panel-visibility-settings)
+- [Test Shots Setting](#test-shots-setting)
+- [Launch Monitor Connection Indicator](#launch-monitor-connection-indicator)
 - [Surface Zones (Local Terrain Overrides)](#surface-zones-local-terrain-overrides)
 - [Distance Benchmarks](#distance-benchmarks)
 - [Known Feature Gaps](#known-feature-gaps)
@@ -205,6 +208,37 @@ GridCanvas --> LayoutPersistenceService : panel layout save/load
 
 @enduml
 ```
+
+## Panel Visibility Settings
+
+HUD data panels are managed through the Settings screen:
+
+- Open `Settings` and select the `Panels` tab.
+- Each panel is shown as a square card with a `Visible` checkbox.
+- Toggling a checkbox immediately shows/hides that panel on the HUD.
+- Visibility changes are saved to `user://layout.cfg` through the existing layout persistence flow.
+
+Shortcut behavior:
+
+- Right-click any visible HUD data panel to open `Settings` directly to the `Panels` tab.
+
+## Test Shots Setting
+
+Test-shot controls can be enabled or disabled from the Player settings tab:
+
+- Open `Settings` and go to `Player`.
+- Toggle `Enable Test Shots`.
+- When disabled, test-shot UI is hidden (`Shot Type`, `Hit Shot`, and injector controls) and test-shot launch paths are ignored.
+- This preference persists across restarts via `user://app_settings.cfg`.
+
+## Launch Monitor Connection Indicator
+
+TCP launch monitor listening now starts from app startup through the `TcpServerService` autoload.
+
+- The main menu top banner (right side) shows launch monitor status only after a valid payload includes a top-level `DeviceID`.
+- When identified, the indicator shows a green circle and the connected launch monitor name (for example, `PiTrac LM 0.1`).
+- If the monitor disconnects, the status indicator is hidden again.
+- Course scenes consume the same shared TCP service, so listener ownership is not duplicated across scene transitions.
 
 ## Surface Zones (Local Terrain Overrides)
 

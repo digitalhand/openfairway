@@ -1,3 +1,4 @@
+using System;
 using System.Threading;
 using Godot;
 using Godot.Collections;
@@ -12,6 +13,12 @@ public abstract partial class HoleSceneControllerBase : Node3D
 
 	private const float CLICK_RAY_DISTANCE = 5000.0f;
 	private const float ROUND_END_SCORE_DURATION_SECONDS = 4.0f;
+	private const double TARGET_HUD_REFRESH_INTERVAL_SECONDS = 0.10;
+	private const float TARGET_HUD_MIN_MOVE_METERS = 0.15f;
+	private const string PROTON_SCATTER_SCRIPT_PATH = "res://addons/proton_scatter/src/scatter.gd";
+	private const string PROTON_SCATTER_OUTPUT_NODE_NAME = "ScatterOutput";
+	private const string PROTON_SCATTER_REBUILD_METHOD = "full_rebuild";
+	private const float SCATTER_REBUILD_STAGGER_SECONDS = 0.02f;
 
 	[ExportGroup("Scene Nodes")]
 	[Export] public NodePath ShotTrackerPath { get; set; } = new NodePath("ShotTracker");
@@ -19,7 +26,7 @@ public abstract partial class HoleSceneControllerBase : Node3D
 	[Export] public NodePath BallPath { get; set; } = new NodePath("ShotTracker/Ball");
 	[Export] public NodePath PhantomCameraPath { get; set; } = new NodePath("PhantomCamera3D");
 	[Export] public NodePath MainCameraPath { get; set; } = new NodePath("Camera3D");
-	[Export] public NodePath TcpServerPath { get; set; } = new NodePath("TCPServer");
+	[Export] public NodePath TcpServerPath { get; set; } = new NodePath("/root/TcpServerService");
 	[Export] public NodePath PrimaryTargetPath { get; set; } = new NodePath("GimmeCircle");
 	[Export] public NodePath FallbackTargetPath { get; set; } = new NodePath("BasicGreen");
 	[Export] public NodePath FlagPolePath { get; set; } = new NodePath("flag_osg_Imported/flag_pole");
@@ -34,6 +41,8 @@ public abstract partial class HoleSceneControllerBase : Node3D
 	[Export] public string ResetAction { get; set; } = "reset";
 
 	private CancellationTokenSource _resetCts;
+	private CancellationTokenSource _lifecycleCts;
+	private bool _isShuttingDown;
 
 	private ShotTracker _shotTracker;
 	private GameplayUI _gameplayUi;
@@ -48,6 +57,7 @@ public abstract partial class HoleSceneControllerBase : Node3D
 	private AudioStreamPlayer3D _audioDriverHit;
 	private AudioStreamPlayer3D _audioBackgroundBirds;
 	private AudioStreamPlayer3D _audioGolfBallLanding;
+	private TcpServer _tcpServer;
 	private GameSettings _gameSettings;
 	private AppSettings _appSettings;
 	private Setting _cameraOrbitDistanceSetting;
@@ -62,6 +72,20 @@ public abstract partial class HoleSceneControllerBase : Node3D
 	private readonly HoleRoundState _holeRoundState = new();
 	private GoalCompletionFlow _goalCompletionFlow;
 	private TargetReferenceResolver _targetResolver;
+	private double _targetHudRefreshTimer;
+	private Vector3 _lastTargetHudBallPosition;
+	private bool _hasTargetHudBallPosition;
+	private StartupStage _startupStage = StartupStage.NotStarted;
+	private readonly System.Collections.Generic.List<Node> _deferredScatterNodes = new();
+
+	private enum StartupStage
+	{
+		NotStarted,
+		Core,
+		Deferred,
+		Background,
+		Complete
+	}
 
 	private bool IsGoalCountdownRunning => _goalCompletionFlow != null && _goalCompletionFlow.IsRunning;
 
@@ -128,6 +152,11 @@ public abstract partial class HoleSceneControllerBase : Node3D
 
 	public override void _Ready()
 	{
+		_isShuttingDown = false;
+		_lifecycleCts?.Cancel();
+		_lifecycleCts?.Dispose();
+		_lifecycleCts = new CancellationTokenSource();
+
 		_shotTracker = GetNodeOrNull<ShotTracker>(ShotTrackerPath);
 		_gameplayUi = GetNodeOrNull<GameplayUI>(GameplayUiPath);
 		_phantomCamera = GetNodeOrNull<Node3D>(PhantomCameraPath);
@@ -140,6 +169,14 @@ public abstract partial class HoleSceneControllerBase : Node3D
 		if (!ValidateRequiredNodes())
 			return;
 
+		_targetHudRefreshTimer = TARGET_HUD_REFRESH_INTERVAL_SECONDS;
+		InitializeCoreStage();
+		CallDeferred(nameof(BeginDeferredStartupStage));
+	}
+
+	private void InitializeCoreStage()
+	{
+		_startupStage = StartupStage.Core;
 		_shotCameraRig = new PhantomShotCameraRig(_phantomCamera);
 		_primaryTarget = GetNodeOrNull<Node3D>(PrimaryTargetPath);
 		if (_primaryTarget == null)
@@ -152,12 +189,13 @@ public abstract partial class HoleSceneControllerBase : Node3D
 		_audioDriverHit = GetNodeOrNull<AudioStreamPlayer3D>(DriverHitAudioPath);
 		_audioBackgroundBirds = GetNodeOrNull<AudioStreamPlayer3D>(AmbientAudioPath);
 		_audioGolfBallLanding = GetNodeOrNull<AudioStreamPlayer3D>(BallLandingAudioPath);
-		ConfigureConsistentAudioLevels();
+		ConfigureConsistentAudioLevels(startAmbientAudio: false);
 		_progressStore = GetNodeOrNull<GameProgressStore>("/root/GameProgressStore");
 		_sceneId = GetSceneId();
 		ResolveCourseCard();
 		CacheTerrainData();
 		InitializeTargetResolver();
+		CacheDeferredScatterNodes();
 		ResetBallToStart();
 		// Physics world may not have collision shapes ready in _Ready;
 		// re-snap once deferred so the terrain raycast succeeds.
@@ -170,11 +208,9 @@ public abstract partial class HoleSceneControllerBase : Node3D
 		_shotTracker.TestHitRequested += OnTestHitRequested;
 
 		// Connect TCP server signal if it exists
-		var tcpServer = GetNodeOrNull<TcpServer>(TcpServerPath);
-		if (tcpServer != null)
-		{
-			tcpServer.HitBall += OnTcpClientHitBall;
-		}
+		_tcpServer = GetNodeOrNull<TcpServer>(TcpServerPath);
+		if (_tcpServer != null)
+			_tcpServer.HitBall += OnTcpClientHitBall;
 
 		var globalSettings = GetNode<GlobalSettings>("/root/GlobalSettings");
 		_gameSettings = globalSettings.GameSettings;
@@ -187,28 +223,66 @@ public abstract partial class HoleSceneControllerBase : Node3D
 			_cameraOrbitDistanceSetting.SettingChanged += OnCameraOrbitDistanceChanged;
 		if (_cameraFollowDelaySetting != null)
 			_cameraFollowDelaySetting.SettingChanged += OnCameraFollowDelayChanged;
-		ConnectGoalZones();
-		InitializeGoalCompletionFlow();
 
 		// Always start fresh at the tee on scene load.
 		// Saved progress can be restored later through an explicit resume flow.
 		SetStrokeCount(0);
 		_gameplayUi?.SetData(_displaySession.Current.ToDictionary());
 		_gameplayUi.SetMarkerCamera(_mainCamera);
-		InitializeShotMarkerController();
 		InitializeShotCameraController();
-		RefreshTargetHud();
+		MaybeRefreshTargetHud(delta: TARGET_HUD_REFRESH_INTERVAL_SECONDS, force: true);
 
 		SetCameraToStartImmediate();
 		OnCameraFollowChanged(_gameSettings.CameraFollowMode.Value);
 		ApplySurfaceToBall();
+	}
+
+	private void BeginDeferredStartupStage()
+	{
+		CancellationToken lifecycleToken = _lifecycleCts != null ? _lifecycleCts.Token : default;
+		if (!CanContinueLifecycleWork(lifecycleToken))
+			return;
+
+		_startupStage = StartupStage.Deferred;
+		ConnectGoalZones();
+		InitializeGoalCompletionFlow();
+		InitializeShotMarkerController();
 		_shotMarkerController.OnRoundReset();
 		_shotMarkerController.Tick();
+		MaybeRefreshTargetHud(delta: TARGET_HUD_REFRESH_INTERVAL_SECONDS, force: true);
+
+		if (!CanContinueLifecycleWork(lifecycleToken))
+			return;
+
+		CallDeferred(nameof(BeginBackgroundStartupStage));
+	}
+
+	private void BeginBackgroundStartupStage()
+	{
+		CancellationToken lifecycleToken = _lifecycleCts != null ? _lifecycleCts.Token : default;
+		if (!CanContinueLifecycleWork(lifecycleToken))
+			return;
+
+		_startupStage = StartupStage.Background;
+		ConfigureNonAttenuated3DAudio(_audioBackgroundBirds, ensurePlaying: true);
+
+		if (!CanContinueLifecycleWork(lifecycleToken))
+			return;
+
+		_ = RebuildDeferredScatterAsync(lifecycleToken);
+		_startupStage = StartupStage.Complete;
 		OnHoleReadyAfterInit();
 	}
 
 	public override void _ExitTree()
 	{
+		_isShuttingDown = true;
+		PhysicsLogger.Info($"{GetType().Name}: beginning hole teardown.");
+		SetProcess(false);
+		SetPhysicsProcess(false);
+		SetProcessInput(false);
+		SetProcessUnhandledInput(false);
+
 		if (_ball != null)
 		{
 			_ball.BallAtRest -= OnGolfBallRest;
@@ -218,9 +292,8 @@ public abstract partial class HoleSceneControllerBase : Node3D
 			_gameplayUi.HitShot -= OnGameplayUiHitShot;
 		if (_shotTracker != null)
 			_shotTracker.TestHitRequested -= OnTestHitRequested;
-		var tcpServer = GetNodeOrNull<TcpServer>(TcpServerPath);
-		if (tcpServer != null)
-			tcpServer.HitBall -= OnTcpClientHitBall;
+		if (_tcpServer != null)
+			_tcpServer.HitBall -= OnTcpClientHitBall;
 		if (_gameSettings != null)
 		{
 			_gameSettings.CameraFollowMode.SettingChanged -= OnCameraFollowChanged;
@@ -231,10 +304,14 @@ public abstract partial class HoleSceneControllerBase : Node3D
 		if (_cameraFollowDelaySetting != null)
 			_cameraFollowDelaySetting.SettingChanged -= OnCameraFollowDelayChanged;
 
+		_lifecycleCts?.Cancel();
+		_lifecycleCts?.Dispose();
+		_lifecycleCts = null;
 		_resetCts?.Cancel();
 		_goalCompletionFlow?.Cancel();
 		_shotCameraController.CancelTransientTweens();
 		_goalZones.Clear();
+		_deferredScatterNodes.Clear();
 	}
 
 	public override void _UnhandledInput(InputEvent @event)
@@ -286,7 +363,7 @@ public abstract partial class HoleSceneControllerBase : Node3D
 		if (_shotTracker == null || _ball == null)
 			return;
 
-		RefreshTargetHud();
+		MaybeRefreshTargetHud(delta);
 		_shotMarkerController.Tick();
 
 		if (_shotCameraController.IsShotLaunching || _shotTracker.GetBallState() != PhysicsEnums.BallState.Rest)
@@ -311,6 +388,9 @@ public abstract partial class HoleSceneControllerBase : Node3D
 	{
 		try
 		{
+			if (!CanContinueLifecycleWork())
+				return;
+
 			UpdateBallDisplay();
 
 			if (IsGoalCountdownRunning)
@@ -340,14 +420,18 @@ public abstract partial class HoleSceneControllerBase : Node3D
 
 			// Reset camera after delay
 			float delay = (float)_gameSettings.BallResetTimer.Value;
-			await ToSignal(GetTree().CreateTimer(delay), SceneTreeTimer.SignalName.Timeout);
+			SceneTree tree = GetTree();
+			if (tree == null)
+				return;
 
-			if (token.IsCancellationRequested)
+			await ToSignal(tree.CreateTimer(delay), SceneTreeTimer.SignalName.Timeout);
+
+			if (token.IsCancellationRequested || !CanContinueLifecycleWork())
 				return;
 
 			await ResetCameraToStart();
 
-			if (token.IsCancellationRequested)
+			if (token.IsCancellationRequested || !CanContinueLifecycleWork())
 				return;
 
 			// Auto-reset ball if enabled
@@ -372,11 +456,17 @@ public abstract partial class HoleSceneControllerBase : Node3D
 
 	private void OnGameplayUiHitShot(Dictionary data)
 	{
+		if (!IsTestShotsEnabled())
+			return;
+
 		LaunchShot(data, useTcpTracker: false, logPayload: false);
 	}
 
 	private void OnTestHitRequested()
 	{
+		if (!IsTestShotsEnabled())
+			return;
+
 		var data = new Dictionary
 		{
 			{ "Speed", 100.0f },
@@ -427,10 +517,11 @@ public abstract partial class HoleSceneControllerBase : Node3D
 		_ = _shotCameraController.EnableFollowDeferredAsync();
 	}
 
-	private void ConfigureConsistentAudioLevels()
+	private void ConfigureConsistentAudioLevels(bool startAmbientAudio)
 	{
-		ConfigureNonAttenuated3DAudio(_audioBackgroundBirds, ensurePlaying: true);
+		ConfigureNonAttenuated3DAudio(_audioBackgroundBirds, ensurePlaying: startAmbientAudio);
 		ConfigureNonAttenuated3DAudio(_audioDriverHit, ensurePlaying: false);
+		ConfigureNonAttenuated3DAudio(_audioGolfBallLanding, ensurePlaying: false);
 	}
 
 	private void ConfigureNonAttenuated3DAudio(AudioStreamPlayer3D player, bool ensurePlaying)
@@ -464,6 +555,9 @@ public abstract partial class HoleSceneControllerBase : Node3D
 
 	private async System.Threading.Tasks.Task ResetCameraToStart()
 	{
+		if (!CanContinueLifecycleWork())
+			return;
+
 		_ball.AimYawOffsetDeg = 0.0f;
 		await _shotCameraController.ResetToStartAsync();
 	}
@@ -534,6 +628,14 @@ public abstract partial class HoleSceneControllerBase : Node3D
 			return AppSettings.DefaultCameraFollowDelaySeconds;
 
 		return (float)_appSettings.CameraFollowDelaySeconds.Value;
+	}
+
+	private bool IsTestShotsEnabled()
+	{
+		if (_appSettings == null)
+			return AppSettings.DefaultTestShotsEnabled;
+
+		return (bool)_appSettings.TestShotsEnabled.Value;
 	}
 
 	private Vector3 SnapPointToTerrain(Vector3 worldPoint)
@@ -853,6 +955,95 @@ public abstract partial class HoleSceneControllerBase : Node3D
 		Variant data = terrain.Get("data");
 		if (data.Obj is GodotObject obj)
 			_terrainData = obj;
+	}
+
+	private void CacheDeferredScatterNodes()
+	{
+		_deferredScatterNodes.Clear();
+		foreach (Node node in FindChildren("*", "", true, false))
+		{
+			if (node == null)
+				continue;
+
+			Variant scriptValue = node.GetScript();
+			if (scriptValue.Obj is not Script script)
+				continue;
+
+			if (!string.Equals(script.ResourcePath, PROTON_SCATTER_SCRIPT_PATH, StringComparison.Ordinal))
+				continue;
+
+			_deferredScatterNodes.Add(node);
+		}
+	}
+
+	private async System.Threading.Tasks.Task RebuildDeferredScatterAsync(CancellationToken token)
+	{
+		if (_deferredScatterNodes.Count == 0)
+			return;
+
+		SceneTree tree = GetTree();
+		if (tree == null)
+			return;
+
+		foreach (Node scatterNode in _deferredScatterNodes)
+		{
+			if (token.IsCancellationRequested || !CanContinueLifecycleWork(token))
+				return;
+
+			if (scatterNode == null || !GodotObject.IsInstanceValid(scatterNode))
+				continue;
+
+			if (ShouldRebuildScatterNode(scatterNode))
+				scatterNode.Call(PROTON_SCATTER_REBUILD_METHOD);
+
+			if (tree == null || !GodotObject.IsInstanceValid(tree))
+				return;
+
+			await ToSignal(tree.CreateTimer(SCATTER_REBUILD_STAGGER_SECONDS), SceneTreeTimer.SignalName.Timeout);
+		}
+	}
+
+	private bool CanContinueLifecycleWork(CancellationToken token = default)
+	{
+		if (_isShuttingDown || !IsInsideTree())
+			return false;
+
+		return !token.CanBeCanceled || !token.IsCancellationRequested;
+	}
+
+	private static bool ShouldRebuildScatterNode(Node scatterNode)
+	{
+		if (scatterNode == null || !GodotObject.IsInstanceValid(scatterNode))
+			return false;
+
+		if (!scatterNode.HasMethod(PROTON_SCATTER_REBUILD_METHOD))
+			return false;
+
+		Node outputNode = scatterNode.GetNodeOrNull<Node>(PROTON_SCATTER_OUTPUT_NODE_NAME);
+		if (outputNode == null)
+			return true;
+
+		return outputNode.GetChildCount() == 0;
+	}
+
+	private void MaybeRefreshTargetHud(double delta, bool force = false)
+	{
+		if (_ball == null)
+			return;
+
+		_targetHudRefreshTimer += delta;
+		float minMoveSquared = TARGET_HUD_MIN_MOVE_METERS * TARGET_HUD_MIN_MOVE_METERS;
+		Vector3 ballPosition = _ball.GlobalPosition;
+		bool movedEnough = !_hasTargetHudBallPosition
+			|| ballPosition.DistanceSquaredTo(_lastTargetHudBallPosition) >= minMoveSquared;
+
+		if (!force && _targetHudRefreshTimer < TARGET_HUD_REFRESH_INTERVAL_SECONDS && !movedEnough)
+			return;
+
+		RefreshTargetHud();
+		_targetHudRefreshTimer = 0.0;
+		_lastTargetHudBallPosition = ballPosition;
+		_hasTargetHudBallPosition = true;
 	}
 
 	private void RefreshTargetHud()

@@ -1,34 +1,202 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=16 format=3]
 
 [ext_resource type="Script" path="res://ui/SettingsPanel.cs" id="1_settings_script"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_settings_panel"]
-bg_color = Color(0.0431373, 0.180392, 0.309804, 0.94)
+bg_color = Color(0.0431373, 0.180392, 0.309804, 0.95)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.337255, 0.698039, 0.937255, 0.42)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel_shadow"]
+bg_color = Color(0, 0, 0, 0.38)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_header_banner"]
+bg_color = Color(0.0627451, 0.0862745, 0.12549, 0.96)
+border_width_bottom = 1
+border_color = Color(0.337255, 0.698039, 0.937255, 0.45)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_card"]
+bg_color = Color(0.0627451, 0.0862745, 0.12549, 0.72)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
-border_color = Color(1, 1, 1, 0.25)
+border_color = Color(1, 1, 1, 0.2)
 corner_radius_top_left = 8
 corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_settings_button"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_field"]
+bg_color = Color(0.0392157, 0.0705882, 0.109804, 0.96)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.2)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+content_margin_left = 12.0
+content_margin_top = 8.0
+content_margin_right = 12.0
+content_margin_bottom = 8.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_field_focus"]
+bg_color = Color(0.0392157, 0.0705882, 0.109804, 0.98)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.337255, 0.698039, 0.937255, 0.8)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+content_margin_left = 12.0
+content_margin_top = 8.0
+content_margin_right = 12.0
+content_margin_bottom = 8.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button_primary"]
+bg_color = Color(0.129412, 0.529412, 0.823529, 0.96)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.35)
+corner_radius_top_left = 7
+corner_radius_top_right = 7
+corner_radius_bottom_right = 7
+corner_radius_bottom_left = 7
+content_margin_left = 16.0
+content_margin_top = 7.0
+content_margin_right = 16.0
+content_margin_bottom = 7.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button_primary_hover"]
+bg_color = Color(0.188235, 0.615686, 0.901961, 0.98)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.45)
+corner_radius_top_left = 7
+corner_radius_top_right = 7
+corner_radius_bottom_right = 7
+corner_radius_bottom_left = 7
+content_margin_left = 16.0
+content_margin_top = 7.0
+content_margin_right = 16.0
+content_margin_bottom = 7.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button_secondary"]
 bg_color = Color(0.0627451, 0.0862745, 0.12549, 0.95)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
 border_width_bottom = 1
-border_color = Color(1, 1, 1, 0.25)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
-content_margin_left = 10.0
-content_margin_top = 4.0
-content_margin_right = 10.0
-content_margin_bottom = 4.0
+border_color = Color(0.337255, 0.698039, 0.937255, 0.6)
+corner_radius_top_left = 7
+corner_radius_top_right = 7
+corner_radius_bottom_right = 7
+corner_radius_bottom_left = 7
+content_margin_left = 16.0
+content_margin_top = 7.0
+content_margin_right = 16.0
+content_margin_bottom = 7.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button_secondary_hover"]
+bg_color = Color(0.0901961, 0.133333, 0.192157, 0.98)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.337255, 0.698039, 0.937255, 0.8)
+corner_radius_top_left = 7
+corner_radius_top_right = 7
+corner_radius_bottom_right = 7
+corner_radius_bottom_left = 7
+content_margin_left = 16.0
+content_margin_top = 7.0
+content_margin_right = 16.0
+content_margin_bottom = 7.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tab_panel"]
+bg_color = Color(0.0196078, 0.0941176, 0.160784, 0.7)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.2)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tab_selected"]
+bg_color = Color(0.129412, 0.529412, 0.823529, 0.95)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.32)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 0
+corner_radius_bottom_left = 0
+content_margin_left = 20.0
+content_margin_top = 10.0
+content_margin_right = 20.0
+content_margin_bottom = 8.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tab_unselected"]
+bg_color = Color(0.0627451, 0.0862745, 0.12549, 0.9)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.22)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 0
+corner_radius_bottom_left = 0
+content_margin_left = 20.0
+content_margin_top = 10.0
+content_margin_right = 20.0
+content_margin_bottom = 8.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tab_hovered"]
+bg_color = Color(0.0901961, 0.141176, 0.211765, 0.95)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.28)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 0
+corner_radius_bottom_left = 0
+content_margin_left = 20.0
+content_margin_top = 10.0
+content_margin_right = 20.0
+content_margin_bottom = 8.0
 
 [node name="SettingsPanel" type="CanvasLayer"]
 visible = false
@@ -50,7 +218,20 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-color = Color(0, 0, 0, 0.45)
+color = Color(0, 0, 0, 0.48)
+
+[node name="PanelShadow" type="PanelContainer" parent="Root"]
+layout_mode = 0
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -537.0
+offset_top = -308.0
+offset_right = 537.0
+offset_bottom = 308.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel_shadow")
 
 [node name="Panel" type="PanelContainer" parent="Root"]
 layout_mode = 0
@@ -58,146 +239,429 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -360.0
-offset_top = -250.0
-offset_right = 360.0
-offset_bottom = 250.0
+offset_left = -520.0
+offset_top = -290.0
+offset_right = 520.0
+offset_bottom = 290.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_settings_panel")
 
 [node name="Margin" type="MarginContainer" parent="Root/Panel"]
 layout_mode = 2
-theme_override_constants/margin_left = 20
-theme_override_constants/margin_top = 16
-theme_override_constants/margin_right = 20
-theme_override_constants/margin_bottom = 16
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 20
 
 [node name="Content" type="VBoxContainer" parent="Root/Panel/Margin"]
 layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="HeaderBanner" type="PanelContainer" parent="Root/Panel/Margin/Content"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_header_banner")
+
+[node name="HeaderMargin" type="MarginContainer" parent="Root/Panel/Margin/Content/HeaderBanner"]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 12
+
+[node name="HeaderRow" type="HBoxContainer" parent="Root/Panel/Margin/Content/HeaderBanner/HeaderMargin"]
+layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="HeaderRow" type="HBoxContainer" parent="Root/Panel/Margin/Content"]
-layout_mode = 2
-
-[node name="Title" type="Label" parent="Root/Panel/Margin/Content/HeaderRow"]
+[node name="Title" type="Label" parent="Root/Panel/Margin/Content/HeaderBanner/HeaderMargin/HeaderRow"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
-theme_override_font_sizes/font_size = 32
+theme_override_font_sizes/font_size = 34
 text = "SETTINGS"
 
-[node name="HeaderSpacer" type="Control" parent="Root/Panel/Margin/Content/HeaderRow"]
+[node name="HeaderSpacer" type="Control" parent="Root/Panel/Margin/Content/HeaderBanner/HeaderMargin/HeaderRow"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="CloseButton" type="Button" parent="Root/Panel/Margin/Content/HeaderRow"]
+[node name="MainMenuButton" type="Button" parent="Root/Panel/Margin/Content/HeaderBanner/HeaderMargin/HeaderRow"]
+visible = false
 layout_mode = 2
-theme_override_styles/normal = SubResource("StyleBoxFlat_settings_button")
-theme_override_styles/hover = SubResource("StyleBoxFlat_settings_button")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_settings_button")
-theme_override_styles/focus = SubResource("StyleBoxFlat_settings_button")
-theme_override_styles/disabled = SubResource("StyleBoxFlat_settings_button")
+theme_override_styles/normal = SubResource("StyleBoxFlat_button_secondary")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button_secondary_hover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button_secondary")
+theme_override_styles/focus = SubResource("StyleBoxFlat_button_secondary_hover")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_button_secondary")
 theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
 theme_override_colors/font_hover_color = Color(0.96, 0.98, 1, 1)
 theme_override_colors/font_pressed_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_focus_color = Color(0.96, 0.98, 1, 1)
+theme_override_font_sizes/font_size = 18
+text = "MAIN MENU"
+
+[node name="SaveButton" type="Button" parent="Root/Panel/Margin/Content/HeaderBanner/HeaderMargin/HeaderRow"]
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_button_primary")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button_primary_hover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button_primary")
+theme_override_styles/focus = SubResource("StyleBoxFlat_button_primary_hover")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_button_primary")
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_focus_color = Color(0.96, 0.98, 1, 1)
+theme_override_font_sizes/font_size = 18
+text = "SAVE"
+
+[node name="CloseButton" type="Button" parent="Root/Panel/Margin/Content/HeaderBanner/HeaderMargin/HeaderRow"]
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_button_secondary")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button_secondary_hover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button_secondary")
+theme_override_styles/focus = SubResource("StyleBoxFlat_button_secondary_hover")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_button_secondary")
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_focus_color = Color(0.96, 0.98, 1, 1)
+theme_override_font_sizes/font_size = 18
 text = "CLOSE"
 
 [node name="Tabs" type="TabContainer" parent="Root/Panel/Margin/Content"]
 layout_mode = 2
 size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_tab_panel")
+theme_override_styles/tab_selected = SubResource("StyleBoxFlat_tab_selected")
+theme_override_styles/tab_unselected = SubResource("StyleBoxFlat_tab_unselected")
+theme_override_styles/tab_hovered = SubResource("StyleBoxFlat_tab_hovered")
+theme_override_colors/font_selected_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_unselected_color = Color(0.82, 0.88, 0.94, 0.92)
+theme_override_colors/font_hovered_color = Color(0.96, 0.98, 1, 1)
+theme_override_font_sizes/font_size = 20
 
 [node name="Player" type="VBoxContainer" parent="Root/Panel/Margin/Content/Tabs"]
 layout_mode = 2
-theme_override_constants/separation = 10
+theme_override_constants/separation = 14
 
-[node name="PlayerNameLabel" type="Label" parent="Root/Panel/Margin/Content/Tabs/Player"]
+[node name="PlayerCard" type="PanelContainer" parent="Root/Panel/Margin/Content/Tabs/Player"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
-theme_override_font_sizes/font_size = 18
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="PlayerCardMargin" type="MarginContainer" parent="Root/Panel/Margin/Content/Tabs/Player/PlayerCard"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 14
+
+[node name="PlayerCardRow" type="HBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Player/PlayerCard/PlayerCardMargin"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="PlayerNameLabel" type="Label" parent="Root/Panel/Margin/Content/Tabs/Player/PlayerCard/PlayerCardMargin/PlayerCardRow"]
+custom_minimum_size = Vector2(210, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.91, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 20
 text = "Player Name"
+vertical_alignment = 1
 
-[node name="PlayerNameInput" type="LineEdit" parent="Root/Panel/Margin/Content/Tabs/Player"]
+[node name="PlayerNameInput" type="LineEdit" parent="Root/Panel/Margin/Content/Tabs/Player/PlayerCard/PlayerCardMargin/PlayerCardRow"]
 layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/normal = SubResource("StyleBoxFlat_field")
+theme_override_styles/focus = SubResource("StyleBoxFlat_field_focus")
+theme_override_styles/read_only = SubResource("StyleBoxFlat_field")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_field")
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_placeholder_color = Color(0.82, 0.88, 0.94, 0.6)
 theme_override_font_sizes/font_size = 18
 placeholder_text = "Enter player name"
 
+[node name="PlayerTestShotsCard" type="PanelContainer" parent="Root/Panel/Margin/Content/Tabs/Player"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="PlayerTestShotsMargin" type="MarginContainer" parent="Root/Panel/Margin/Content/Tabs/Player/PlayerTestShotsCard"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 14
+
+[node name="PlayerTestShotsRow" type="HBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Player/PlayerTestShotsCard/PlayerTestShotsMargin"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="TestShotsLabel" type="Label" parent="Root/Panel/Margin/Content/Tabs/Player/PlayerTestShotsCard/PlayerTestShotsMargin/PlayerTestShotsRow"]
+custom_minimum_size = Vector2(210, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.91, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 20
+text = "Enable Test Shots"
+vertical_alignment = 1
+
+[node name="TestShotsCheck" type="CheckBox" parent="Root/Panel/Margin/Content/Tabs/Player/PlayerTestShotsCard/PlayerTestShotsMargin/PlayerTestShotsRow"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.91, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 20
+text = "Enabled"
+
+[node name="PlayerTestShotsSpacer" type="Control" parent="Root/Panel/Margin/Content/Tabs/Player/PlayerTestShotsCard/PlayerTestShotsMargin/PlayerTestShotsRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
 [node name="Display" type="VBoxContainer" parent="Root/Panel/Margin/Content/Tabs"]
 layout_mode = 2
-theme_override_constants/separation = 10
+theme_override_constants/separation = 14
 
-[node name="ResolutionLabel" type="Label" parent="Root/Panel/Margin/Content/Tabs/Display"]
+[node name="DisplayResolutionCard" type="PanelContainer" parent="Root/Panel/Margin/Content/Tabs/Display"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
-theme_override_font_sizes/font_size = 18
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="DisplayResolutionMargin" type="MarginContainer" parent="Root/Panel/Margin/Content/Tabs/Display/DisplayResolutionCard"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 14
+
+[node name="DisplayResolutionRow" type="HBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Display/DisplayResolutionCard/DisplayResolutionMargin"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="ResolutionLabel" type="Label" parent="Root/Panel/Margin/Content/Tabs/Display/DisplayResolutionCard/DisplayResolutionMargin/DisplayResolutionRow"]
+custom_minimum_size = Vector2(210, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.91, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 20
 text = "Window Size"
+vertical_alignment = 1
 
-[node name="ResolutionOption" type="OptionButton" parent="Root/Panel/Margin/Content/Tabs/Display"]
+[node name="ResolutionOption" type="OptionButton" parent="Root/Panel/Margin/Content/Tabs/Display/DisplayResolutionCard/DisplayResolutionMargin/DisplayResolutionRow"]
+custom_minimum_size = Vector2(340, 0)
 layout_mode = 2
-theme_override_styles/normal = SubResource("StyleBoxFlat_settings_button")
-theme_override_styles/hover = SubResource("StyleBoxFlat_settings_button")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_settings_button")
-theme_override_styles/focus = SubResource("StyleBoxFlat_settings_button")
-theme_override_styles/disabled = SubResource("StyleBoxFlat_settings_button")
+theme_override_styles/normal = SubResource("StyleBoxFlat_field")
+theme_override_styles/hover = SubResource("StyleBoxFlat_field_focus")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_field")
+theme_override_styles/focus = SubResource("StyleBoxFlat_field_focus")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_field")
 theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
 theme_override_colors/font_hover_color = Color(0.96, 0.98, 1, 1)
 theme_override_colors/font_pressed_color = Color(0.96, 0.98, 1, 1)
 theme_override_colors/font_focus_color = Color(0.96, 0.98, 1, 1)
 theme_override_colors/font_disabled_color = Color(0.96, 0.98, 1, 0.6)
-
-[node name="FullscreenCheck" type="CheckBox" parent="Root/Panel/Margin/Content/Tabs/Display"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
 theme_override_font_sizes/font_size = 18
+
+[node name="FullscreenCheck" type="CheckBox" parent="Root/Panel/Margin/Content/Tabs/Display/DisplayResolutionCard/DisplayResolutionMargin/DisplayResolutionRow"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.91, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 20
 text = "Fullscreen"
 
 [node name="Game" type="VBoxContainer" parent="Root/Panel/Margin/Content/Tabs"]
 layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="CameraDistanceCard" type="PanelContainer" parent="Root/Panel/Margin/Content/Tabs/Game"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="CameraDistanceMargin" type="MarginContainer" parent="Root/Panel/Margin/Content/Tabs/Game/CameraDistanceCard"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 14
+
+[node name="CameraDistanceContent" type="VBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Game/CameraDistanceCard/CameraDistanceMargin"]
+layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="CameraDistanceLabel" type="Label" parent="Root/Panel/Margin/Content/Tabs/Game"]
+[node name="CameraDistanceLabel" type="Label" parent="Root/Panel/Margin/Content/Tabs/Game/CameraDistanceCard/CameraDistanceMargin/CameraDistanceContent"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
-theme_override_font_sizes/font_size = 18
-text = "Camera Distance"
+theme_override_colors/font_color = Color(0.91, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 20
+text = "Camera Distance (ft)"
 
-[node name="CameraDistanceRow" type="HBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Game"]
+[node name="CameraDistanceRow" type="HBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Game/CameraDistanceCard/CameraDistanceMargin/CameraDistanceContent"]
 layout_mode = 2
-theme_override_constants/separation = 8
+theme_override_constants/separation = 10
 
-[node name="CameraDistanceSlider" type="HSlider" parent="Root/Panel/Margin/Content/Tabs/Game/CameraDistanceRow"]
-custom_minimum_size = Vector2(420, 0)
+[node name="CameraDistanceSlider" type="HSlider" parent="Root/Panel/Margin/Content/Tabs/Game/CameraDistanceCard/CameraDistanceMargin/CameraDistanceContent/CameraDistanceRow"]
+custom_minimum_size = Vector2(460, 0)
 layout_mode = 2
 size_flags_horizontal = 3
-min_value = 1.0
-max_value = 8.0
+min_value = 3.28
+max_value = 26.25
 step = 0.1
 
-[node name="CameraDistanceValue" type="SpinBox" parent="Root/Panel/Margin/Content/Tabs/Game/CameraDistanceRow"]
-custom_minimum_size = Vector2(100, 0)
+[node name="CameraDistanceValue" type="SpinBox" parent="Root/Panel/Margin/Content/Tabs/Game/CameraDistanceCard/CameraDistanceMargin/CameraDistanceContent/CameraDistanceRow"]
+custom_minimum_size = Vector2(110, 0)
 layout_mode = 2
-min_value = 1.0
-max_value = 8.0
+min_value = 3.28
+max_value = 26.25
 step = 0.1
 alignment = 1
 
-[node name="CameraDelayLabel" type="Label" parent="Root/Panel/Margin/Content/Tabs/Game"]
+[node name="CameraDistanceHelper" type="Label" parent="Root/Panel/Margin/Content/Tabs/Game/CameraDistanceCard/CameraDistanceMargin/CameraDistanceContent"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
-theme_override_font_sizes/font_size = 18
-text = "Camera Follow Delay (s)"
+theme_override_colors/font_color = Color(0.72, 0.8, 0.88, 0.96)
+theme_override_font_sizes/font_size = 15
+text = "Distance from ball: 0 ft"
 
-[node name="CameraDelayRow" type="HBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Game"]
+[node name="CameraDelayCard" type="PanelContainer" parent="Root/Panel/Margin/Content/Tabs/Game"]
 layout_mode = 2
-theme_override_constants/separation = 8
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
 
-[node name="CameraDelaySlider" type="HSlider" parent="Root/Panel/Margin/Content/Tabs/Game/CameraDelayRow"]
-custom_minimum_size = Vector2(420, 0)
+[node name="CameraDelayMargin" type="MarginContainer" parent="Root/Panel/Margin/Content/Tabs/Game/CameraDelayCard"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 14
+
+[node name="CameraDelayContent" type="VBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Game/CameraDelayCard/CameraDelayMargin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="CameraDelayLabel" type="Label" parent="Root/Panel/Margin/Content/Tabs/Game/CameraDelayCard/CameraDelayMargin/CameraDelayContent"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.91, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 20
+text = "Camera Follow Delay (seconds)"
+
+[node name="CameraDelayRow" type="HBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Game/CameraDelayCard/CameraDelayMargin/CameraDelayContent"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="CameraDelaySlider" type="HSlider" parent="Root/Panel/Margin/Content/Tabs/Game/CameraDelayCard/CameraDelayMargin/CameraDelayContent/CameraDelayRow"]
+custom_minimum_size = Vector2(460, 0)
 layout_mode = 2
 size_flags_horizontal = 3
 max_value = 2.0
 step = 0.05
 
-[node name="CameraDelayValue" type="SpinBox" parent="Root/Panel/Margin/Content/Tabs/Game/CameraDelayRow"]
-custom_minimum_size = Vector2(100, 0)
+[node name="CameraDelayValue" type="SpinBox" parent="Root/Panel/Margin/Content/Tabs/Game/CameraDelayCard/CameraDelayMargin/CameraDelayContent/CameraDelayRow"]
+custom_minimum_size = Vector2(110, 0)
 layout_mode = 2
 max_value = 2.0
 step = 0.05
 alignment = 1
+
+[node name="CameraDelayHelper" type="Label" parent="Root/Panel/Margin/Content/Tabs/Game/CameraDelayCard/CameraDelayMargin/CameraDelayContent"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.72, 0.8, 0.88, 0.96)
+theme_override_font_sizes/font_size = 15
+text = "Follow starts after 0.00 seconds"
+
+[node name="TcpPortCard" type="PanelContainer" parent="Root/Panel/Margin/Content/Tabs/Game"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="TcpPortMargin" type="MarginContainer" parent="Root/Panel/Margin/Content/Tabs/Game/TcpPortCard"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 14
+
+[node name="TcpPortContent" type="VBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Game/TcpPortCard/TcpPortMargin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="TcpPortRow" type="HBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Game/TcpPortCard/TcpPortMargin/TcpPortContent"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="TcpPortLabel" type="Label" parent="Root/Panel/Margin/Content/Tabs/Game/TcpPortCard/TcpPortMargin/TcpPortContent/TcpPortRow"]
+custom_minimum_size = Vector2(210, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.91, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 20
+text = "TCP Port"
+vertical_alignment = 1
+
+[node name="TcpPortValue" type="SpinBox" parent="Root/Panel/Margin/Content/Tabs/Game/TcpPortCard/TcpPortMargin/TcpPortContent/TcpPortRow"]
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_field")
+theme_override_styles/focus = SubResource("StyleBoxFlat_field_focus")
+theme_override_styles/read_only = SubResource("StyleBoxFlat_field")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_field")
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+theme_override_font_sizes/font_size = 18
+min_value = 1.0
+max_value = 65535.0
+step = 1.0
+alignment = 1
+
+[node name="TcpPortSpacer" type="Control" parent="Root/Panel/Margin/Content/Tabs/Game/TcpPortCard/TcpPortMargin/TcpPortContent/TcpPortRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="TcpPortHelper" type="Label" parent="Root/Panel/Margin/Content/Tabs/Game/TcpPortCard/TcpPortMargin/TcpPortContent"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.72, 0.8, 0.88, 0.96)
+theme_override_font_sizes/font_size = 15
+text = "Launch monitor TCP listening port."
+
+[node name="Panels" type="VBoxContainer" parent="Root/Panel/Margin/Content/Tabs"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="PanelsTopSpacer" type="Control" parent="Root/Panel/Margin/Content/Tabs/Panels"]
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+
+[node name="PanelsGridScroll" type="ScrollContainer" parent="Root/Panel/Margin/Content/Tabs/Panels"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="PanelsGrid" type="GridContainer" parent="Root/Panel/Margin/Content/Tabs/Panels/PanelsGridScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/h_separation = 10
+theme_override_constants/v_separation = 10
+columns = 8
+
+[node name="PanelsEmptyLabel" type="Label" parent="Root/Panel/Margin/Content/Tabs/Panels"]
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.82, 0.88, 0.94, 0.92)
+theme_override_font_sizes/font_size = 16
+text = "No HUD panels are available in this screen."
+horizontal_alignment = 1
+
+[node name="PanelCardTemplate" type="PanelContainer" parent="Root/Panel/Margin/Content/Tabs/Panels"]
+visible = false
+custom_minimum_size = Vector2(110, 95)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="PanelCardMargin" type="MarginContainer" parent="Root/Panel/Margin/Content/Tabs/Panels/PanelCardTemplate"]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 9
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 9
+
+[node name="PanelCardContent" type="VBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Panels/PanelCardTemplate/PanelCardMargin"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 6
+
+[node name="PanelNameLabel" type="Label" parent="Root/Panel/Margin/Content/Tabs/Panels/PanelCardTemplate/PanelCardMargin/PanelCardContent"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+theme_override_font_sizes/font_size = 14
+text = "Panel Name"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3
+
+[node name="PanelVisibilityCheck" type="CheckBox" parent="Root/Panel/Margin/Content/Tabs/Panels/PanelCardTemplate/PanelCardMargin/PanelCardContent"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.91, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 15
+text = "Visible"

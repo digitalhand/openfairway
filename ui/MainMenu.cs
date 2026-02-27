@@ -2,7 +2,9 @@ using Godot;
 
 public partial class MainMenu : Control
 {
+    private const string LoadingScenePath = "res://ui/loading_screen.tscn";
     private const string CoursesScenePath = "res://courses/airways_fresno/hole_1/hole_1.tscn";
+    private const string TcpServerServicePath = "/root/TcpServerService";
     private const string VersionSettingPath = "application/config/version";
     private const string VersionFallback = "dev";
 
@@ -10,6 +12,9 @@ public partial class MainMenu : Control
     private Button _exitButton;
     private Button _coursesButton;
     private SettingsPanel _settingsPanel;
+    private TcpServer _tcpServer;
+    private Control _launchMonitorStatus;
+    private Label _launchMonitorLabel;
     private Label _versionLabel;
 
     public override void _Ready()
@@ -18,13 +23,23 @@ public partial class MainMenu : Control
         _exitButton = GetNode<Button>("TopBanner/LeftButtons/ExitButton");
         _coursesButton = GetNode<Button>("TilesRow/CoursesTile/CoursesButton");
         _settingsPanel = GetNodeOrNull<SettingsPanel>("SettingsPanel");
+        _launchMonitorStatus = GetNode<Control>("TopBanner/LaunchMonitorStatus");
+        _launchMonitorLabel = GetNode<Label>("TopBanner/LaunchMonitorStatus/LaunchMonitorLabel");
         _versionLabel = GetNode<Label>("VersionLabel");
+        _settingsPanel?.SetMainMenuButtonVisible(false);
+        _tcpServer = GetNodeOrNull<TcpServer>(TcpServerServicePath);
 
         _settingsButton.Pressed += OnSettingsPressed;
         _exitButton.Pressed += OnExitPressed;
         _coursesButton.Pressed += OnCoursesPressed;
+        if (_tcpServer != null)
+            _tcpServer.ConnectionStatusChanged += OnTcpConnectionStatusChanged;
 
         UpdateVersionLabel();
+        if (_tcpServer != null)
+            UpdateLaunchMonitorStatus(_tcpServer.HasIdentifiedDevice, _tcpServer.ConnectedDeviceId);
+        else
+            UpdateLaunchMonitorStatus(false, string.Empty);
     }
 
     public override void _ExitTree()
@@ -35,6 +50,8 @@ public partial class MainMenu : Control
             _exitButton.Pressed -= OnExitPressed;
         if (_coursesButton != null)
             _coursesButton.Pressed -= OnCoursesPressed;
+        if (_tcpServer != null)
+            _tcpServer.ConnectionStatusChanged -= OnTcpConnectionStatusChanged;
     }
 
     private void OnSettingsPressed()
@@ -49,9 +66,31 @@ public partial class MainMenu : Control
 
     private void OnCoursesPressed()
     {
-        Error error = GetTree().ChangeSceneToFile(CoursesScenePath);
-        if (error != Error.Ok)
-            GD.PushError($"Failed to load courses scene '{CoursesScenePath}'. Error: {error}");
+        _coursesButton.Disabled = true;
+
+        CourseLoadService courseLoadService = GetNodeOrNull<CourseLoadService>("/root/CourseLoadService");
+        if (courseLoadService == null)
+        {
+            _coursesButton.Disabled = false;
+            GD.PushError("Course load service autoload is missing.");
+            return;
+        }
+
+        Error requestError = courseLoadService.StartLoad(CoursesScenePath);
+        if (requestError != Error.Ok)
+        {
+            _coursesButton.Disabled = false;
+            GD.PushError($"Failed to start loading courses scene '{CoursesScenePath}'. Error: {requestError}");
+            return;
+        }
+
+        Error transitionError = GetTree().ChangeSceneToFile(LoadingScenePath);
+        if (transitionError != Error.Ok)
+        {
+            courseLoadService.CancelLoad("Failed to open loading screen.");
+            _coursesButton.Disabled = false;
+            GD.PushError($"Failed to open loading scene '{LoadingScenePath}'. Error: {transitionError}");
+        }
     }
 
     private void UpdateVersionLabel()
@@ -65,5 +104,22 @@ public partial class MainMenu : Control
         }
 
         _versionLabel.Text = $"Version {versionText}";
+    }
+
+    private void OnTcpConnectionStatusChanged(bool connected, string deviceId)
+    {
+        UpdateLaunchMonitorStatus(connected, deviceId);
+    }
+
+    private void UpdateLaunchMonitorStatus(bool connected, string deviceId)
+    {
+        if (_launchMonitorStatus == null || _launchMonitorLabel == null)
+            return;
+
+        string safeDeviceId = string.IsNullOrWhiteSpace(deviceId) ? string.Empty : deviceId.Trim();
+        bool showStatus = connected && !string.IsNullOrWhiteSpace(safeDeviceId);
+        _launchMonitorStatus.Visible = showStatus;
+        if (showStatus)
+            _launchMonitorLabel.Text = safeDeviceId;
     }
 }

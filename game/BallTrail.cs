@@ -12,11 +12,13 @@ public partial class BallTrail : MeshInstance3D
 
     private System.Collections.Generic.List<Vector3> _points = new();
     private StandardMaterial3D _material;
+    private bool _meshDirty;
 
     public override void _Ready()
     {
         Mesh = new ArrayMesh();
         SetupMaterial();
+        _meshDirty = true;
     }
 
     private void SetupMaterial()
@@ -35,6 +37,9 @@ public partial class BallTrail : MeshInstance3D
 
     public override void _Process(double delta)
     {
+        if (!_meshDirty)
+            return;
+
         DrawTrail();
     }
 
@@ -57,6 +62,7 @@ public partial class BallTrail : MeshInstance3D
     public void AddPoint(Vector3 point)
     {
         _points.Add(point);
+        _meshDirty = true;
     }
 
     /// <summary>
@@ -69,6 +75,8 @@ public partial class BallTrail : MeshInstance3D
         {
             ((ArrayMesh)Mesh).ClearSurfaces();
         }
+
+        _meshDirty = false;
     }
 
     private void DrawTrail()
@@ -77,9 +85,13 @@ public partial class BallTrail : MeshInstance3D
         arrayMesh.ClearSurfaces();
 
         if (_points.Count < 2)
+        {
+            _meshDirty = false;
             return;
+        }
 
         CreateRibbonMesh(arrayMesh);
+        _meshDirty = false;
     }
 
     private void CreateRibbonMesh(ArrayMesh arrayMesh)

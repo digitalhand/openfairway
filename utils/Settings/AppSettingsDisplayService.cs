@@ -5,10 +5,13 @@ public static class AppSettingsDisplayService
 {
     public static readonly string[] Presets =
     {
+        "1024x768",
         "1280x720",
         "1600x900",
         "1728x972",
-        "1920x1080"
+        "1920x1080",
+        "2560x1080",
+        "3440x1440"
     };
 
     public static void Apply(AppSettings appSettings, Window window)

@@ -219,7 +219,7 @@ text = "203 YDS"
 vertical_alignment = 1
 
 [node name="SettingsBox" type="ColorRect" parent="OverlayLayer/CourseHeaderCard" unique_id=1738125372]
-custom_minimum_size = Vector2(56, 62)
+custom_minimum_size = Vector2(28, 62)
 layout_mode = 2
 mouse_filter = 2
 color = Color(0.0627451, 0.0862745, 0.12549, 0.8)
@@ -244,8 +244,6 @@ theme_override_font_sizes/font_size = 36
 text = "⋮"
 horizontal_alignment = 1
 vertical_alignment = 1
-
-[node name="SettingsPopup" type="PopupMenu" parent="OverlayLayer/CourseHeaderCard/SettingsBox/SettingsMenu" unique_id=2106391942]
 
 [node name="CourseHeaderControlsRow" type="HBoxContainer" parent="OverlayLayer" unique_id=809501377]
 layout_mode = 0
@@ -296,25 +294,6 @@ text = "Hit Shot"
 [node name="ControlsSpacer" type="Control" parent="OverlayLayer/CourseHeaderControlsRow" unique_id=413646088]
 layout_mode = 2
 size_flags_horizontal = 3
-
-[node name="PanelsMenu" type="Button" parent="OverlayLayer/CourseHeaderControlsRow" unique_id=36180300]
-custom_minimum_size = Vector2(120, 0)
-layout_mode = 2
-size_flags_vertical = 0
-theme_override_styles/normal = SubResource("StyleBoxFlat_controls_button")
-theme_override_styles/hover = SubResource("StyleBoxFlat_controls_button")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_controls_button")
-theme_override_styles/focus = SubResource("StyleBoxFlat_controls_button")
-theme_override_styles/disabled = SubResource("StyleBoxFlat_controls_button")
-theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
-theme_override_colors/font_hover_color = Color(0.96, 0.98, 1, 1)
-theme_override_colors/font_pressed_color = Color(0.96, 0.98, 1, 1)
-theme_override_colors/font_focus_color = Color(0.96, 0.98, 1, 1)
-theme_override_colors/font_disabled_color = Color(0.96, 0.98, 1, 0.6)
-theme_override_font_sizes/font_size = 18
-text = "Panels"
-
-[node name="PanelsPopup" type="PopupMenu" parent="OverlayLayer/CourseHeaderControlsRow/PanelsMenu" unique_id=488506219]
 
 [node name="TotalDistanceOverlay" type="Label" parent="OverlayLayer" unique_id=793381493]
 visible = false
