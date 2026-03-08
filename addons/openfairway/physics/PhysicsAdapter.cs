@@ -10,6 +10,7 @@ public partial class PhysicsAdapter : RefCounted
 {
     private const float MPS_PER_MPH = 0.44704f;
     private const float YARDS_PER_METER = 1.09361f;
+    private const float FEET_PER_METER = 3.28084f;
     private const float START_HEIGHT = 0.02f;
     private const float DEFAULT_TEMP_F = 75.0f;
     private const float DEFAULT_ALT_FT = 0.0f;
@@ -52,10 +53,33 @@ public partial class PhysicsAdapter : RefCounted
         bool onGround = false;
         float carryM = 0.0f;
         bool carryRecorded = false;
+        float hangTimeS = 0.0f;
+        float apexM = pos.Y;
+
+        float initialSpeed = velocity.Length();
+        float initialSpinRatio = initialSpeed > 0.001f ? omega.Length() * BallPhysics.RADIUS / initialSpeed : 0.0f;
+        float initialRe = parameters.AirDensity * initialSpeed * BallPhysics.RADIUS * 2.0f / parameters.AirViscosity;
+        float initialSpinDragMultiplier = 1.0f + BallPhysics.SPIN_DRAG_MULTIPLIER_COEFF * initialSpinRatio * initialSpinRatio;
+        initialSpinDragMultiplier = Mathf.Min(initialSpinDragMultiplier, BallPhysics.SPIN_DRAG_MULTIPLIER_MAX);
+        float initialCd = _aero.GetCd(initialRe) * initialSpinDragMultiplier * parameters.DragScale;
+        float initialCl = _aero.GetCl(initialRe, initialSpinRatio) * parameters.LiftScale;
+        float peakCl = 0.0f;
 
         int steps = (int)(MAX_TIME / DT);
         for (int i = 0; i < steps; i++)
         {
+            if (!onGround)
+            {
+                float aeroSpeed = velocity.Length();
+                if (aeroSpeed > 0.001f)
+                {
+                    float spinRatio = omega.Length() * BallPhysics.RADIUS / aeroSpeed;
+                    float reynolds = parameters.AirDensity * aeroSpeed * BallPhysics.RADIUS * 2.0f / parameters.AirViscosity;
+                    float cl = _aero.GetCl(reynolds, spinRatio) * parameters.LiftScale;
+                    peakCl = Mathf.Max(peakCl, cl);
+                }
+            }
+
             Vector3 force = _physics.CalculateForces(velocity, omega, onGround, parameters);
             Vector3 torque = _physics.CalculateTorques(velocity, omega, onGround, parameters);
 
@@ -63,6 +87,7 @@ public partial class PhysicsAdapter : RefCounted
             omega += (torque / BallPhysics.MOMENT_OF_INERTIA) * DT;
 
             pos += velocity * DT;
+            apexM = Mathf.Max(apexM, pos.Y);
 
             bool hasImpact = pos.Y <= 0.0f && (velocity.Y < -0.01f || state == PhysicsEnums.BallState.Flight);
             if (hasImpact)
@@ -79,6 +104,7 @@ public partial class PhysicsAdapter : RefCounted
                 {
                     carryM = Mathf.Max(pos.Dot(shotDir), 0.0f);
                     carryRecorded = true;
+                    hangTimeS = (i + 1) * DT;
                 }
             }
             else
@@ -110,7 +136,15 @@ public partial class PhysicsAdapter : RefCounted
         return new Dictionary
         {
             { "carry_yd", carryM * YARDS_PER_METER },
-            { "total_yd", totalM * YARDS_PER_METER }
+            { "total_yd", totalM * YARDS_PER_METER },
+            { "carry_yd_first_impact", carryM * YARDS_PER_METER },
+            { "apex_ft", apexM * FEET_PER_METER },
+            { "hang_time_s", hangTimeS },
+            { "initial_re", initialRe },
+            { "initial_spin_ratio", initialSpinRatio },
+            { "initial_cd", initialCd },
+            { "initial_cl", initialCl },
+            { "peak_cl", peakCl }
         };
     }
 

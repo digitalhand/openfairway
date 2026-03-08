@@ -15,6 +15,7 @@ public static class TestShots
         { "Bump & Run", "res://assets/data/bump_and_run.json" },
         { "Bump & Run SL", "res://assets/data/bump_and_run_slow.json" },
         { "Approach", "res://assets/data/approach_test_shot.json" },
+        { "Approach Mid", "res://assets/data/approach_mid_iron_test_shot.json" },
         { "Topped", "res://assets/data/topped_test_shot.json" },
         { "Checked", "res://assets/data/checked_test_shot.json" },
         { "Flop", "res://assets/data/flop_test_shot.json" },

@@ -14,6 +14,8 @@ public partial class BallPhysics : RefCounted
     public const float CROSS_SECTION = Mathf.Pi * RADIUS * RADIUS;  // m²
     public const float MOMENT_OF_INERTIA = 0.4f * MASS * RADIUS * RADIUS;  // kg*m²
     public const float SPIN_DECAY_TAU = 5.0f;  // Spin decay time constant (seconds)
+    public const float SPIN_DRAG_MULTIPLIER_COEFF = 2.8f;
+    public const float SPIN_DRAG_MULTIPLIER_MAX = 1.35f;
 
     // Read-only properties for GDScript access to constants (private set satisfies [Export] requirement)
     [Export] public float BallMass { get => MASS; private set { } }
@@ -216,7 +218,13 @@ public partial class BallPhysics : RefCounted
         float spinRatio = omega.Length() * RADIUS / speed;
         float reynolds = parameters.AirDensity * speed * RADIUS * 2.0f / parameters.AirViscosity;
 
-        float cd = _aero.GetCd(reynolds) * parameters.DragScale;
+        // Spin-aware drag term:
+        // low-spin driver shots remain near baseline Cd, while high-spin
+        // approach shots get additional drag without a global hard floor.
+        float spinDragMultiplier = 1.0f + SPIN_DRAG_MULTIPLIER_COEFF * spinRatio * spinRatio;
+        spinDragMultiplier = Mathf.Min(spinDragMultiplier, SPIN_DRAG_MULTIPLIER_MAX);
+
+        float cd = _aero.GetCd(reynolds) * spinDragMultiplier * parameters.DragScale;
         float cl = _aero.GetCl(reynolds, spinRatio) * parameters.LiftScale;
 
         // Drag force (opposite to velocity)

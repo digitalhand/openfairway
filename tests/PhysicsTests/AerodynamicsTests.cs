@@ -85,20 +85,18 @@ public class AerodynamicsTests
     }
 
     [Test]
-    public void GetCl_LowReynolds_ReturnsMinimal()
+    public void GetCl_LowReynolds_ReturnsZero()
     {
         float cl = _aero.GetCl(30000.0f, 0.3f);
-        Assert.That(cl, Is.EqualTo(0.1f));
+        Assert.That(cl, Is.EqualTo(0.0f).Within(TOLERANCE));
     }
 
     [Test]
-    public void GetCl_HighReynolds_LinearModel()
+    public void GetCl_HighReynolds_ConstrainedModel()
     {
         float cl = _aero.GetCl(100000.0f, 0.2f);
 
-        // Should use linear model: 1.3 * S + 0.05
-        // For S = 0.2: 1.3 * 0.2 + 0.05 = 0.31
-        Assert.That(cl, Is.InRange(0.2f, 0.4f));
+        Assert.That(cl, Is.InRange(0.10f, 0.25f));
     }
 
     [Test]
@@ -126,8 +124,7 @@ public class AerodynamicsTests
     {
         float cl = _aero.GetCl(100000.0f, 0.0f);
 
-        // With zero spin, should still get some lift (0.05 from linear model)
-        Assert.That(cl, Is.GreaterThan(0.0f));
+        Assert.That(cl, Is.EqualTo(0.0f).Within(TOLERANCE));
     }
 
     [Test]
@@ -138,6 +135,21 @@ public class AerodynamicsTests
         float cl2 = _aero.GetCl(100000.0f, 0.2f);
 
         Assert.That(cl2, Is.GreaterThan(cl1));
+    }
+
+    [Test]
+    public void GetCl_NearSeventyFiveK_IsContinuous()
+    {
+        float clLow = _aero.GetCl(74999.0f, 0.25f);
+        float clHigh = _aero.GetCl(75001.0f, 0.25f);
+
+        Assert.That(Mathf.Abs(clHigh - clLow), Is.LessThan(0.03f));
+    }
+
+    [Test]
+    public void CdMin_PhysicalFloor_IsReasonable()
+    {
+        Assert.That(Aerodynamics.CD_MIN, Is.InRange(0.20f, 0.25f));
     }
 
     [Test]
