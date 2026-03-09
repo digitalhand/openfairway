@@ -3,12 +3,8 @@
 [ext_resource type="Script" uid="uid://c8t8p5orukafc" path="res://courses/airways_fresno/hole_1/Hole1.cs" id="1_sunpe"]
 [ext_resource type="PackedScene" uid="uid://w55fmvo7ly8g" path="res://game/shot_tracker.tscn" id="3_4jr3s"]
 [ext_resource type="PackedScene" uid="uid://da1vsfwmbk8vw" path="res://ui/gameplay_ui.tscn" id="4_d1a0v"]
-[ext_resource type="Material" uid="uid://bn3fr3m3glrnp" path="res://addons/proton_scatter/demos/assets/materials/m_bush.tres" id="9_k0egi"]
 [ext_resource type="Texture2D" uid="uid://di6j724bgb0x6" path="res://assets/texture/grasses/grass005_1k/graass_005_alb_ht.dds" id="9_rgr1e"]
 [ext_resource type="Texture2D" uid="uid://4nt256e7mxat" path="res://assets/texture/grasses/grass005_1k/graass_005_nrm_rgh.dds" id="10_redvt"]
-[ext_resource type="Material" uid="uid://d01d0h08lqqn6" path="res://addons/proton_scatter/demos/assets/materials/m_trunk.tres" id="10_vcr6a"]
-[ext_resource type="Material" uid="uid://c4mot1fo3siox" path="res://addons/proton_scatter/demos/assets/materials/m_grass.tres" id="10_wle5o"]
-[ext_resource type="PackedScene" uid="uid://bhums0j31gm5n" path="res://addons/proton_scatter/demos/assets/models/pine_tree.glb" id="11_ff4pe"]
 [ext_resource type="Texture2D" uid="uid://dh5ipo56avs3d" path="res://assets/texture/rock/rock049/rock049_alb_ht.dds" id="11_rgr1e"]
 [ext_resource type="Texture2D" uid="uid://b4tsp4kyuk7nf" path="res://assets/texture/rock/rock049/rock049_nrm_rgh.dds" id="12_redvt"]
 [ext_resource type="Texture2D" uid="uid://d0by8hnns55lh" path="res://assets/texture/sand/ground055s_sand/ground055S_Sand_alb_ht.dds" id="13_87hcm"]
@@ -112,7 +108,7 @@ lod0_range = 128.0
 id = 1
 generated_type = 1
 height_offset = 0.5
-material_override = ExtResource("9_k0egi")
+material_override = null
 last_lod = 0
 last_shadow_lod = 0
 lod0_range = 128.0
@@ -121,7 +117,7 @@ lod0_range = 128.0
 id = 2
 generated_type = 1
 height_offset = 0.5
-material_override = ExtResource("10_wle5o")
+material_override = null
 last_lod = 0
 last_shadow_lod = 0
 lod0_range = 128.0
@@ -144,9 +140,9 @@ lod0_range = 128.0
 [sub_resource type="Terrain3DMeshAsset" id="Terrain3DMeshAsset_4svp1"]
 name = "pine_tree"
 id = 4
-scene_file = ExtResource("11_ff4pe")
+scene_file = null
 density = 1.3219845
-material_override = ExtResource("10_vcr6a")
+material_override = null
 last_lod = 1
 last_shadow_lod = 1
 lod1_range = 128.0

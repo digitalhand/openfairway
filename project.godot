@@ -15,7 +15,7 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 [application]
 
 config/name="OpenFairway"
-config/version="1.0.3"
+config/version="1.0.4"
 run/main_scene="res://ui/main_menu.tscn"
 config/features=PackedStringArray("4.6", "C#", "Mobile")
 
@@ -39,7 +39,7 @@ project/assembly_name="OpenFairway"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/openfairway/plugin.cfg", "res://addons/phantom_camera/plugin.cfg", "res://addons/proton_scatter/plugin.cfg", "res://addons/terrain_3d/plugin.cfg")
+enabled=PackedStringArray("res://addons/openfairway/plugin.cfg", "res://addons/phantom_camera/plugin.cfg", "res://addons/terrain_3d/plugin.cfg")
 
 [filesystem]
 

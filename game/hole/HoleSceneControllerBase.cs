@@ -17,10 +17,6 @@ public abstract partial class HoleSceneControllerBase : Node3D
 	private const float ROUND_END_SCORE_DURATION_SECONDS = 4.0f;
 	private const double TARGET_HUD_REFRESH_INTERVAL_SECONDS = 0.10;
 	private const float TARGET_HUD_MIN_MOVE_METERS = 0.15f;
-	private const string PROTON_SCATTER_SCRIPT_PATH = "res://addons/proton_scatter/src/scatter.gd";
-	private const string PROTON_SCATTER_OUTPUT_NODE_NAME = "ScatterOutput";
-	private const string PROTON_SCATTER_REBUILD_METHOD = "full_rebuild";
-	private const float SCATTER_REBUILD_STAGGER_SECONDS = 0.02f;
 
 	[ExportGroup("Scene Nodes")]
 	[Export] public NodePath ShotTrackerPath { get; set; } = new NodePath("ShotTracker");
@@ -81,7 +77,6 @@ public abstract partial class HoleSceneControllerBase : Node3D
 	private Vector3 _lastTargetHudBallPosition;
 	private bool _hasTargetHudBallPosition;
 	private StartupStage _startupStage = StartupStage.NotStarted;
-	private readonly System.Collections.Generic.List<Node> _deferredScatterNodes = new();
 
 	private enum StartupStage
 	{
@@ -200,7 +195,6 @@ public abstract partial class HoleSceneControllerBase : Node3D
 		ResolveCourseCard();
 		CacheTerrainData();
 		InitializeTargetResolver();
-		CacheDeferredScatterNodes();
 		ResetBallToStart();
 		// Physics world may not have collision shapes ready in _Ready;
 		// re-snap once deferred so the terrain raycast succeeds.
@@ -277,7 +271,6 @@ public abstract partial class HoleSceneControllerBase : Node3D
 		if (!CanContinueLifecycleWork(lifecycleToken))
 			return;
 
-		_ = RebuildDeferredScatterAsync(lifecycleToken);
 		_startupStage = StartupStage.Complete;
 		OnHoleReadyAfterInit();
 	}
@@ -323,7 +316,6 @@ public abstract partial class HoleSceneControllerBase : Node3D
 		_goalZones.Clear();
 		DisconnectSurfaceZones();
 		DisconnectSurfaceGridMaps();
-		_deferredScatterNodes.Clear();
 	}
 
 	public override void _UnhandledInput(InputEvent @event)
@@ -1104,73 +1096,12 @@ public abstract partial class HoleSceneControllerBase : Node3D
 			_terrainData = obj;
 	}
 
-	private void CacheDeferredScatterNodes()
-	{
-		_deferredScatterNodes.Clear();
-		foreach (Node node in FindChildren("*", "", true, false))
-		{
-			if (node == null)
-				continue;
-
-			Variant scriptValue = node.GetScript();
-			if (scriptValue.Obj is not Script script)
-				continue;
-
-			if (!string.Equals(script.ResourcePath, PROTON_SCATTER_SCRIPT_PATH, StringComparison.Ordinal))
-				continue;
-
-			_deferredScatterNodes.Add(node);
-		}
-	}
-
-	private async System.Threading.Tasks.Task RebuildDeferredScatterAsync(CancellationToken token)
-	{
-		if (_deferredScatterNodes.Count == 0)
-			return;
-
-		SceneTree tree = GetTree();
-		if (tree == null)
-			return;
-
-		foreach (Node scatterNode in _deferredScatterNodes)
-		{
-			if (token.IsCancellationRequested || !CanContinueLifecycleWork(token))
-				return;
-
-			if (scatterNode == null || !GodotObject.IsInstanceValid(scatterNode))
-				continue;
-
-			if (ShouldRebuildScatterNode(scatterNode))
-				scatterNode.Call(PROTON_SCATTER_REBUILD_METHOD);
-
-			if (tree == null || !GodotObject.IsInstanceValid(tree))
-				return;
-
-			await ToSignal(tree.CreateTimer(SCATTER_REBUILD_STAGGER_SECONDS), SceneTreeTimer.SignalName.Timeout);
-		}
-	}
-
 	private bool CanContinueLifecycleWork(CancellationToken token = default)
 	{
 		if (_isShuttingDown || !IsInsideTree())
 			return false;
 
 		return !token.CanBeCanceled || !token.IsCancellationRequested;
-	}
-
-	private static bool ShouldRebuildScatterNode(Node scatterNode)
-	{
-		if (scatterNode == null || !GodotObject.IsInstanceValid(scatterNode))
-			return false;
-
-		if (!scatterNode.HasMethod(PROTON_SCATTER_REBUILD_METHOD))
-			return false;
-
-		Node outputNode = scatterNode.GetNodeOrNull<Node>(PROTON_SCATTER_OUTPUT_NODE_NAME);
-		if (outputNode == null)
-			return true;
-
-		return outputNode.GetChildCount() == 0;
 	}
 
 	private void MaybeRefreshTargetHud(double delta, bool force = false)
