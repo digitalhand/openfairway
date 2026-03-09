@@ -16,9 +16,9 @@ public partial class BallPhysics : RefCounted
     public const float SIMULATION_HZ = 120.0f;  // shared integration rate for runtime + headless
     public const float SIMULATION_DT = 1.0f / SIMULATION_HZ;
     public const float SPIN_DECAY_TAU = 5.0f;  // Spin decay time constant (seconds)
-    public const float SPIN_DRAG_MULTIPLIER_COEFF = 2.8f;
+    public const float SPIN_DRAG_MULTIPLIER_COEFF = 2.5f;
     public const float SPIN_DRAG_MULTIPLIER_MAX = 1.35f;
-    public const float SPIN_DRAG_MULTIPLIER_HIGH_SPIN_MAX = 1.17f;
+    public const float SPIN_DRAG_MULTIPLIER_HIGH_SPIN_MAX = 1.22f;
 
     // Read-only properties for GDScript access to constants (private set satisfies [Export] requirement)
     [Export] public float BallMass { get => MASS; private set { } }
@@ -44,8 +44,8 @@ public partial class BallPhysics : RefCounted
 
     // Friction blending
     private const float FRICTION_BLEND_SPEED = 15.0f;     // m/s — blending threshold for rolling/kinetic friction
-    private const float HIGH_SPIN_DRAG_SR_START = 0.40f;
-    private const float HIGH_SPIN_DRAG_SR_END = 0.50f;
+    private const float HIGH_SPIN_DRAG_SR_START = 0.34f;
+    private const float HIGH_SPIN_DRAG_SR_END = 0.44f;
     private readonly Aerodynamics _aero = new();
 
     /// <summary>

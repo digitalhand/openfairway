@@ -20,8 +20,11 @@ public partial class Aerodynamics : RefCounted
 	private const float SUTHERLAND_CONSTANT = 198.72f;  // K (source: NASA)
 	private const float FEET_TO_METERS = 0.3048f;
 	private const float HIGH_RE_START = 75000.0f;
-	private const float HIGH_RE_CL_MAX = 0.28f;
+	private const float HIGH_RE_CL_MAX = 0.275f;
 	private const float HIGH_RE_SPIN_GAIN = 10.0f;
+	private const float HIGH_SPIN_CL_ATTENUATION_START = 0.42f;
+	private const float HIGH_SPIN_CL_ATTENUATION_END = 0.72f;
+	private const float HIGH_SPIN_CL_ATTENUATION_MAX = 0.08f;
 
 	// Physically realistic coefficient bounds for dimpled golf balls in-play.
 	// Sources in project docs (Bearman/Harvey, R&A studies) place Cd and Cl
@@ -131,7 +134,7 @@ public partial class Aerodynamics : RefCounted
 
 		// High Reynolds number - use saturating lift curve.
 		if (Re >= HIGH_RE_START)
-			return Mathf.Clamp(ClHighRe(spin), 0.0f, CL_MAX);
+			return ApplyHighSpinLiftAttenuation(spin, Mathf.Clamp(ClHighRe(spin), 0.0f, CL_MAX));
 
 		// Interpolation between polynomial models for 50k <= Re <= 75k
 		int[] reValues = { 50000, 60000, 65000, 70000, 75000 };
@@ -198,5 +201,18 @@ public partial class Aerodynamics : RefCounted
 		// - preserves low-spin driver lift (needed for realistic carry),
 		// - limits high-spin ballooning for approach/wedge trajectories.
 		return HIGH_RE_CL_MAX * (1.0f - Mathf.Exp(-HIGH_RE_SPIN_GAIN * S));
+	}
+
+	private float ApplyHighSpinLiftAttenuation(float spinRatio, float cl)
+	{
+		float attenuationT = Mathf.Clamp(
+			(spinRatio - HIGH_SPIN_CL_ATTENUATION_START) /
+			(HIGH_SPIN_CL_ATTENUATION_END - HIGH_SPIN_CL_ATTENUATION_START),
+			0.0f,
+			1.0f
+		);
+		attenuationT = attenuationT * attenuationT * (3.0f - 2.0f * attenuationT);
+		float attenuation = 1.0f - HIGH_SPIN_CL_ATTENUATION_MAX * attenuationT;
+		return cl * attenuation;
 	}
 }

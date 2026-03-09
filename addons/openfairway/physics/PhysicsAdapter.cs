@@ -65,6 +65,8 @@ public partial class PhysicsAdapter : RefCounted
         float hangTimeS = 0.0f;
         float apexM = pos.Y;
         bool firstImpactSpinback = false;
+        float landingSpeedMps = 0.0f;
+        float landingAngleDeg = 0.0f;
         float firstImpactTangentIn = 0.0f;
         float firstImpactTangentOut = 0.0f;
 
@@ -100,6 +102,8 @@ public partial class PhysicsAdapter : RefCounted
             if (hasImpact)
             {
                 pos.Y = 0.0f;
+                float preImpactSpeed = velocity.Length();
+                float preImpactNormalSpeed = Mathf.Abs(velocity.Dot(contactNormal));
                 Vector3 preImpactTangent = velocity - contactNormal * velocity.Dot(contactNormal);
                 var bounce = _physics.CalculateBounce(velocity, omega, contactNormal, state, parameters);
                 velocity = bounce.NewVelocity;
@@ -116,6 +120,8 @@ public partial class PhysicsAdapter : RefCounted
 
                     firstImpactTangentIn = preTanMag;
                     firstImpactTangentOut = postTanMag;
+                    landingSpeedMps = preImpactSpeed;
+                    landingAngleDeg = Mathf.RadToDeg(Mathf.Atan2(preImpactNormalSpeed, Mathf.Max(preTanMag, 0.0001f)));
 
                     if (preTanMag > 0.01f && postTanMag > 0.01f)
                     {
@@ -168,6 +174,10 @@ public partial class PhysicsAdapter : RefCounted
             { "carry_yd_first_impact", carryM * YARDS_PER_METER },
             { "apex_ft", apexM * FEET_PER_METER },
             { "hang_time_s", hangTimeS },
+            { "flight_time_s", hangTimeS },
+            { "first_impact_time_s", hangTimeS },
+            { "landing_speed_mps", landingSpeedMps },
+            { "landing_angle_deg", landingAngleDeg },
             { "initial_re", initialRe },
             { "initial_spin_ratio", initialSpinRatio },
             { "initial_cd", initialCd },
