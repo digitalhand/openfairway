@@ -2,10 +2,6 @@ using Godot;
 
 /// <summary>
 /// Area-based surface override for local terrain patches.
-/// TODO: After fixing bug, I need to figure out how to more surface types
-/// 1. Example would be SAND_HARD, SAND_SOFT, etc. 
-/// 2. This will help debug/troubleshoot when ball enters, exists such surface. 
-/// 3. In some cases enters and never leaves, WATER :P
 /// </summary>
 public partial class SurfaceZone : Area3D
 {
@@ -39,7 +35,7 @@ public partial class SurfaceZone : Area3D
 			if (LogTransitions)
 				PhysicsLogger.INFO(
 					$"[SurfaceZone] entered '{Name}' zone={SurfaceType} active={ball.SurfaceType} " +
-					$"downrange={ball.GetDownrangeMeters() * 1.09361f:F2}yd speed={ball.Velocity.Length():F2}m/s pos={ball.Position}"
+					$"downrange={ball.GetDownrangeMeters() * MeasurementUtils.MetersToYards:F2}yd speed={ball.Velocity.Length():F2}m/s pos={ball.Position}"
 				);
 		}
 	}
@@ -52,7 +48,7 @@ public partial class SurfaceZone : Area3D
 			if (LogTransitions)
 				PhysicsLogger.INFO(
 					$"[SurfaceZone] exited '{Name}' zone={SurfaceType} active={ball.SurfaceType} " +
-					$"downrange={ball.GetDownrangeMeters() * 1.09361f:F2}yd speed={ball.Velocity.Length():F2}m/s pos={ball.Position}"
+					$"downrange={ball.GetDownrangeMeters() * MeasurementUtils.MetersToYards:F2}yd speed={ball.Velocity.Length():F2}m/s pos={ball.Position}"
 				);
 		}
 	}

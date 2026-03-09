@@ -46,7 +46,6 @@ public partial class BallPhysics : RefCounted
     private const float FRICTION_BLEND_SPEED = 15.0f;     // m/s — blending threshold for rolling/kinetic friction
     private const float HIGH_SPIN_DRAG_SR_START = 0.40f;
     private const float HIGH_SPIN_DRAG_SR_END = 0.50f;
-
     private readonly Aerodynamics _aero = new();
 
     /// <summary>
@@ -95,7 +94,7 @@ public partial class BallPhysics : RefCounted
     {
         // Use the higher of current spin or impact spin
         // This preserves the "bite" effect even as spin decays during rollout
-        float currentSpinRpm = omega.Length() / 0.10472f;
+        float currentSpinRpm = omega.Length() / ShotSetup.RAD_PER_RPM;
         float effectiveSpinRpm = Mathf.Max(currentSpinRpm, impactSpinRpm);
 
         // Calculate velocity scaling factor
@@ -162,46 +161,77 @@ public partial class BallPhysics : RefCounted
         Vector3 grassDrag = velocity * (-6.0f * Mathf.Pi * RADIUS * parameters.GrassViscosity);
         grassDrag.Y = 0.0f;
 
-        // Contact point velocity for friction calculation
-        Vector3 contactVelocity = velocity + omega.Cross(-parameters.FloorNormal * RADIUS);
-        Vector3 tangentVelocity = contactVelocity - parameters.FloorNormal * contactVelocity.Dot(parameters.FloorNormal);
-
-        // Spin-based friction multiplier (high spin = more grip)
-        // Uses impact spin to preserve "bite" effect even as spin decays
-        float spinMultiplier = GetSpinFrictionMultiplier(omega, parameters.RolloutImpactSpin, velocity.Length());
-
-        Vector3 friction = Vector3.Zero;
-        float tangentVelMag = tangentVelocity.Length();
+        Vector3 friction = CalculateFrictionForce(velocity, omega, parameters);
 
         // Debug: print every 60 frames (~1 second) when on ground
         bool shouldDebug = Engine.GetPhysicsFrames() % 60 == 0;
+        if (shouldDebug)
+        {
+            float spinMultiplier = GetSpinFrictionMultiplier(omega, parameters.RolloutImpactSpin, velocity.Length());
+            Vector3 contactVelocity = velocity + omega.Cross(-parameters.FloorNormal * RADIUS);
+            Vector3 tangentVelocity = contactVelocity - parameters.FloorNormal * contactVelocity.Dot(parameters.FloorNormal);
+            float tangentVelMag = tangentVelocity.Length();
+
+            if (tangentVelMag < 0.05f)
+            {
+                float effectiveRollingFriction = parameters.RollingFriction * spinMultiplier;
+                PhysicsLogger.Verbose($"  ROLLING: vel={velocity.Length():F2} m/s, spin={omega.Length() / ShotSetup.RAD_PER_RPM:F0} rpm, c_rr={effectiveRollingFriction:F3} (×{spinMultiplier:F2})");
+            }
+            else
+            {
+                float velocityMag = velocity.Length();
+                float baseFriction;
+                if (velocityMag < FRICTION_BLEND_SPEED)
+                {
+                    float blendFactor = Mathf.Clamp(velocityMag / FRICTION_BLEND_SPEED, 0.0f, 1.0f);
+                    blendFactor = blendFactor * blendFactor;
+                    baseFriction = Mathf.Lerp(parameters.RollingFriction, parameters.KineticFriction, blendFactor);
+                }
+                else
+                {
+                    baseFriction = parameters.KineticFriction;
+                }
+                float effectiveFriction = baseFriction * spinMultiplier;
+                PhysicsLogger.Verbose($"  SLIPPING: vel={velocityMag:F2} m/s, spin={omega.Length() / ShotSetup.RAD_PER_RPM:F0} rpm, tangent_vel={tangentVelMag:F2}, μ_eff={effectiveFriction:F3} (×{spinMultiplier:F2})");
+            }
+        }
+
+        return grassDrag + friction;
+    }
+
+    /// <summary>
+    /// Shared friction force calculation used by both ground forces and ground torques.
+    /// Computes contact-point friction (rolling or slipping) with spin-based multiplier.
+    /// </summary>
+    private Vector3 CalculateFrictionForce(
+        Vector3 velocity,
+        Vector3 omega,
+        PhysicsParams parameters)
+    {
+        Vector3 contactVelocity = velocity + omega.Cross(-parameters.FloorNormal * RADIUS);
+        Vector3 tangentVelocity = contactVelocity - parameters.FloorNormal * contactVelocity.Dot(parameters.FloorNormal);
+
+        float spinMultiplier = GetSpinFrictionMultiplier(omega, parameters.RolloutImpactSpin, velocity.Length());
+        float tangentVelMag = tangentVelocity.Length();
 
         if (tangentVelMag < 0.05f)
         {
-            // Pure rolling - use rolling resistance from surface parameters
+            // Pure rolling
             Vector3 flatVelocity = velocity - parameters.FloorNormal * velocity.Dot(parameters.FloorNormal);
             Vector3 frictionDir = flatVelocity.Length() > 0.01f ? flatVelocity.Normalized() : Vector3.Zero;
             float effectiveRollingFriction = parameters.RollingFriction * spinMultiplier;
-            friction = frictionDir * (-effectiveRollingFriction * MASS * 9.81f);
-            if (shouldDebug)
-            {
-                PhysicsLogger.Verbose($"  ROLLING: vel={velocity.Length():F2} m/s, spin={omega.Length() / 0.10472f:F0} rpm, c_rr={effectiveRollingFriction:F3} (×{spinMultiplier:F2})");
-            }
+            return frictionDir * (-effectiveRollingFriction * MASS * 9.81f);
         }
         else
         {
-            // Slipping - use blended friction for smooth transition
-            // For low-velocity rollout, reduce friction to allow more rollout
+            // Slipping — blended friction for smooth transition
             float velocityMag = velocity.Length();
             float baseFriction;
 
             if (velocityMag < FRICTION_BLEND_SPEED)
             {
-                // Blend between rolling resistance and kinetic friction based on velocity
-                // At v=0: use rolling resistance, at v=FRICTION_BLEND_SPEED: use kinetic friction
-                // Use exponential curve for gentler low-speed friction
                 float blendFactor = Mathf.Clamp(velocityMag / FRICTION_BLEND_SPEED, 0.0f, 1.0f);
-                blendFactor = blendFactor * blendFactor;  // Square for gentler low-speed friction
+                blendFactor = blendFactor * blendFactor;
                 baseFriction = Mathf.Lerp(parameters.RollingFriction, parameters.KineticFriction, blendFactor);
             }
             else
@@ -209,18 +239,10 @@ public partial class BallPhysics : RefCounted
                 baseFriction = parameters.KineticFriction;
             }
 
-            // Apply spin multiplier to increase friction for high-spin shots
             float effectiveFriction = baseFriction * spinMultiplier;
-
             Vector3 slipDir = tangentVelMag > 0.01f ? tangentVelocity.Normalized() : Vector3.Zero;
-            friction = slipDir * (-effectiveFriction * MASS * 9.81f);
-            if (shouldDebug)
-            {
-                PhysicsLogger.Verbose($"  SLIPPING: vel={velocityMag:F2} m/s, spin={omega.Length() / 0.10472f:F0} rpm, tangent_vel={tangentVelMag:F2}, μ_eff={effectiveFriction:F3} (×{spinMultiplier:F2})");
-            }
+            return slipDir * (-effectiveFriction * MASS * 9.81f);
         }
-
-        return grassDrag + friction;
     }
 
     /// <summary>
@@ -284,6 +306,39 @@ public partial class BallPhysics : RefCounted
     }
 
     /// <summary>
+    /// Greens can exhibit stronger check/spinback on steep, high-spin impacts.
+    /// Model this as an effective increase in critical angle for high-spin wedge/flop
+    /// impacts, while leaving lower-spin/low-speed impacts unchanged.
+    /// </summary>
+    private static float GetEffectiveCriticalAngle(
+        PhysicsParams parameters,
+        float currentSpinRpm,
+        float impactSpeed,
+        PhysicsEnums.BallState currentState)
+    {
+        if (currentState != PhysicsEnums.BallState.Flight ||
+            parameters.SpinbackThetaBoostMax <= 0.0f)
+        {
+            return parameters.CriticalAngle;
+        }
+
+        float spinRange = parameters.SpinbackSpinEndRpm - parameters.SpinbackSpinStartRpm;
+        float spinT = spinRange > 0.0f
+            ? Mathf.Clamp((currentSpinRpm - parameters.SpinbackSpinStartRpm) / spinRange, 0.0f, 1.0f)
+            : 0.0f;
+        spinT = spinT * spinT * (3.0f - 2.0f * spinT);
+
+        float speedRange = parameters.SpinbackSpeedEndMps - parameters.SpinbackSpeedStartMps;
+        float speedT = speedRange > 0.0f
+            ? Mathf.Clamp((impactSpeed - parameters.SpinbackSpeedStartMps) / speedRange, 0.0f, 1.0f)
+            : 0.0f;
+        speedT = speedT * speedT * (3.0f - 2.0f * speedT);
+
+        float boost = parameters.SpinbackThetaBoostMax * spinT * speedT;
+        return parameters.CriticalAngle + boost;
+    }
+
+    /// <summary>
     /// Calculate total torques acting on the ball
     /// </summary>
     public Vector3 CalculateTorques(
@@ -329,50 +384,11 @@ public partial class BallPhysics : RefCounted
         Vector3 omega,
         PhysicsParams parameters)
     {
-        Vector3 frictionTorque = Vector3.Zero;
         Vector3 grassTorque = -6.0f * Mathf.Pi * parameters.GrassViscosity * RADIUS * omega;
 
-        // Calculate friction for torque
-        Vector3 contactVelocity = velocity + omega.Cross(-parameters.FloorNormal * RADIUS);
-        Vector3 tangentVelocity = contactVelocity - parameters.FloorNormal * contactVelocity.Dot(parameters.FloorNormal);
+        Vector3 frictionForce = CalculateFrictionForce(velocity, omega, parameters);
 
-        // Spin-based friction multiplier (same as in CalculateGroundForces)
-        float spinMultiplier = GetSpinFrictionMultiplier(omega, parameters.RolloutImpactSpin, velocity.Length());
-
-        Vector3 frictionForce = Vector3.Zero;
-        float tangentVelMag = tangentVelocity.Length();
-
-        if (tangentVelMag < 0.05f)
-        {
-            // Pure rolling - use rolling resistance from surface parameters
-            Vector3 flatVelocity = velocity - parameters.FloorNormal * velocity.Dot(parameters.FloorNormal);
-            Vector3 frictionDir = flatVelocity.Length() > 0.01f ? flatVelocity.Normalized() : Vector3.Zero;
-            float effectiveRollingFriction = parameters.RollingFriction * spinMultiplier;
-            frictionForce = frictionDir * (-effectiveRollingFriction * MASS * 9.81f);
-        }
-        else
-        {
-            // Slipping - use blended friction (same as in CalculateGroundForces)
-            float velocityMag = velocity.Length();
-            float baseFriction;
-
-            if (velocityMag < 15.0f)
-            {
-                float blendFactor = Mathf.Clamp(velocityMag / 15.0f, 0.0f, 1.0f);
-                baseFriction = Mathf.Lerp(parameters.RollingFriction, parameters.KineticFriction, blendFactor);
-            }
-            else
-            {
-                baseFriction = parameters.KineticFriction;
-            }
-
-            // Apply spin multiplier to increase friction for high-spin shots
-            float effectiveFriction = baseFriction * spinMultiplier;
-
-            Vector3 slipDir = tangentVelMag > 0.01f ? tangentVelocity.Normalized() : Vector3.Zero;
-            frictionForce = slipDir * (-effectiveFriction * MASS * 9.81f);
-        }
-
+        Vector3 frictionTorque = Vector3.Zero;
         if (frictionForce.Length() > 0.001f)
         {
             frictionTorque = (-parameters.FloorNormal * RADIUS).Cross(frictionForce);
@@ -414,7 +430,7 @@ public partial class BallPhysics : RefCounted
         float omegaTangentMagnitude = omegaTangent.Length();
 
         // Tangential retention based on spin
-        float currentSpinRpm = omega.Length() / 0.10472f;
+        float currentSpinRpm = omega.Length() / ShotSetup.RAD_PER_RPM;
 
         float tangentialRetention;
 
@@ -456,16 +472,17 @@ public partial class BallPhysics : RefCounted
             // The Penner model only works for HIGH-ENERGY steep impacts (full wedge shots)
             // For low-energy impacts (chip shots), use simple retention even if angle is steep
             // For shallow-angle impacts (driver shots), use simple retention
-            float impactAngleDeg = Mathf.RadToDeg(impactAngle);
-            float criticalAngleDeg = Mathf.RadToDeg(parameters.CriticalAngle);
             float impactSpeed = vel.Length();
-            bool isGreenSurface = parameters.SurfaceType == PhysicsEnums.SurfaceType.Green;
-            bool isSteepImpact = impactAngle >= parameters.CriticalAngle;
+            bool hasSpinbackSurface = parameters.SpinbackThetaBoostMax > 0.0f;
+            float effectiveCriticalAngle = GetEffectiveCriticalAngle(parameters, currentSpinRpm, impactSpeed, currentState);
+            float impactAngleDeg = Mathf.RadToDeg(impactAngle);
+            float criticalAngleDeg = Mathf.RadToDeg(effectiveCriticalAngle);
+            bool isSteepImpact = impactAngle >= effectiveCriticalAngle;
 
-            // Non-green lies keep the low-energy guard to prevent unrealistic
-            // chip spin-back. Greens allow steep-impact Penner behavior even below
-            // 20 m/s so high-spin flop/wedge shots can naturally check/spin back.
-            bool shouldUsePenner = isSteepImpact && (impactSpeed >= 20.0f || isGreenSurface);
+            // Surfaces without spinback keep the low-energy guard to prevent unrealistic
+            // chip spin-back. Spinback surfaces allow steep-impact Penner behavior even
+            // below 20 m/s so high-spin flop/wedge shots can naturally check/spin back.
+            bool shouldUsePenner = isSteepImpact && (impactSpeed >= 20.0f || hasSpinbackSurface);
 
             if (!shouldUsePenner)
             {
@@ -476,7 +493,7 @@ public partial class BallPhysics : RefCounted
                 {
                     PhysicsLogger.Verbose($"  Bounce: Shallow angle ({impactAngleDeg:F2}° < {criticalAngleDeg:F2}°) - using simple retention");
                 }
-                else if (impactSpeed < 20.0f && !isGreenSurface)
+                else if (impactSpeed < 20.0f && !hasSpinbackSurface)
                 {
                     PhysicsLogger.Verbose($"  Bounce: Low energy ({impactSpeed:F2} m/s < 20 m/s) - using simple retention");
                 }
@@ -490,7 +507,7 @@ public partial class BallPhysics : RefCounted
             {
                 // Penner tangential model for steep impacts:
                 // backspin term can reverse tangential velocity (spin-back) when large enough.
-                newTangentSpeed = tangentialRetention * vel.Length() * Mathf.Sin(impactAngle - parameters.CriticalAngle) -
+                newTangentSpeed = tangentialRetention * vel.Length() * Mathf.Sin(impactAngle - effectiveCriticalAngle) -
                     2.0f * RADIUS * omegaTangentMagnitude / 7.0f;
                 PhysicsLogger.Verbose($"  Bounce: Penner model ({parameters.SurfaceType}) speed={impactSpeed:F2} m/s angle={impactAngleDeg:F2}° crit={criticalAngleDeg:F2}°");
                 PhysicsLogger.Verbose($"    speedTangent={speedTangent:F2} m/s, newTangentSpeed={newTangentSpeed:F2} m/s");
@@ -572,7 +589,7 @@ public partial class BallPhysics : RefCounted
             float baseCor = GetCoefficientOfRestitution(speedNormal);
 
             // Spin-based COR reduction
-            float spinRpm = omega.Length() / 0.10472f;
+            float spinRpm = omega.Length() / ShotSetup.RAD_PER_RPM;
 
             // Velocity scaling: High-spin COR reduction should only apply to high-energy impacts
             // The "bite" effect from spin depends on impact energy, not just spin rate

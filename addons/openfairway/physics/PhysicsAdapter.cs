@@ -8,9 +8,8 @@ using Godot.Collections;
 [GlobalClass]
 public partial class PhysicsAdapter : RefCounted
 {
-    private const float MPS_PER_MPH = 0.44704f;
-    private const float YARDS_PER_METER = 1.09361f;
-    private const float FEET_PER_METER = 3.28084f;
+    private const float YARDS_PER_METER = ShotSetup.YARDS_PER_METER;
+    private const float FEET_PER_METER = ShotSetup.FEET_PER_METER;
     private const float START_HEIGHT = 0.02f;
     private const float DEFAULT_TEMP_F = 75.0f;
     private const float DEFAULT_ALT_FT = 0.0f;
@@ -197,7 +196,13 @@ public partial class PhysicsAdapter : RefCounted
             (float)surfaceParams["nu_g"],
             (float)surfaceParams["theta_c"],
             surface,
-            floorNormal
+            floorNormal,
+            rolloutImpactSpin: 0.0f,
+            spinbackThetaBoostMax: (float)surfaceParams["spinback_theta_boost_max"],
+            spinbackSpinStartRpm: (float)surfaceParams["spinback_spin_start_rpm"],
+            spinbackSpinEndRpm: (float)surfaceParams["spinback_spin_end_rpm"],
+            spinbackSpeedStartMps: (float)surfaceParams["spinback_speed_start_mps"],
+            spinbackSpeedEndMps: (float)surfaceParams["spinback_speed_end_mps"]
         );
     }
 }

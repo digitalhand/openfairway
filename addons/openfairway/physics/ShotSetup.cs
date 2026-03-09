@@ -9,8 +9,10 @@ using Godot.Collections;
 [GlobalClass]
 public partial class ShotSetup : RefCounted
 {
-    private const float MPS_PER_MPH = 0.44704f;
-    private const float RAD_PER_RPM = 0.10472f;
+    public const float MPS_PER_MPH = 0.44704f;
+    public const float RAD_PER_RPM = 0.10472f;
+    public const float YARDS_PER_METER = 1.09361f;
+    public const float FEET_PER_METER = 3.28084f;
 
     /// <summary>
     /// Normalize spin data from various launch-monitor input formats.

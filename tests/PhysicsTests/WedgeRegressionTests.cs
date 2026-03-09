@@ -1,6 +1,3 @@
-using System.IO;
-using System.Text.Json;
-using Godot;
 using Godot.Collections;
 using NUnit.Framework;
 
@@ -13,20 +10,18 @@ namespace OpenFairway.Tests
         private const float CarryToleranceYd = 1.5f;
 
         private PhysicsAdapter _adapter;
-        private string _dataPath;
 
         [SetUp]
         public void Setup()
         {
             _adapter = new PhysicsAdapter();
-            _dataPath = Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "..", "..", "assets", "data");
         }
 
         [Test]
         [Category("RolloutPhysics")]
         public void WedgeShot_Regression_CarryMatchesTarget()
         {
-            Dictionary shot = LoadTestShot("wedge_test_shot.json");
+            Dictionary shot = TestShotLoader.LoadTestShot("wedge_test_shot.json");
             Dictionary result = _adapter.SimulateShotFromJson(shot);
 
             Assert.That(result.ContainsKey("carry_yd"), Is.True, "Result missing carry_yd");
@@ -51,48 +46,5 @@ namespace OpenFairway.Tests
             Assert.That(BallPhysics.SIMULATION_DT, Is.EqualTo(1.0f / 120.0f).Within(0.000001f));
         }
 
-        private Dictionary LoadTestShot(string filename)
-        {
-            string path = Path.Combine(_dataPath, filename);
-            if (!File.Exists(path))
-                Assert.Fail($"Test shot file not found: {path}");
-
-            string json = File.ReadAllText(path);
-            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            var data = JsonSerializer.Deserialize<System.Collections.Generic.Dictionary<string, object>>(json, options);
-
-            var dict = new Dictionary();
-            foreach (var kvp in data)
-                dict[kvp.Key] = Variant.From(ConvertJsonValue(kvp.Value));
-
-            return dict;
-        }
-
-        private object ConvertJsonValue(object value)
-        {
-            if (value is JsonElement element)
-            {
-                switch (element.ValueKind)
-                {
-                    case JsonValueKind.Number:
-                        if (element.TryGetDouble(out double d))
-                            return d;
-                        break;
-                    case JsonValueKind.String:
-                        return element.GetString();
-                    case JsonValueKind.True:
-                        return true;
-                    case JsonValueKind.False:
-                        return false;
-                    case JsonValueKind.Object:
-                        var dict = new Dictionary();
-                        foreach (var prop in element.EnumerateObject())
-                            dict[prop.Name] = Variant.From(ConvertJsonValue(prop.Value));
-                        return dict;
-                }
-            }
-
-            return value;
-        }
     }
 }

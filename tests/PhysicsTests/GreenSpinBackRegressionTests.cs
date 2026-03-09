@@ -1,5 +1,3 @@
-using System.IO;
-using System.Text.Json;
 using Godot;
 using Godot.Collections;
 using NUnit.Framework;
@@ -10,20 +8,18 @@ namespace OpenFairway.Tests
     public class GreenSpinBackRegressionTests
     {
         private PhysicsAdapter _adapter;
-        private string _dataPath;
 
         [SetUp]
         public void Setup()
         {
             _adapter = new PhysicsAdapter();
-            _dataPath = Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "..", "..", "assets", "data");
         }
 
         [Test]
         [Category("RolloutPhysics")]
         public void FlopShot_FlatGreen_MinimalRollout_WithImpactSpinback()
         {
-            Dictionary shot = LoadTestShot("flop_test_shot.json");
+            Dictionary shot = TestShotLoader.LoadTestShot("flop_test_shot.json");
             Dictionary result = _adapter.SimulateShotFromJson(shot, PhysicsEnums.SurfaceType.Green, Vector3.Up);
 
             Assert.That(result.ContainsKey("carry_yd"), Is.True, "Result missing carry_yd");
@@ -44,7 +40,7 @@ namespace OpenFairway.Tests
             TestContext.WriteLine($"  First impact tangent out: {tangentOut:F3} m/s");
             TestContext.WriteLine($"  First impact spinback: {firstImpactSpinback}");
 
-            Assert.That(rollout, Is.LessThanOrEqualTo(1.0f), "High-spin flop on green should have little/no forward rollout");
+            Assert.That(rollout, Is.LessThanOrEqualTo(-0.5f), "High-spin flop on green should exhibit meaningful spinback rollout");
             Assert.That(firstImpactSpinback, Is.True, "Flat green flop should reverse tangential direction on first impact");
             Assert.That(tangentOut, Is.LessThan(0.0f), "Spinback should be reflected as negative tangential speed");
         }
@@ -53,7 +49,7 @@ namespace OpenFairway.Tests
         [Category("RolloutPhysics")]
         public void FlopShot_GreenSlope_InfluencesPostImpactTravelDirectionally()
         {
-            Dictionary shot = LoadTestShot("flop_test_shot.json");
+            Dictionary shot = TestShotLoader.LoadTestShot("flop_test_shot.json");
 
             Dictionary flat = _adapter.SimulateShotFromJson(shot, PhysicsEnums.SurfaceType.Green, Vector3.Up);
             Vector3 downhillNormal = new Vector3(0.173648f, 0.984807f, 0.0f).Normalized();
@@ -81,48 +77,5 @@ namespace OpenFairway.Tests
                 "Downhill slope should provide at least as much post-impact travel as uphill");
         }
 
-        private Dictionary LoadTestShot(string filename)
-        {
-            string path = Path.Combine(_dataPath, filename);
-            if (!File.Exists(path))
-                Assert.Fail($"Test shot file not found: {path}");
-
-            string json = File.ReadAllText(path);
-            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            var data = JsonSerializer.Deserialize<System.Collections.Generic.Dictionary<string, object>>(json, options);
-
-            var dict = new Dictionary();
-            foreach (var kvp in data)
-                dict[kvp.Key] = Variant.From(ConvertJsonValue(kvp.Value));
-
-            return dict;
-        }
-
-        private object ConvertJsonValue(object value)
-        {
-            if (value is JsonElement element)
-            {
-                switch (element.ValueKind)
-                {
-                    case JsonValueKind.Number:
-                        if (element.TryGetDouble(out double d))
-                            return d;
-                        break;
-                    case JsonValueKind.String:
-                        return element.GetString();
-                    case JsonValueKind.True:
-                        return true;
-                    case JsonValueKind.False:
-                        return false;
-                    case JsonValueKind.Object:
-                        var dict = new Dictionary();
-                        foreach (var prop in element.EnumerateObject())
-                            dict[prop.Name] = Variant.From(ConvertJsonValue(prop.Value));
-                        return dict;
-                }
-            }
-
-            return value;
-        }
     }
 }

@@ -11,8 +11,6 @@ using Godot.Collections;
 public partial class GolfBall : CharacterBody3D
 {
 	// Keep a small collision recovery distance so the ball can settle into terrain lows.
-	// These should maybe be in physics lib? 
-	// TODO rethink patterns to decouple, and just pass values instead? 
 	private const float COLLISION_SAFE_MARGIN = 0.0005f;
 	private const float BELOW_GROUND_RECOVERY_Y = -0.5f;
 	private const float FALLTHROUGH_FAILSAFE_Y = -5.0f;
@@ -58,6 +56,11 @@ public partial class GolfBall : CharacterBody3D
 	private float _rollingFriction = 0.18f;
 	private float _grassViscosity = 0.0020f;
 	private float _criticalAngle = 0.30f;  // radians
+	private float _spinbackThetaBoostMax = 0.0f;
+	private float _spinbackSpinStartRpm = 0.0f;
+	private float _spinbackSpinEndRpm = 0.0f;
+	private float _spinbackSpeedStartMps = 0.0f;
+	private float _spinbackSpeedEndMps = 0.0f;
 
 	// Environment
 	private float _airDensity;
@@ -146,9 +149,7 @@ public partial class GolfBall : CharacterBody3D
 	}
 
 	/// <summary>
-	/// Set the surface type and update friction parameters
-	/// TODO: This is all messed up, needs more testing. 
-	/// Last major bug left. 
+	/// Set the surface type and update friction parameters.
 	/// </summary>
 	public void SetSurface(PhysicsEnums.SurfaceType surface)
 	{
@@ -202,6 +203,11 @@ public partial class GolfBall : CharacterBody3D
 		_rollingFriction = (float)parameters["u_kr"];
 		_grassViscosity = (float)parameters["nu_g"];
 		_criticalAngle = (float)parameters["theta_c"];
+		_spinbackThetaBoostMax = (float)parameters["spinback_theta_boost_max"];
+		_spinbackSpinStartRpm = (float)parameters["spinback_spin_start_rpm"];
+		_spinbackSpinEndRpm = (float)parameters["spinback_spin_end_rpm"];
+		_spinbackSpeedStartMps = (float)parameters["spinback_speed_start_mps"];
+		_spinbackSpeedEndMps = (float)parameters["spinback_speed_end_mps"];
 	}
 
 	private void UpdateSurfaceFromCollider(Node collider, Vector3 worldPoint)
@@ -343,7 +349,12 @@ public partial class GolfBall : CharacterBody3D
 			_criticalAngle,
 			SurfaceType,
 			FloorNormal,
-			RolloutImpactSpinRpm
+			RolloutImpactSpinRpm,
+			_spinbackThetaBoostMax,
+			_spinbackSpinStartRpm,
+			_spinbackSpinEndRpm,
+			_spinbackSpeedStartMps,
+			_spinbackSpeedEndMps
 		);
 	}
 
@@ -472,7 +483,7 @@ public partial class GolfBall : CharacterBody3D
 						PrintImpactDebug();
 						// Capture impact spin for friction calculation during rollout
 						// This preserves the "bite" effect even as spin decays
-						RolloutImpactSpinRpm = Omega.Length() / 0.10472f;
+						RolloutImpactSpinRpm = Omega.Length() / ShotSetup.RAD_PER_RPM;
 					}
 
 					var parameters = CreatePhysicsParams();
@@ -550,9 +561,9 @@ public partial class GolfBall : CharacterBody3D
 
 	private void PrintImpactDebug()
 	{
-		PhysicsLogger.Info($"FIRST IMPACT at pos: {Position}, downrange: {GetDownrangeMeters() * 1.09361f:F2} yds");
+		PhysicsLogger.Info($"FIRST IMPACT at pos: {Position}, downrange: {GetDownrangeMeters() * ShotSetup.YARDS_PER_METER:F2} yds");
 		PhysicsLogger.Info($"  Velocity at impact: {Velocity} ({Velocity.Length():F2} m/s)");
-		PhysicsLogger.Info($"  Spin at impact: {Omega} ({Omega.Length() / 0.10472f:F0} rpm)");
+		PhysicsLogger.Info($"  Spin at impact: {Omega} ({Omega.Length() / ShotSetup.RAD_PER_RPM:F0} rpm)");
 		PhysicsLogger.Info($"  Normal: {FloorNormal}");
 	}
 
@@ -696,7 +707,7 @@ public partial class GolfBall : CharacterBody3D
         ShotDirection = launchDirection;
         LaunchSpinRpm = totalSpin;
 
-        PrintLaunchDebug(data, speedMph * 0.44704f, vlaDeg, hlaDeg, totalSpin, spinAxis);
+        PrintLaunchDebug(data, speedMph * ShotSetup.MPS_PER_MPH, vlaDeg, hlaDeg, totalSpin, spinAxis);
     }
 
     private void PrintLaunchDebug(Dictionary data, float speedMps, float vla, float hla, float spin, float axis)
@@ -711,13 +722,13 @@ public partial class GolfBall : CharacterBody3D
         PhysicsLogger.Info($"Dynamic viscosity: {_airViscosity:F11}");
 
         float ReInitial = _airDensity * speedMps * BallPhysics.RADIUS * 2.0f / _airViscosity;
-        float spinRatio = speedMps > 0.1f ? (spin * 0.10472f) * BallPhysics.RADIUS / speedMps : 0.0f;
+        float spinRatio = speedMps > 0.1f ? (spin * ShotSetup.RAD_PER_RPM) * BallPhysics.RADIUS / speedMps : 0.0f;
         float ClInitial = _aerodynamics.GetCl(ReInitial, spinRatio);
         PhysicsLogger.Info($"Reynolds number: {ReInitial:F0}");
         PhysicsLogger.Info($"Spin ratio: {spinRatio:F3}");
         PhysicsLogger.Info($"Cl (before scale): {ClInitial:F3}, after: {ClInitial * _liftScale:F3}");
         PhysicsLogger.Info($"Initial velocity: {Velocity}");
-        PhysicsLogger.Info($"Initial omega: {Omega} ({Omega.Length() / 0.10472f:F0} rpm)");
+        PhysicsLogger.Info($"Initial omega: {Omega} ({Omega.Length() / ShotSetup.RAD_PER_RPM:F0} rpm)");
         PhysicsLogger.Info($"Shot direction: {ShotDirection}");
         PhysicsLogger.Info("===================");
     }

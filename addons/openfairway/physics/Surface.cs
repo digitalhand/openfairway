@@ -24,15 +24,17 @@ public partial class Surface : RefCounted
         {
             PhysicsEnums.SurfaceType.Rough =>
                 // Tall grass rough: shortest rollout.
-                // TODO, more testing needed here. 
-                // 1. Need game/consumer to dictate these values. 
-                // 2. These values are not reacting as state, rough slower, firm faster. 
                 new Dictionary
                 {
                     { "u_k", 0.62f },      // High slip friction
                     { "u_kr", 0.095f },    // High rolling resistance
                     { "nu_g", 0.0032f },   // Strong vegetation drag
-                    { "theta_c", 0.35f }   // ~20°
+                    { "theta_c", 0.35f },  // ~20°
+                    { "spinback_theta_boost_max", 0.0f },
+                    { "spinback_spin_start_rpm", 0.0f },
+                    { "spinback_spin_end_rpm", 0.0f },
+                    { "spinback_speed_start_mps", 0.0f },
+                    { "spinback_speed_end_mps", 0.0f }
                 },
 
             PhysicsEnums.SurfaceType.Fairway =>
@@ -42,7 +44,12 @@ public partial class Surface : RefCounted
                     { "u_k", 0.50f },      // Higher slip friction than prior baseline
                     { "u_kr", 0.050f },    // ~1.67x rolling resistance vs prior baseline
                     { "nu_g", 0.0017f },   // ~1.7x grass drag vs prior baseline
-                    { "theta_c", 0.29f }   // ~17°
+                    { "theta_c", 0.29f },  // ~17°
+                    { "spinback_theta_boost_max", 0.0f },
+                    { "spinback_spin_start_rpm", 0.0f },
+                    { "spinback_spin_end_rpm", 0.0f },
+                    { "spinback_speed_start_mps", 0.0f },
+                    { "spinback_speed_end_mps", 0.0f }
                 },
 
             PhysicsEnums.SurfaceType.FairwaySoft =>
@@ -52,7 +59,12 @@ public partial class Surface : RefCounted
                     { "u_k", 0.56f },
                     { "u_kr", 0.070f },
                     { "nu_g", 0.0024f },
-                    { "theta_c", 0.32f }   // ~18°
+                    { "theta_c", 0.32f },  // ~18°
+                    { "spinback_theta_boost_max", 0.0f },
+                    { "spinback_spin_start_rpm", 0.0f },
+                    { "spinback_spin_end_rpm", 0.0f },
+                    { "spinback_speed_start_mps", 0.0f },
+                    { "spinback_speed_end_mps", 0.0f }
                 },
 
             PhysicsEnums.SurfaceType.Firm =>
@@ -63,19 +75,30 @@ public partial class Surface : RefCounted
                     { "u_k", 0.30f },
                     { "u_kr", 0.030f },
                     { "nu_g", 0.0010f },
-                    { "theta_c", 0.25f }  // ~14°
+                    { "theta_c", 0.25f },  // ~14°
+                    { "spinback_theta_boost_max", 0.0f },
+                    { "spinback_spin_start_rpm", 0.0f },
+                    { "spinback_spin_end_rpm", 0.0f },
+                    { "spinback_speed_start_mps", 0.0f },
+                    { "spinback_speed_end_mps", 0.0f }
                 },
 
             PhysicsEnums.SurfaceType.Green =>
                 // Putting green:
                 // - Higher impact grip (u_k/theta_c) supports check/spin-back for steep high-spin wedges.
                 // - Lower rolling resistance/vegetation drag keeps post-check motion realistic for short-cut turf.
+                // - Spinback parameters enable check/reversal on steep high-spin impacts.
                 new Dictionary
                 {
                     { "u_k", 0.58f },
                     { "u_kr", 0.028f },
                     { "nu_g", 0.0009f },
-                    { "theta_c", 0.36f }  // ~21°
+                    { "theta_c", 0.36f },  // ~21°
+                    { "spinback_theta_boost_max", 0.12f },       // rad (~6.9°)
+                    { "spinback_spin_start_rpm", 3500.0f },
+                    { "spinback_spin_end_rpm", 5500.0f },
+                    { "spinback_speed_start_mps", 8.0f },
+                    { "spinback_speed_end_mps", 20.0f }
                 },
 
             _ =>
@@ -85,7 +108,12 @@ public partial class Surface : RefCounted
                     { "u_k", 0.50f },
                     { "u_kr", 0.050f },
                     { "nu_g", 0.0017f },
-                    { "theta_c", 0.29f }
+                    { "theta_c", 0.29f },
+                    { "spinback_theta_boost_max", 0.0f },
+                    { "spinback_spin_start_rpm", 0.0f },
+                    { "spinback_spin_end_rpm", 0.0f },
+                    { "spinback_speed_start_mps", 0.0f },
+                    { "spinback_speed_end_mps", 0.0f }
                 }
         };
     }
