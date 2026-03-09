@@ -1,12 +1,15 @@
 # OpenFairway Physics
 
-Realistic golf ball physics engine with aerodynamics, bounce, and surface interactions for Godot 4.5+ C# projects. Usable from both C# and GDScript.
+Realistic golf ball physics engine for Godot 4.5+ C# projects. Usable from both C# and GDScript. The same runtime path powers the in-game `GolfBall` node and the headless `PhysicsAdapter`.
 
 ## Table of Contents
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [Quick Start (GDScript)](#quick-start-gdscript)
-- [API Reference — GDScript Usage](#api-reference--gdscript-usage)
+- [Runtime Architecture](#runtime-architecture)
+- [Game Integration: Ball and Surface Ownership](#game-integration-ball-and-surface-ownership)
+- [Surface Authoring](#surface-authoring)
+- [API Reference - GDScript Usage](#api-reference---gdscript-usage)
   - [BallPhysics](#ballphysics)
   - [PhysicsParams](#physicsparams)
   - [BounceResult](#bounceresult)
@@ -16,73 +19,130 @@ Realistic golf ball physics engine with aerodynamics, bounce, and surface intera
   - [ShotSetup](#shotsetup)
   - [PhysicsAdapter](#physicsadapter)
   - [PhysicsLogger](#physicslogger)
-- [Controlling Log Output](#controlling-log-output)
-- [Full Example — GDScript Physics Loop](#full-example--gdscript-physics-loop)
-- [Full Example — Headless Shot Simulation](#full-example--headless-shot-simulation-gdscript)
+- [C# Runtime Helpers](#c-runtime-helpers)
+- [Physics Flow](#physics-flow)
+- [Bounce and Rollout](#bounce-and-rollout)
+- [Surface Tuning](#surface-tuning)
+- [Diagrams](#diagrams)
 - [Units Convention](#units-convention)
-- [Detailed Physics Documentation](#detailed-physics-documentation)
+- [References](#references)
 - [License](#license)
 
 ## Requirements
 
-- **Godot 4.5+** with **.NET support** (the standard GDScript-only editor build will not work)
+- **Godot 4.5+** with **.NET support**
 - **.NET 8.0 SDK** (or later)
-- The .NET build is required because this addon is written in C#
-- GDScript projects **can** use this addon — Godot's cross-language scripting handles the interop automatically
+- The addon is written in C#, but GDScript projects can consume it through Godot interop
 
 ### Installing .NET 8.0 SDK
 
-**Windows:**
-1. Download the .NET 8.0 SDK installer from https://dotnet.microsoft.com/download/dotnet/8.0
-2. Run the installer and follow the prompts
-3. Verify: open a terminal and run `dotnet --version`
+**Windows**
+1. Download the .NET 8.0 SDK from https://dotnet.microsoft.com/download/dotnet/8.0
+2. Run the installer
+3. Verify with `dotnet --version`
 
-**Linux (Ubuntu/Debian):**
+**Linux (Ubuntu/Debian)**
 ```bash
 sudo apt update
 sudo apt install dotnet-sdk-8.0
 dotnet --version
 ```
 
-**Linux (Fedora):**
+**Linux (Fedora)**
 ```bash
 sudo dnf install dotnet-sdk-8.0
 dotnet --version
 ```
 
-For other distributions, see the [official .NET install guide](https://learn.microsoft.com/dotnet/core/install/linux).
-
 ## Installation
 
-1. Copy the `addons/openfairway/` folder into your project's `addons/` directory.
-2. **Ensure your project has a C# solution.** If your project already has a `.csproj` and `.sln`, skip to step 3. Otherwise, generate them by going to **Project > Tools > C# > Create C# Solution** in the Godot editor. Alternatively, create any temporary C# script (Node > Attach Script > Language: C#) and Godot will generate both files automatically.
-3. Build your project: **Build > Build Project** in the editor or `Alt+B`, or run `dotnet build YourProject.csproj` from the command line. Godot compiles all `.cs` files under `addons/` as part of your project.
-4. Enable the plugin: **Project > Project Settings > Plugins > OpenFairway Physics**.
+1. Copy `addons/openfairway/` into your project's `addons/` directory.
+2. Ensure your project has a C# solution. In Godot, use **Project > Tools > C# > Create C# Solution** if needed.
+3. Build the project in Godot or run `dotnet build YourProject.csproj`.
+4. Enable **OpenFairway Physics** in **Project Settings > Plugins**.
 
 ## Quick Start (GDScript)
 
 ```gdscript
-# Calculate forces on a ball in flight
 var physics = BallPhysics.new()
 var aero = Aerodynamics.new()
+var surface = Surface.new()
 
 var params = PhysicsParams.new()
 params.air_density = aero.get_air_density(0.0, 75.0, PhysicsEnums.Units.IMPERIAL)
 params.air_viscosity = aero.get_dynamic_viscosity(75.0, PhysicsEnums.Units.IMPERIAL)
 params.drag_scale = 1.0
 params.lift_scale = 1.0
+params.surface_type = PhysicsEnums.SurfaceType.Fairway
 params.floor_normal = Vector3.UP
 
-var velocity = Vector3(40.0, 15.0, 0.0)  # m/s
-var omega = Vector3(0.0, 0.0, 300.0)     # rad/s (~2865 RPM)
+var fairway = surface.get_params(PhysicsEnums.SurfaceType.Fairway)
+params.kinetic_friction = fairway["u_k"]
+params.rolling_friction = fairway["u_kr"]
+params.grass_viscosity = fairway["nu_g"]
+params.critical_angle = fairway["theta_c"]
+params.spinback_response_scale = fairway["spinback_response_scale"]
+params.spinback_theta_boost_max = fairway["spinback_theta_boost_max"]
+params.spinback_spin_start_rpm = fairway["spinback_spin_start_rpm"]
+params.spinback_spin_end_rpm = fairway["spinback_spin_end_rpm"]
+params.spinback_speed_start_mps = fairway["spinback_speed_start_mps"]
+params.spinback_speed_end_mps = fairway["spinback_speed_end_mps"]
+
+var velocity = Vector3(40.0, 15.0, 0.0)
+var omega = Vector3(0.0, 0.0, 300.0)
 
 var force = physics.calculate_forces(velocity, omega, false, params)
 print("Force: ", force)
 ```
 
-## API Reference — GDScript Usage
+## Runtime Architecture
 
-Godot automatically converts C# PascalCase to GDScript snake_case. All classes below extend `RefCounted` (or `Resource`) and are created with `.new()`.
+- `BallPhysics` owns force, torque, integration, and bounce math.
+- `Aerodynamics` computes air density, viscosity, drag, and lift coefficients.
+- `PhysicsParamsFactory` is the canonical C# runtime path for combining environment, resolved surface, floor normal, rollout spin, and optional `BallPhysicsProfile`.
+- `SurfacePhysicsCatalog` is the single source of truth for surface tuning.
+- `Surface` is the GDScript-friendly wrapper over the same catalog values.
+- `PhysicsAdapter` reuses the same parameter assembly path for headless regression runs.
+
+![Physics runtime components](assets/images/physics-runtime-components.png)
+
+Source: [`assets/diagrams/physics-runtime-components.puml`](assets/diagrams/physics-runtime-components.puml)
+
+## Game Integration: Ball and Surface Ownership
+
+The runtime split is intentional:
+
+- `GolfBall` owns launch state, collision handling, floor normal, active `SurfaceType`, and calls into `BallPhysics`.
+- `HoleSceneControllerBase` wires the ball, applies the default surface from settings, registers `SurfaceZone`s and surface `GridMap`s, and supplies the `ResolveLieSurface` delegate.
+- `LieSurfaceResolver` owns surface precedence. It resolves in this order: active zone override, registered `GridMap` world-point lookup, collider ancestry `GridMap`, then default surface.
+- `PhysicsParamsFactory` and `SurfacePhysicsCatalog` decide how a surface changes bounce, spinback, and rollout. `GolfBall` should not branch on mesh names or surface-specific rules.
+
+At log level `Info`, first impact prints a compact line like:
+
+```text
+[LandingSurface] surface=Green ... source=gridmap_world_point
+```
+
+That line is the quickest way to confirm the resolved lie surface and the bounce parameters used on landing.
+
+## Surface Authoring
+
+Use one of these two authoring paths:
+
+1. **Base lie surface from `GridMap`**
+   - Name `MeshLibrary` items with the `surface:` prefix.
+   - Supported labels: `surface:fairway`, `surface:fairway_soft`, `surface:rough`, `surface:firm`, `surface:green`.
+   - `LieSurfaceResolver` reads those labels at the ball's contact point.
+2. **Local override from `SurfaceZone`**
+   - Add `res://game/SurfaceZone.cs` to an `Area3D`.
+   - Set its `SurfaceType`.
+   - Use this for patches that should override the base `GridMap` result.
+
+If you build a custom ball/controller flow, keep the same ownership boundary: resolve a `SurfaceType` outside the ball, then pass that surface into the physics parameter path.
+
+## API Reference - GDScript Usage
+
+Godot converts C# PascalCase members to GDScript snake_case. The classes below are available after building the project.
 
 ### BallPhysics
 
@@ -92,55 +152,59 @@ Core force, torque, and bounce calculations.
 var physics = BallPhysics.new()
 ```
 
-**Constants** (read-only exported properties):
+Useful exported constants:
 
-| GDScript property          | Value                | Description                  |
-|----------------------------|----------------------|------------------------------|
-| `physics.ball_mass`        | 0.04593 kg           | Regulation golf ball mass    |
-| `physics.ball_radius`      | 0.02134 m            | Regulation golf ball radius  |
-| `physics.ball_cross_section` | pi * r^2 m^2       | Cross-sectional area         |
-| `physics.ball_moment_of_inertia` | 0.4 * m * r^2 | Moment of inertia            |
-| `physics.spin_decay_tau`   | 3.0 s                | Spin decay time constant     |
-
-**Methods:**
+| GDScript property | Value | Description |
+|---|---:|---|
+| `physics.ball_mass` | `0.04592623` kg | Regulation golf ball mass |
+| `physics.ball_radius` | `0.021335` m | Regulation golf ball radius |
+| `physics.ball_cross_section` | `pi * r^2` | Cross-sectional area |
+| `physics.ball_moment_of_inertia` | `0.4 * m * r^2` | Moment of inertia |
+| `physics.simulation_dt` | `1 / 240.0` s | Internal simulation timestep |
+| `physics.spin_decay_tau` | `5.0` s | Air spin decay time constant |
 
 ```gdscript
-# Total forces acting on the ball (gravity + aero or ground friction)
-# on_ground: true if ball is rolling, false if in flight
 var force: Vector3 = physics.calculate_forces(velocity, omega, on_ground, params)
-
-# Total torques acting on the ball (spin decay in air, friction torque on ground)
 var torque: Vector3 = physics.calculate_torques(velocity, omega, on_ground, params)
-
-# Bounce calculation when ball impacts a surface
-# Returns a BounceResult with new_velocity, new_omega, new_state
 var bounce: BounceResult = physics.calculate_bounce(vel, omega, normal, state, params)
-
-# Coefficient of restitution for a given normal impact speed
 var cor: float = physics.get_coefficient_of_restitution(speed_normal)
 ```
 
 ### PhysicsParams
 
-Physics parameters passed to force/torque/bounce calculations. Extends `Resource`.
+`PhysicsParams` is the runtime resource passed to `BallPhysics`.
 
 ```gdscript
 var params = PhysicsParams.new()
-params.air_density = 1.225          # kg/m^3 (sea level, 15 C)
-params.air_viscosity = 1.81e-05     # kg/(m*s)
-params.drag_scale = 1.0             # Multiplier for drag coefficient tuning
-params.lift_scale = 1.0             # Multiplier for lift coefficient tuning
-params.kinetic_friction = 0.30      # Sliding friction coefficient
-params.rolling_friction = 0.030     # Rolling resistance coefficient
-params.grass_viscosity = 0.001      # Grass drag viscosity
-params.critical_angle = 0.25        # Bounce critical angle (radians)
-params.floor_normal = Vector3.UP    # Ground surface normal
-params.rollout_impact_spin = 0.0    # Spin (RPM) when ball first landed
+params.air_density = 1.225
+params.air_viscosity = 1.81e-05
+params.drag_scale = 1.0
+params.lift_scale = 1.0
+params.kinetic_friction = 0.50
+params.rolling_friction = 0.050
+params.grass_viscosity = 0.0017
+params.critical_angle = 0.29
+params.surface_type = PhysicsEnums.SurfaceType.Fairway
+params.floor_normal = Vector3.UP
+params.rollout_impact_spin = 0.0
+params.spinback_response_scale = 0.78
+params.spinback_theta_boost_max = 0.0
+params.spinback_spin_start_rpm = 0.0
+params.spinback_spin_end_rpm = 0.0
+params.spinback_speed_start_mps = 0.0
+params.spinback_speed_end_mps = 0.0
 ```
+
+Key fields:
+
+- `surface_type` tracks the resolved lie surface used for the step.
+- `floor_normal` should be a unit vector at the ground contact point.
+- `rollout_impact_spin` stores the spin captured at first landing.
+- The `spinback_*` fields enable surface-weighted check and spinback behavior on steep, high-spin impacts.
 
 ### BounceResult
 
-Returned by `calculate_bounce()`. Extends `RefCounted`.
+Returned by `calculate_bounce()`.
 
 ```gdscript
 var result: BounceResult = physics.calculate_bounce(vel, omega, normal, state, params)
@@ -151,308 +215,264 @@ var new_state: PhysicsEnums.BallState = result.new_state
 
 ### Aerodynamics
 
-Air density, viscosity, and drag/lift coefficient calculations.
+Air density, viscosity, and drag/lift helpers.
 
 ```gdscript
 var aero = Aerodynamics.new()
 
-# Air density from altitude and temperature (barometric formula)
-# altitude: feet (Imperial) or meters (Metric)
-# temp: Fahrenheit (Imperial) or Celsius (Metric)
 var density: float = aero.get_air_density(altitude, temp, PhysicsEnums.Units.IMPERIAL)
-
-# Dynamic air viscosity (Sutherland's formula)
 var viscosity: float = aero.get_dynamic_viscosity(temp, PhysicsEnums.Units.IMPERIAL)
-
-# Drag coefficient from Reynolds number
 var cd: float = aero.get_cd(reynolds_number)
-
-# Lift coefficient from Reynolds number and spin ratio (omega * radius / speed)
 var cl: float = aero.get_cl(reynolds_number, spin_ratio)
-
-# Maximum lift coefficient cap (read-only exported property)
-print(aero.cl_max)  # 0.55
+print(aero.cl_max)
 ```
 
 ### Surface
 
-Surface parameter presets for different ground types.
+Compatibility helper for GDScript consumers. Internally it forwards to `SurfacePhysicsCatalog`.
 
 ```gdscript
 var surface = Surface.new()
-var p: Dictionary = surface.get_params(PhysicsEnums.SurfaceType.FAIRWAY)
-
-# Returned dictionary keys:
-# "u_k"     - Kinetic friction coefficient (sliding)
-# "u_kr"    - Rolling friction coefficient
-# "nu_g"    - Grass drag viscosity
-# "theta_c" - Critical bounce angle in radians
+var p: Dictionary = surface.get_params(PhysicsEnums.SurfaceType.Green)
 ```
+
+Returned dictionary keys:
+
+- `u_k`
+- `u_kr`
+- `nu_g`
+- `theta_c`
+- `spinback_response_scale`
+- `spinback_theta_boost_max`
+- `spinback_spin_start_rpm`
+- `spinback_spin_end_rpm`
+- `spinback_speed_start_mps`
+- `spinback_speed_end_mps`
 
 Available surface types:
 
-| GDScript enum                           | Description                          |
-|-----------------------------------------|--------------------------------------|
-| `PhysicsEnums.SurfaceType.FAIRWAY`      | Firm fairway, good conditions        |
-| `PhysicsEnums.SurfaceType.FAIRWAY_SOFT` | Soft/wet fairway, reduced rollout    |
-| `PhysicsEnums.SurfaceType.ROUGH`        | Longer grass, more friction          |
-| `PhysicsEnums.SurfaceType.FIRM`         | Hard ground, less friction           |
+| GDScript enum | Description |
+|---|---|
+| `PhysicsEnums.SurfaceType.Fairway` | Standard fairway baseline |
+| `PhysicsEnums.SurfaceType.FairwaySoft` | Softer fairway with more check and less rollout |
+| `PhysicsEnums.SurfaceType.Rough` | Higher friction and drag |
+| `PhysicsEnums.SurfaceType.Firm` | Lower friction and more forward release |
+| `PhysicsEnums.SurfaceType.Green` | Strongest spinback/check response |
 
 ### PhysicsEnums
 
-The addon ships a GDScript mirror (`physics_enums.gd`) that provides enum access for GDScript consumers. Nested C# enums don't reliably expose to GDScript through Godot's cross-language interop, so this mirror ensures enums are always available. The integer values match the C# definitions so interop works seamlessly.
+The addon ships `physics_enums.gd` so enums are always available in GDScript.
 
 ```gdscript
-# Ball states
-PhysicsEnums.BallState.Rest       # 0 - Ball is stationary
-PhysicsEnums.BallState.Flight     # 1 - Ball is airborne
-PhysicsEnums.BallState.Rollout    # 2 - Ball is rolling after landing
+PhysicsEnums.BallState.Rest
+PhysicsEnums.BallState.Flight
+PhysicsEnums.BallState.Rollout
 
-# Unit systems
-PhysicsEnums.Units.Metric         # 0 - Meters, Celsius
-PhysicsEnums.Units.Imperial       # 1 - Feet/yards, Fahrenheit
+PhysicsEnums.Units.Metric
+PhysicsEnums.Units.Imperial
 
-# Surface types
-PhysicsEnums.SurfaceType.Fairway      # 0
-PhysicsEnums.SurfaceType.FairwaySoft  # 1
-PhysicsEnums.SurfaceType.Rough        # 2
-PhysicsEnums.SurfaceType.Firm         # 3
+PhysicsEnums.SurfaceType.Fairway
+PhysicsEnums.SurfaceType.FairwaySoft
+PhysicsEnums.SurfaceType.Rough
+PhysicsEnums.SurfaceType.Firm
+PhysicsEnums.SurfaceType.Green
 ```
-
-> **Note:** The C# physics classes (`BallPhysics`, `Aerodynamics`, etc.) use `[GlobalClass]` and do **not** need GDScript mirrors — Godot registers them automatically after building. Only the enums require a mirror.
 
 ### ShotSetup
 
-Shared utilities for parsing launch monitor spin data and converting shot parameters to physics vectors. Used internally by `PhysicsAdapter` and intended for game-layer consumers (e.g., a `CharacterBody3D` ball node).
+Shared launch parsing and vector building utilities.
 
 ```gdscript
 var setup = ShotSetup.new()
 
-# Parse spin data from various launch monitor formats
-# Accepts any combination of BackSpin/SideSpin and TotalSpin/SpinAxis
-# Returns { "backspin", "sidespin", "total", "axis" } (RPM / degrees)
 var spin: Dictionary = setup.parse_spin({
     "TotalSpin": 6500.0,
     "SpinAxis": 15.0
 })
-print(spin["backspin"])   # 6278.1 RPM (computed)
-print(spin["sidespin"])   # 1682.3 RPM (computed)
-print(spin["total"])      # 6500.0 RPM
-print(spin["axis"])       # 15.0 degrees
 
-# Build physics vectors from launch monitor data (mph, degrees, RPM)
-# Returns { "velocity": Vector3, "omega": Vector3, "shot_direction": Vector3 }
 var launch: Dictionary = setup.build_launch_vectors(
-    150.0,   # speed_mph
-    12.5,    # vla_deg  (vertical launch angle)
-    -2.0,    # hla_deg  (horizontal launch angle)
-    2800.0,  # total_spin_rpm
-    5.0      # spin_axis_deg
+    150.0,
+    12.5,
+    -2.0,
+    2800.0,
+    5.0
 )
-var velocity: Vector3 = launch["velocity"]          # m/s
-var omega: Vector3 = launch["omega"]                # rad/s
-var shot_direction: Vector3 = launch["shot_direction"]  # normalized horizontal
 ```
 
 ### PhysicsAdapter
 
-Headless shot simulator — runs a full shot from launch data and returns carry/total distances.
+Headless simulation helper. It uses the same `BallPhysics` + `PhysicsParamsFactory` path as the runtime ball.
 
 ```gdscript
 var adapter = PhysicsAdapter.new()
 
-# simulate_shot_from_json takes a Dictionary with a "BallData" sub-dictionary
-# Returns { "carry_yd": float, "total_yd": float }
-var result: Dictionary = adapter.simulate_shot_from_json(shot_dict)
+var result_default: Dictionary = adapter.simulate_shot_from_json(shot_dict)
+var result_green: Dictionary = adapter.simulate_shot_from_json(
+    shot_dict,
+    PhysicsEnums.SurfaceType.Green,
+    Vector3.UP
+)
 ```
+
+Returned keys include:
+
+- `carry_yd`
+- `total_yd`
+- `apex_ft`
+- `hang_time_s`
+- `surface`
+- `first_impact_spinback`
+- `first_impact_tangent_in_mps`
+- `first_impact_tangent_out_mps`
 
 ### PhysicsLogger
 
-Controls how much the addon prints to the Godot console. The default is `Error` — only genuine errors are emitted. No calls to `GD.Print` or `GD.PrintErr` exist anywhere else in the addon; all output goes through this class.
+Controls physics console output for both runtime and headless paths.
 
-**Log levels:**
-
-| Value | C# name   | GDScript int | Output                                                     |
-|-------|-----------|--------------|------------------------------------------------------------|
-| 0     | `Off`     | `0`          | Nothing                                                    |
-| 1     | `Error`   | `1`          | Errors only — `GD.PrintErr` / `GD.PushError` (default)    |
-| 2     | `Info`    | `2`          | Shot launch summary, first-impact details, spin warnings   |
-| 3     | `Verbose` | `3`          | Per-frame rolling/slipping state, bounce details, COR      |
-
-**GDScript:**
+| Value | C# name | GDScript int | Output |
+|---|---|---:|---|
+| `0` | `Off` | `0` | No output |
+| `1` | `Error` | `1` | Errors only |
+| `2` | `Info` | `2` | Launch summaries, first impact, `[LandingSurface]` diagnostics |
+| `3` | `Verbose` | `3` | Per-step bounce and rollout detail |
 
 ```gdscript
-# Set once, early in your scene tree (e.g. _ready() of your main scene or autoload)
-PhysicsLogger.set_level(2)   # Info
-PhysicsLogger.set_level(3)   # Verbose
-PhysicsLogger.set_level(0)   # Silent
-PhysicsLogger.set_level(1)   # Errors only (default)
-
+PhysicsLogger.set_level(2)
+PhysicsLogger.set_level(3)
 var current: int = PhysicsLogger.get_level()
 ```
 
-**C#:**
+## C# Runtime Helpers
+
+These are the runtime helpers the game layer uses directly:
+
+- `PhysicsParamsFactory` builds `ResolvedPhysicsParams` from environment, surface, floor normal, rollout spin, and optional ball profile.
+- `ResolvedPhysicsParams` is a plain C# object you can inspect in tests before converting to `PhysicsParams`.
+- `BallPhysicsProfile` is the seam for ball-specific modifiers. Defaults are neutral so behavior stays unchanged unless you opt in.
 
 ```csharp
-PhysicsLogger.LogLevel = PhysicsLogger.Level.Info;
-PhysicsLogger.LogLevel = PhysicsLogger.Level.Verbose;
-PhysicsLogger.LogLevel = PhysicsLogger.Level.Off;
+var factory = new PhysicsParamsFactory();
+ResolvedPhysicsParams resolved = factory.Create(
+    airDensity,
+    airViscosity,
+    dragScale,
+    liftScale,
+    PhysicsEnums.SurfaceType.Green,
+    Vector3.Up,
+    rolloutImpactSpin: 5024.0f,
+    ballProfile: new BallPhysicsProfile()
+);
 
-PhysicsLogger.Level current = PhysicsLogger.LogLevel;
+PhysicsParams parameters = resolved.ToPhysicsParams();
 ```
 
-The log level is a process-global static field, so a single call covers all physics classes. A natural place to set it is your project's autoload `_Ready()`:
+## Physics Flow
 
-```gdscript
-# autoload/GameSettings.gd
-func _ready():
-    PhysicsLogger.set_level(2)  # show shot summaries in all builds
+The current flow is:
+
+1. Parse launch monitor data with `ShotSetup`.
+2. Resolve environment with `Aerodynamics`.
+3. Resolve lie surface outside the ball.
+4. Build runtime parameters through `PhysicsParamsFactory`.
+5. Integrate forces and torques in `BallPhysics`.
+6. On first impact, use the resolved surface to drive bounce, check, spinback, and rollout.
+
+Core calculations:
+
+- Gravity: `g = (0, -9.81 * mass, 0)`
+- Drag: `Fd = -0.5 * Cd * rho * A * v * |v|`
+- Magnus: `Fm = 0.5 * Cl * rho * A * (omega x v) * |v| / |omega|`
+- Grass drag: `Fgrass = -6 * pi * R * nu_g * v`
+- Contact velocity: `v_contact = v + omega x (-n * R)`
+
+`BallPhysics` uses `PhysicsParams.FloorNormal` for ground calculations, so slope-sensitive ground response and surface-sensitive rollout share the same parameter object.
+
+## Bounce and Rollout
+
+`BallPhysics.CalculateBounce()` decomposes the impact into normal and tangential components, then applies retention, COR, and spin updates.
+
+- Low-energy impacts keep the simple tangential retention path.
+- Steep, high-energy impacts can enter the Penner-style tangential reversal branch.
+- `CriticalAngle` controls when a surface crosses from shallow to steep behavior.
+- `SpinbackResponseScale` weights the reverse tangential term by surface.
+- `SpinbackThetaBoostMax` adds extra steep-impact help when the surface, spin window, and speed window allow it.
+- `RolloutImpactSpin` carries the first-landing spin into the rollout friction model.
+
+Green behavior is no longer hard-coded in `GolfBall`. If a green reacts differently, it is because the resolved `SurfaceType` maps to different physics parameters.
+
+![Landing surface and bounce sequence](assets/images/landing-surface-sequence.png)
+
+Source: [`assets/diagrams/landing-surface-sequence.puml`](assets/diagrams/landing-surface-sequence.puml)
+
+## Surface Tuning
+
+`SurfacePhysicsCatalog` is the single source of truth for the built-in surfaces:
+
+| Surface | `u_k` | `u_kr` | `theta_c` rad | `spin_scale` | `theta_boost` rad |
+|---|---:|---:|---:|---:|---:|
+| Fairway | 0.50 | 0.050 | 0.29 | 0.78 | 0.00 |
+| FairwaySoft | 0.56 | 0.070 | 0.32 | 0.92 | 0.00 |
+| Rough | 0.62 | 0.095 | 0.35 | 0.70 | 0.00 |
+| Firm | 0.30 | 0.030 | 0.25 | 0.60 | 0.00 |
+| Green | 0.58 | 0.028 | 0.36 | 1.12 | 0.12 |
+
+Green also enables a spinback ramp:
+
+- `spinback_spin_start_rpm = 3500`
+- `spinback_spin_end_rpm = 5500`
+- `spinback_speed_start_mps = 8`
+- `spinback_speed_end_mps = 20`
+
+Tune these files when behavior changes:
+
+- `addons/openfairway/physics/SurfacePhysicsCatalog.cs` for per-surface values
+- `addons/openfairway/physics/BallPhysics.cs` for shared formulas and physical constants
+- `addons/openfairway/physics/BallPhysicsProfile.cs` for ball-specific modifiers
+
+## Diagrams
+
+- [`assets/images/physics-runtime-components.png`](assets/images/physics-runtime-components.png)
+- [`assets/images/landing-surface-sequence.png`](assets/images/landing-surface-sequence.png)
+- [`assets/diagrams/physics-runtime-components.puml`](assets/diagrams/physics-runtime-components.puml)
+- [`assets/diagrams/landing-surface-sequence.puml`](assets/diagrams/landing-surface-sequence.puml)
+
+Render with:
+
+```bash
+cd addons/openfairway/assets/diagrams
+java -Djava.awt.headless=true -jar /usr/share/plantuml/plantuml.jar -tpng -o ../images physics-runtime-components.puml landing-surface-sequence.puml
 ```
-
-Or conditionally in C# for debug-only verbose output:
-
-```csharp
-// In your autoload or main scene _Ready()
-#if DEBUG
-PhysicsLogger.LogLevel = PhysicsLogger.Level.Info;
-#endif
-```
-
-## Controlling Log Output
-
-By default the addon is silent except for errors. To see shot-level summaries (launch params, first-impact position, spin warnings) set level 2; for per-frame detail set level 3:
-
-```gdscript
-PhysicsLogger.set_level(2)   # recommended for development
-PhysicsLogger.set_level(3)   # maximum detail (high volume per shot)
-PhysicsLogger.set_level(0)   # production — suppress everything including errors
-```
-
-## Full Example — GDScript Physics Loop
-
-A complete per-frame physics integration equivalent to what the game's `GolfBall` node does internally. Attach this to a `CharacterBody3D` with a collision shape.
-
-```gdscript
-extends CharacterBody3D
-
-var physics := BallPhysics.new()
-var aero := Aerodynamics.new()
-var surface_helper := Surface.new()
-
-var omega := Vector3.ZERO          # Angular velocity (rad/s)
-var state: PhysicsEnums.BallState = PhysicsEnums.BallState.REST
-var on_ground := false
-var floor_normal := Vector3.UP
-var rollout_impact_spin_rpm := 0.0
-
-func _ready():
-    pass
-
-func hit_ball(speed_mph: float, vla_deg: float, hla_deg: float,
-              total_spin_rpm: float, spin_axis_deg: float):
-    var speed_mps := speed_mph * 0.44704
-
-    velocity = Vector3(speed_mps, 0, 0) \
-        .rotated(Vector3.FORWARD, deg_to_rad(-vla_deg)) \
-        .rotated(Vector3.UP, deg_to_rad(-hla_deg))
-
-    omega = Vector3(0.0, 0.0, total_spin_rpm * 0.10472) \
-        .rotated(Vector3.RIGHT, deg_to_rad(spin_axis_deg))
-
-    state = PhysicsEnums.BallState.FLIGHT
-    on_ground = false
-    rollout_impact_spin_rpm = 0.0
-
-func _physics_process(delta: float):
-    if state == PhysicsEnums.BallState.REST:
-        return
-
-    # Build physics params
-    var params := PhysicsParams.new()
-    params.air_density = aero.get_air_density(0.0, 75.0, PhysicsEnums.Units.IMPERIAL)
-    params.air_viscosity = aero.get_dynamic_viscosity(75.0, PhysicsEnums.Units.IMPERIAL)
-    params.drag_scale = 1.0
-    params.lift_scale = 1.0
-    params.floor_normal = floor_normal
-    params.rollout_impact_spin = rollout_impact_spin_rpm
-
-    # Load surface params
-    var sp := surface_helper.get_params(PhysicsEnums.SurfaceType.FAIRWAY)
-    params.kinetic_friction = sp["u_k"]
-    params.rolling_friction = sp["u_kr"]
-    params.grass_viscosity = sp["nu_g"]
-    params.critical_angle = sp["theta_c"]
-
-    # Calculate forces and torques
-    var force := physics.calculate_forces(velocity, omega, on_ground, params)
-    var torque := physics.calculate_torques(velocity, omega, on_ground, params)
-
-    # Integrate
-    velocity += (force / physics.ball_mass) * delta
-    omega += (torque / physics.ball_moment_of_inertia) * delta
-
-    # Move and handle collision
-    var collision := move_and_collide(velocity * delta)
-    if collision:
-        var normal := collision.get_normal()
-        if normal.y > 0.7:  # Ground hit
-            if state == PhysicsEnums.BallState.FLIGHT:
-                rollout_impact_spin_rpm = omega.length() / 0.10472
-            var bounce := physics.calculate_bounce(velocity, omega, normal, state, params)
-            velocity = bounce.new_velocity
-            omega = bounce.new_omega
-            state = bounce.new_state
-            on_ground = true
-            floor_normal = normal
-
-    # Check for rest
-    if velocity.length() < 0.1 and state != PhysicsEnums.BallState.REST:
-        state = PhysicsEnums.BallState.REST
-        velocity = Vector3.ZERO
-        omega = Vector3.ZERO
-```
-
-## Full Example — Headless Shot Simulation (GDScript)
-
-Use `PhysicsAdapter` to simulate a complete shot without any scene tree or physics nodes:
-
-```gdscript
-var adapter = PhysicsAdapter.new()
-
-var shot = {
-    "BallData": {
-        "Speed": 150.0,       # mph
-        "VLA": 12.5,          # vertical launch angle (degrees)
-        "HLA": -2.0,          # horizontal launch angle (degrees)
-        "TotalSpin": 2800.0,  # RPM
-        "SpinAxis": 5.0       # degrees (0 = pure backspin)
-    }
-}
-
-var result = adapter.simulate_shot_from_json(shot)
-print("Carry: %.1f yds" % result["carry_yd"])
-print("Total: %.1f yds" % result["total_yd"])
-```
-
-The adapter uses default conditions (75 F, sea level, fairway surface) and runs the full physics loop at 240 Hz internally.
 
 ## Units Convention
 
-| Context            | Units                                      |
-|--------------------|--------------------------------------------|
-| Physics engine     | SI: meters, m/s, rad/s                     |
-| JSON/TCP input     | Imperial: mph (speed), degrees (angles), RPM (spin) |
-| Display conversion | Consumer's responsibility                  |
+| Context | Units |
+|---|---|
+| Physics engine | SI: meters, m/s, rad/s |
+| JSON or TCP input | Imperial: mph, degrees, RPM |
+| Display conversion | Consumer responsibility |
 
 Conversion constants:
-- **Speed**: 1 mph = 0.44704 m/s
-- **Spin**: 1 RPM = 0.10472 rad/s
-- **Distance**: 1 meter = 1.09361 yards
 
-## Detailed Physics Documentation
+- `1 mph = 0.44704 m/s`
+- `1 RPM = 0.10472 rad/s`
+- `1 meter = 1.09361 yards`
 
-See [`physics/README.md`](physics/README.md) for detailed force/torque formulas, the bounce model, aerodynamic coefficient curves, and tuning guidance.
+## References
+
+### Primary Sources
+
+1. **A.R. Penner** - "The Physics of Golf"  
+   https://raypenner.com/golf-physics.pdf
+2. **P.W. Bearman and J.K. Harvey** - golf ball aerodynamics data
+3. **NASA Glenn Research Center** - Sutherland's Law  
+   https://www.grc.nasa.gov/www/BGH/viscosity.html
+4. **Barometric Formula** reference  
+   https://en.wikipedia.org/wiki/Barometric_formula
+
+### Calibration References
+
+5. Launch monitor, range, and simulator comparison runs used for tuning carry, apex, bounce, and rollout.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT - see [LICENSE](LICENSE).

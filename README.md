@@ -316,8 +316,7 @@ addons/openfairway/
 
 ## Documentation
 
-- **[Addon README](addons/openfairway/README.md)** — full GDScript API reference, installation details, complete physics loop and headless simulation examples
-- **[Physics README](addons/openfairway/physics/README.md)** — force/torque formulas, bounce model, aerodynamic coefficients, unit conversions, tuning guide, and references
+- **[Addon README](addons/openfairway/README.md)** — installation, API usage, runtime architecture, surface integration, formulas, tuning guide, and rendered physics diagrams
 
 ## Units Convention
 

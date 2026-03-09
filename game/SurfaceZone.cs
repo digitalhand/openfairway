@@ -5,6 +5,14 @@ using Godot;
 /// </summary>
 public partial class SurfaceZone : Area3D
 {
+	public const string GroupName = "surface_zone";
+
+	[Signal]
+	public delegate void BallEnteredSurfaceZoneEventHandler(GolfBall ball, int surfaceTypeValue);
+
+	[Signal]
+	public delegate void BallExitedSurfaceZoneEventHandler(GolfBall ball, int surfaceTypeValue);
+
 	[Export]
 	public PhysicsEnums.SurfaceType SurfaceType { get; set; } = PhysicsEnums.SurfaceType.Fairway;
 
@@ -16,6 +24,7 @@ public partial class SurfaceZone : Area3D
 
 	public override void _Ready()
 	{
+		AddToGroup(GroupName);
 		EnsureDebugVisual();
 		BodyEntered += OnBodyEntered;
 		BodyExited += OnBodyExited;
@@ -31,7 +40,7 @@ public partial class SurfaceZone : Area3D
 	{
 		if (body is GolfBall ball)
 		{
-			ball.EnterSurfaceZone(SurfaceType);
+			EmitSignal(SignalName.BallEnteredSurfaceZone, ball, (int)SurfaceType);
 			if (LogTransitions)
 				PhysicsLogger.INFO(
 					$"[SurfaceZone] entered '{Name}' zone={SurfaceType} active={ball.SurfaceType} " +
@@ -44,7 +53,7 @@ public partial class SurfaceZone : Area3D
 	{
 		if (body is GolfBall ball)
 		{
-			ball.ExitSurfaceZone(SurfaceType);
+			EmitSignal(SignalName.BallExitedSurfaceZone, ball, (int)SurfaceType);
 			if (LogTransitions)
 				PhysicsLogger.INFO(
 					$"[SurfaceZone] exited '{Name}' zone={SurfaceType} active={ball.SurfaceType} " +

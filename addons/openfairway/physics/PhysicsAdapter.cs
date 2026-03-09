@@ -1,4 +1,3 @@
-using System;
 using Godot;
 using Godot.Collections;
 
@@ -18,8 +17,9 @@ public partial class PhysicsAdapter : RefCounted
 
     private readonly BallPhysics _physics = new();
     private readonly Aerodynamics _aero = new();
-    private readonly Surface _surface = new();
+    private readonly PhysicsParamsFactory _physicsParamsFactory = new();
     private readonly ShotSetup _shotSetup = new();
+    private readonly BallPhysicsProfile _ballProfile = new();
 
     /// <summary>
     /// Simulate a shot from JSON data and return carry/total distances
@@ -182,27 +182,18 @@ public partial class PhysicsAdapter : RefCounted
 
     private PhysicsParams CreateParams(Vector3 floorNormal, PhysicsEnums.SurfaceType surface)
     {
-        var surfaceParams = _surface.GetParams(surface);
         float airDensity = _aero.GetAirDensity(DEFAULT_ALT_FT, DEFAULT_TEMP_F, PhysicsEnums.Units.Imperial);
         float airViscosity = _aero.GetDynamicViscosity(DEFAULT_TEMP_F, PhysicsEnums.Units.Imperial);
 
-        return new PhysicsParams(
+        return _physicsParamsFactory.Create(
             airDensity,
             airViscosity,
             1.0f,
             1.0f,
-            (float)surfaceParams["u_k"],
-            (float)surfaceParams["u_kr"],
-            (float)surfaceParams["nu_g"],
-            (float)surfaceParams["theta_c"],
             surface,
             floorNormal,
             rolloutImpactSpin: 0.0f,
-            spinbackThetaBoostMax: (float)surfaceParams["spinback_theta_boost_max"],
-            spinbackSpinStartRpm: (float)surfaceParams["spinback_spin_start_rpm"],
-            spinbackSpinEndRpm: (float)surfaceParams["spinback_spin_end_rpm"],
-            spinbackSpeedStartMps: (float)surfaceParams["spinback_speed_start_mps"],
-            spinbackSpeedEndMps: (float)surfaceParams["spinback_speed_end_mps"]
-        );
+            ballProfile: _ballProfile
+        ).ToPhysicsParams();
     }
 }

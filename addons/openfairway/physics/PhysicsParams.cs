@@ -22,6 +22,7 @@ public partial class PhysicsParams : Resource
     /// </summary>
     [Export] public Vector3 FloorNormal { get; set; }
     [Export] public float RolloutImpactSpin { get; set; }  // Spin RPM when ball first landed for rollout
+    [Export] public float SpinbackResponseScale { get; set; } = 1.0f;
 
     // Spinback parameters — non-zero values enable check/spin-back behavior on steep high-spin impacts.
     [Export] public float SpinbackThetaBoostMax { get; set; }
@@ -44,6 +45,7 @@ public partial class PhysicsParams : Resource
         PhysicsEnums.SurfaceType surfaceType,
         Vector3 floorNormal,
         float rolloutImpactSpin = 0.0f,
+        float spinbackResponseScale = 1.0f,
         float spinbackThetaBoostMax = 0.0f,
         float spinbackSpinStartRpm = 0.0f,
         float spinbackSpinEndRpm = 0.0f,
@@ -61,6 +63,7 @@ public partial class PhysicsParams : Resource
         SurfaceType = surfaceType;
         FloorNormal = floorNormal;
         RolloutImpactSpin = rolloutImpactSpin;
+        SpinbackResponseScale = spinbackResponseScale;
         SpinbackThetaBoostMax = spinbackThetaBoostMax;
         SpinbackSpinStartRpm = spinbackSpinStartRpm;
         SpinbackSpinEndRpm = spinbackSpinEndRpm;

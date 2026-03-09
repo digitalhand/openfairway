@@ -473,7 +473,7 @@ public partial class BallPhysics : RefCounted
             // For low-energy impacts (chip shots), use simple retention even if angle is steep
             // For shallow-angle impacts (driver shots), use simple retention
             float impactSpeed = vel.Length();
-            bool hasSpinbackSurface = parameters.SpinbackThetaBoostMax > 0.0f;
+            bool hasSpinbackSurface = parameters.SpinbackThetaBoostMax > 0.0f || parameters.SpinbackResponseScale > 1.0f;
             float effectiveCriticalAngle = GetEffectiveCriticalAngle(parameters, currentSpinRpm, impactSpeed, currentState);
             float impactAngleDeg = Mathf.RadToDeg(impactAngle);
             float criticalAngleDeg = Mathf.RadToDeg(effectiveCriticalAngle);
@@ -507,10 +507,12 @@ public partial class BallPhysics : RefCounted
             {
                 // Penner tangential model for steep impacts:
                 // backspin term can reverse tangential velocity (spin-back) when large enough.
+                // Surface response scales how strongly a lie converts spin into reverse tangential motion.
+                float spinbackTerm = 2.0f * RADIUS * omegaTangentMagnitude * Mathf.Max(parameters.SpinbackResponseScale, 0.0f) / 7.0f;
                 newTangentSpeed = tangentialRetention * vel.Length() * Mathf.Sin(impactAngle - effectiveCriticalAngle) -
-                    2.0f * RADIUS * omegaTangentMagnitude / 7.0f;
+                    spinbackTerm;
                 PhysicsLogger.Verbose($"  Bounce: Penner model ({parameters.SurfaceType}) speed={impactSpeed:F2} m/s angle={impactAngleDeg:F2}° crit={criticalAngleDeg:F2}°");
-                PhysicsLogger.Verbose($"    speedTangent={speedTangent:F2} m/s, newTangentSpeed={newTangentSpeed:F2} m/s");
+                PhysicsLogger.Verbose($"    speedTangent={speedTangent:F2} m/s, spinbackScale={parameters.SpinbackResponseScale:F2}, newTangentSpeed={newTangentSpeed:F2} m/s");
             }
         }
         else

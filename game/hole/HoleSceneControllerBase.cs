@@ -12,6 +12,8 @@ public abstract partial class HoleSceneControllerBase : Node3D
 	private static readonly Vector3 BALL_START_POSITION = GolfBall.START_POSITION;
 
 	private const float CLICK_RAY_DISTANCE = 5000.0f;
+	private const float LIE_SURFACE_RAYCAST_UP = 0.05f;
+	private const float LIE_SURFACE_RAYCAST_DOWN = BallPhysics.RADIUS + 0.08f;
 	private const float ROUND_END_SCORE_DURATION_SECONDS = 4.0f;
 	private const double TARGET_HUD_REFRESH_INTERVAL_SECONDS = 0.10;
 	private const float TARGET_HUD_MIN_MOVE_METERS = 0.15f;
@@ -67,6 +69,9 @@ public abstract partial class HoleSceneControllerBase : Node3D
 	private ShotMarkerController _shotMarkerController = new();
 	private bool _didLogMissingFlagPole = false;
 	private readonly System.Collections.Generic.List<CourseGoalZone> _goalZones = new();
+	private readonly System.Collections.Generic.List<SurfaceZone> _surfaceZones = new();
+	private readonly System.Collections.Generic.List<GridMap> _surfaceGridMaps = new();
+	private readonly LieSurfaceResolver _lieSurfaceResolver = new();
 
 	private readonly ShotDisplaySession _displaySession = new();
 	private readonly HoleRoundState _holeRoundState = new();
@@ -217,6 +222,8 @@ public abstract partial class HoleSceneControllerBase : Node3D
 		_appSettings = globalSettings.AppSettings;
 		_gameSettings.CameraFollowMode.SettingChanged += OnCameraFollowChanged;
 		_gameSettings.SurfaceType.SettingChanged += OnSurfaceChanged;
+		_ball.ResolveLieSurface = ResolveLieSurfaceAtContact;
+		_ball.DescribeLieSurfaceResolution = () => _lieSurfaceResolver.DescribeLastResolution();
 		_cameraOrbitDistanceSetting = _appSettings?.CameraOrbitDistance;
 		_cameraFollowDelaySetting = _appSettings?.CameraFollowDelaySeconds;
 		if (_cameraOrbitDistanceSetting != null)
@@ -245,6 +252,7 @@ public abstract partial class HoleSceneControllerBase : Node3D
 
 		_startupStage = StartupStage.Deferred;
 		ConnectGoalZones();
+		ConnectSurfaceZones();
 		InitializeGoalCompletionFlow();
 		InitializeShotMarkerController();
 		_shotMarkerController.OnRoundReset();
@@ -287,6 +295,8 @@ public abstract partial class HoleSceneControllerBase : Node3D
 		{
 			_ball.BallAtRest -= OnGolfBallRest;
 			_ball.BallLanded -= OnGolfBallLanded;
+			_ball.ResolveLieSurface = null;
+			_ball.DescribeLieSurfaceResolution = null;
 		}
 		if (_gameplayUi != null)
 			_gameplayUi.HitShot -= OnGameplayUiHitShot;
@@ -311,6 +321,8 @@ public abstract partial class HoleSceneControllerBase : Node3D
 		_goalCompletionFlow?.Cancel();
 		_shotCameraController.CancelTransientTweens();
 		_goalZones.Clear();
+		DisconnectSurfaceZones();
+		DisconnectSurfaceGridMaps();
 		_deferredScatterNodes.Clear();
 	}
 
@@ -354,6 +366,7 @@ public abstract partial class HoleSceneControllerBase : Node3D
 		ResetRoundView();
 		SetStrokeCount(0);
 		ClearRoundProgress();
+		ResetLieSurfaceAfterTeleport();
 		CallDeferred(nameof(SetCameraToStartImmediate));
 		QueueFlagMarkerResetToTarget();
 	}
@@ -440,6 +453,7 @@ public abstract partial class HoleSceneControllerBase : Node3D
 				_displaySession.Reset();
 				_gameplayUi.SetData(_displaySession.Current.ToDictionary());
 				_shotTracker.ResetBall();
+				ResetLieSurfaceAfterTeleport();
 				CallDeferred(nameof(SetCameraToStartImmediate));
 			}
 		}
@@ -648,6 +662,7 @@ public abstract partial class HoleSceneControllerBase : Node3D
 
 	private void ResetBallToStart()
 	{
+		_lieSurfaceResolver.ClearZones();
 		_ball.Position = BALL_START_POSITION;
 		_ball.SnapToGround();
 		_ball.Velocity = Vector3.Zero;
@@ -666,6 +681,81 @@ public abstract partial class HoleSceneControllerBase : Node3D
 
 			_goalZones.Add(goalZone);
 		}
+	}
+
+	private void ConnectSurfaceZones()
+	{
+		DisconnectSurfaceZones();
+		ConnectSurfaceGridMaps();
+
+		foreach (Node node in GetTree().GetNodesInGroup(SurfaceZone.GroupName))
+		{
+			if (node is not SurfaceZone surfaceZone)
+				continue;
+
+			_surfaceZones.Add(surfaceZone);
+			surfaceZone.BallEnteredSurfaceZone += OnBallEnteredSurfaceZone;
+			surfaceZone.BallExitedSurfaceZone += OnBallExitedSurfaceZone;
+		}
+	}
+
+	private void DisconnectSurfaceZones()
+	{
+		foreach (var surfaceZone in _surfaceZones)
+		{
+			if (surfaceZone == null)
+				continue;
+
+			surfaceZone.BallEnteredSurfaceZone -= OnBallEnteredSurfaceZone;
+			surfaceZone.BallExitedSurfaceZone -= OnBallExitedSurfaceZone;
+		}
+
+		_surfaceZones.Clear();
+	}
+
+	private void ConnectSurfaceGridMaps()
+	{
+		DisconnectSurfaceGridMaps();
+		Node root = GetTree().CurrentScene ?? this;
+		CollectSurfaceGridMaps(root);
+
+		string gridMapNames = _surfaceGridMaps.Count == 0
+			? "none"
+			: string.Join(", ", _surfaceGridMaps.ConvertAll(gridMap => gridMap.Name.ToString()));
+		PhysicsLogger.Info($"[SurfaceGridMaps] registered={_surfaceGridMaps.Count} names={gridMapNames}");
+	}
+
+	private void DisconnectSurfaceGridMaps()
+	{
+		_surfaceGridMaps.Clear();
+		_lieSurfaceResolver.ClearGridMaps();
+	}
+
+	private void CollectSurfaceGridMaps(Node node)
+	{
+		if (node is GridMap gridMap && _lieSurfaceResolver.RegisterGridMap(gridMap))
+			_surfaceGridMaps.Add(gridMap);
+
+		foreach (Node child in node.GetChildren())
+			CollectSurfaceGridMaps(child);
+	}
+
+	private void OnBallEnteredSurfaceZone(GolfBall ball, int surfaceTypeValue)
+	{
+		if (ball != _ball)
+			return;
+
+		_lieSurfaceResolver.EnterZone((PhysicsEnums.SurfaceType)surfaceTypeValue);
+		RefreshBallLieSurfaceAtCurrentPosition();
+	}
+
+	private void OnBallExitedSurfaceZone(GolfBall ball, int surfaceTypeValue)
+	{
+		if (ball != _ball)
+			return;
+
+		_lieSurfaceResolver.ExitZone((PhysicsEnums.SurfaceType)surfaceTypeValue);
+		RefreshBallLieSurfaceAtCurrentPosition();
 	}
 
 	private void InitializeGoalCompletionFlow()
@@ -704,6 +794,7 @@ public abstract partial class HoleSceneControllerBase : Node3D
 		SetStrokeCount(0);
 		ClearRoundProgress();
 		_shotTracker.ResetBall();
+		ResetLieSurfaceAfterTeleport();
 		CallDeferred(nameof(SetCameraToStartImmediate));
 		QueueFlagMarkerResetToTarget();
 		OnHoleRoundCompleted();
@@ -825,11 +916,67 @@ public abstract partial class HoleSceneControllerBase : Node3D
 
 	private void ApplySurfaceToBall()
 	{
-		if (_shotTracker != null && _shotTracker.HasNode("Ball"))
-		{
-			var surfaceType = (PhysicsEnums.SurfaceType)(int)_gameSettings.SurfaceType.Value;
-			_ball.SetSurface(surfaceType);
-		}
+		if (_ball == null || _gameSettings == null)
+			return;
+
+		_lieSurfaceResolver.SetDefaultSurface((PhysicsEnums.SurfaceType)(int)_gameSettings.SurfaceType.Value);
+		RefreshBallLieSurfaceAtCurrentPosition();
+	}
+
+	private PhysicsEnums.SurfaceType ResolveLieSurfaceAtContact(Node collider, Vector3 worldPoint)
+	{
+		return _lieSurfaceResolver.Resolve(collider, worldPoint);
+	}
+
+	private void RefreshBallLieSurfaceAtCurrentPosition()
+	{
+		if (_ball == null)
+			return;
+
+		_ball.SetLieSurface(ResolveBallLieSurfaceAtCurrentPosition());
+	}
+
+	private PhysicsEnums.SurfaceType ResolveBallLieSurfaceAtCurrentPosition()
+	{
+		if (TryGetBallGroundContact(out Node collider, out Vector3 worldPoint))
+			return ResolveLieSurfaceAtContact(collider, worldPoint);
+
+		return _lieSurfaceResolver.Resolve(null, _ball != null ? _ball.GlobalPosition : Vector3.Zero);
+	}
+
+	private bool TryGetBallGroundContact(out Node collider, out Vector3 worldPoint)
+	{
+		collider = null;
+		worldPoint = _ball != null ? _ball.GlobalPosition : Vector3.Zero;
+		if (_ball == null)
+			return false;
+
+		World3D world = _ball.GetWorld3D();
+		if (world == null)
+			return false;
+
+		Vector3 rayStart = _ball.GlobalPosition + Vector3.Up * LIE_SURFACE_RAYCAST_UP;
+		Vector3 rayEnd = _ball.GlobalPosition + Vector3.Down * LIE_SURFACE_RAYCAST_DOWN;
+		var query = PhysicsRayQueryParameters3D.Create(rayStart, rayEnd);
+		query.CollideWithAreas = false;
+		query.CollideWithBodies = true;
+		query.Exclude = new Array<Rid> { _ball.GetRid() };
+
+		var hit = world.DirectSpaceState.IntersectRay(query);
+		if (hit.Count == 0)
+			return false;
+
+		worldPoint = (Vector3)hit["position"];
+		collider = hit.ContainsKey("collider") && hit["collider"].Obj is Node node
+			? node
+			: null;
+		return true;
+	}
+
+	private void ResetLieSurfaceAfterTeleport()
+	{
+		_lieSurfaceResolver.ClearZones();
+		CallDeferred(nameof(ApplySurfaceToBall));
 	}
 
 	private void UpdateBallDisplay()

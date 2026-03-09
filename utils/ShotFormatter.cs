@@ -2,7 +2,8 @@ using Godot;
 using Godot.Collections;
 
 /// <summary>
-/// Formats ball/shot data for UI display with unit conversion.
+/// Formats ball/shot data for UI display with unit conversion only.
+/// It does not own gameplay, lie, or physics setup responsibilities.
 /// </summary>
 public static class ShotFormatter
 {

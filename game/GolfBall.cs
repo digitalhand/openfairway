@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using Godot;
 using Godot.Collections;
 
@@ -18,7 +17,6 @@ public partial class GolfBall : CharacterBody3D
 	private const float GROUND_RAYCAST_UP = 2.0f;
 	private const float GROUND_RAYCAST_DOWN = 8.0f;
 	private const float GROUND_PROBE_DISTANCE = 0.08f;
-	private const string GREEN_GRID_ITEM_NAME = "GreenMesh";
 	private const float PHYSICS_SUBSTEP_DT = BallPhysics.SIMULATION_DT;
 	private const int MAX_SUBSTEPS_PER_FRAME = 12;
 
@@ -31,7 +29,7 @@ public partial class GolfBall : CharacterBody3D
 	// Physics instances
 	private readonly BallPhysics _ballPhysics = new();
 	private readonly Aerodynamics _aerodynamics = new();
-	private readonly Surface _surfaceHelper = new();
+	private readonly PhysicsParamsFactory _physicsParamsFactory = new();
 	private readonly ShotSetup _shotSetup = new();
 
 	// State — ball center sits one radius above ground so it rests on the surface
@@ -49,18 +47,10 @@ public partial class GolfBall : CharacterBody3D
 	// Terrain3D data reference for height queries (cached on _Ready)
 	private GodotObject _terrainData;
 
-	// Surface parameters
-	public PhysicsEnums.SurfaceType SurfaceType { get; set; } = PhysicsEnums.SurfaceType.Fairway;
-	private readonly List<PhysicsEnums.SurfaceType> _surfaceZoneStack = new();
-	private float _kineticFriction = 0.42f;
-	private float _rollingFriction = 0.18f;
-	private float _grassViscosity = 0.0020f;
-	private float _criticalAngle = 0.30f;  // radians
-	private float _spinbackThetaBoostMax = 0.0f;
-	private float _spinbackSpinStartRpm = 0.0f;
-	private float _spinbackSpinEndRpm = 0.0f;
-	private float _spinbackSpeedStartMps = 0.0f;
-	private float _spinbackSpeedEndMps = 0.0f;
+	public PhysicsEnums.SurfaceType SurfaceType { get; private set; } = PhysicsEnums.SurfaceType.Fairway;
+	public BallPhysicsProfile BallProfile { get; set; } = new();
+	public Func<Node, Vector3, PhysicsEnums.SurfaceType> ResolveLieSurface { get; set; }
+	public Func<string> DescribeLieSurfaceResolution { get; set; }
 
 	// Environment
 	private float _airDensity;
@@ -79,7 +69,6 @@ public partial class GolfBall : CharacterBody3D
 	{
 		CacheTerrainData();
 		ConnectSettings();
-		SetSurface(GetConfiguredSurfaceType());
 		UpdateEnvironment();
 	}
 
@@ -148,118 +137,47 @@ public partial class GolfBall : CharacterBody3D
 		_liftScale = (float)GetNode<GlobalSettings>("/root/GlobalSettings").GameSettings.LiftScale.Value;
 	}
 
-	/// <summary>
-	/// Set the surface type and update friction parameters.
-	/// </summary>
-	public void SetSurface(PhysicsEnums.SurfaceType surface)
+	public void SetLieSurface(PhysicsEnums.SurfaceType surface)
 	{
 		if (SurfaceType == surface)
 			return;
 
 		SurfaceType = surface;
-		ApplySurfaceParams();
-		PhysicsLogger.Info($"[Surface] Set to {surface}: u_k={_kineticFriction:F3}, u_kr={_rollingFriction:F4}, nu_g={_grassViscosity:F5}");
+		PhysicsLogger.Info($"[Surface] Active={SurfaceType}");
 	}
 
-	public void EnterSurfaceZone(PhysicsEnums.SurfaceType surface)
+	private void UpdateLieSurfaceFromContact(Node collider, Vector3 worldPoint)
 	{
-		_surfaceZoneStack.Add(surface);
-		SetSurface(surface);
-	}
-
-	public void ExitSurfaceZone(PhysicsEnums.SurfaceType surface)
-	{
-		for (int i = _surfaceZoneStack.Count - 1; i >= 0; i--)
-		{
-			if (_surfaceZoneStack[i] != surface)
-				continue;
-
-			_surfaceZoneStack.RemoveAt(i);
-			break;
-		}
-
-		if (_surfaceZoneStack.Count > 0)
-		{
-			SetSurface(_surfaceZoneStack[_surfaceZoneStack.Count - 1]);
-		}
-		else
-		{
-			SetSurface(GetConfiguredSurfaceType());
-		}
-	}
-
-	private PhysicsEnums.SurfaceType GetConfiguredSurfaceType()
-	{
-		if (_gameSettings != null)
-			return (PhysicsEnums.SurfaceType)(int)_gameSettings.SurfaceType.Value;
-
-		return PhysicsEnums.SurfaceType.Fairway;
-	}
-
-	private void ApplySurfaceParams()
-	{
-		var parameters = _surfaceHelper.GetParams(SurfaceType);
-		_kineticFriction = (float)parameters["u_k"];
-		_rollingFriction = (float)parameters["u_kr"];
-		_grassViscosity = (float)parameters["nu_g"];
-		_criticalAngle = (float)parameters["theta_c"];
-		_spinbackThetaBoostMax = (float)parameters["spinback_theta_boost_max"];
-		_spinbackSpinStartRpm = (float)parameters["spinback_spin_start_rpm"];
-		_spinbackSpinEndRpm = (float)parameters["spinback_spin_end_rpm"];
-		_spinbackSpeedStartMps = (float)parameters["spinback_speed_start_mps"];
-		_spinbackSpeedEndMps = (float)parameters["spinback_speed_end_mps"];
-	}
-
-	private void UpdateSurfaceFromCollider(Node collider, Vector3 worldPoint)
-	{
-		// Explicit surface zones have priority over inferred geometry surfaces.
-		if (_surfaceZoneStack.Count > 0)
+		if (ResolveLieSurface == null)
 			return;
 
-		if (TryResolveSurfaceFromCollider(collider, worldPoint, out var resolved))
-		{
-			SetSurface(resolved);
-			return;
-		}
-
-		SetSurface(GetConfiguredSurfaceType());
+		SetLieSurface(ResolveLieSurface(collider, worldPoint));
 	}
 
-	private bool TryResolveSurfaceFromCollider(
-		Node collider,
-		Vector3 worldPoint,
-		out PhysicsEnums.SurfaceType surface)
+	private void RefreshLieSurfaceFromGroundProbe()
 	{
-		surface = GetConfiguredSurfaceType();
-		GridMap gridMap = FindGridMapFromCollider(collider);
-		if (gridMap == null || gridMap.MeshLibrary == null)
-			return false;
-
-		Vector3 localPoint = gridMap.ToLocal(worldPoint);
-		Vector3I cell = gridMap.LocalToMap(localPoint);
-		int itemId = gridMap.GetCellItem(cell);
-		if (itemId < 0)
-			return false;
-
-		string itemName = gridMap.MeshLibrary.GetItemName(itemId);
-		if (string.Equals(itemName, GREEN_GRID_ITEM_NAME, StringComparison.OrdinalIgnoreCase))
-		{
-			surface = PhysicsEnums.SurfaceType.Green;
-			return true;
-		}
-
-		return false;
+		if (TryProbeGround(out _, out Node groundCollider, out Vector3 groundPoint))
+			UpdateLieSurfaceFromContact(groundCollider, groundPoint);
 	}
 
-	private static GridMap FindGridMapFromCollider(Node collider)
+	private void LogLandingSurfaceReaction(PhysicsParams parameters, Vector3 velocity, Vector3 omega, Vector3 normal)
 	{
-		for (Node cursor = collider; cursor != null; cursor = cursor.GetParent())
-		{
-			if (cursor is GridMap gridMap)
-				return gridMap;
-		}
+		float speed = velocity.Length();
+		float impactSpinRpm = omega.Length() / ShotSetup.RAD_PER_RPM;
+		float angleToNormal = velocity.AngleTo(normal);
+		float impactAngleDeg = Mathf.RadToDeg(Mathf.Abs(angleToNormal - Mathf.Pi / 2.0f));
+		float criticalAngleDeg = Mathf.RadToDeg(parameters.CriticalAngle);
+		float thetaBoostDeg = Mathf.RadToDeg(parameters.SpinbackThetaBoostMax);
+		string resolutionSource = DescribeLieSurfaceResolution?.Invoke();
+		string sourceSegment = string.IsNullOrWhiteSpace(resolutionSource)
+			? string.Empty
+			: $" {resolutionSource}";
 
-		return null;
+		PhysicsLogger.Info(
+			$"[LandingSurface] surface={parameters.SurfaceType} speed={speed:F2}m/s impact_spin={impactSpinRpm:F0}rpm " +
+			$"rollout_spin={RolloutImpactSpinRpm:F0}rpm angle={impactAngleDeg:F1}deg theta_c={criticalAngleDeg:F1}deg " +
+			$"spin_scale={parameters.SpinbackResponseScale:F2} theta_boost={thetaBoostDeg:F1}deg{sourceSegment}"
+		);
 	}
 
 	/// <summary>
@@ -338,24 +256,16 @@ public partial class GolfBall : CharacterBody3D
 
 	private PhysicsParams CreatePhysicsParams()
 	{
-		return new PhysicsParams(
+		return _physicsParamsFactory.Create(
 			_airDensity,
 			_airViscosity,
 			_dragScale,
 			_liftScale,
-			_kineticFriction,
-			_rollingFriction,
-			_grassViscosity,
-			_criticalAngle,
 			SurfaceType,
 			FloorNormal,
 			RolloutImpactSpinRpm,
-			_spinbackThetaBoostMax,
-			_spinbackSpinStartRpm,
-			_spinbackSpinEndRpm,
-			_spinbackSpeedStartMps,
-			_spinbackSpeedEndMps
-		);
+			BallProfile
+		).ToPhysicsParams();
 	}
 
 	private bool CheckOutOfBounds()
@@ -415,7 +325,7 @@ public partial class GolfBall : CharacterBody3D
 		FloorNormal = hitNormal;
 		Velocity = RemoveVelocityAlongNormal(Velocity, hitNormal, removeBothDirections: false);
 		OnGround = true;
-		UpdateSurfaceFromCollider(hitCollider, hitPosition);
+		UpdateLieSurfaceFromContact(hitCollider, hitPosition);
 
 		if (State == PhysicsEnums.BallState.Flight)
 		{
@@ -471,7 +381,7 @@ public partial class GolfBall : CharacterBody3D
 			if (IsGroundNormal(normal))
 			{
 				FloorNormal = normal;
-				UpdateSurfaceFromCollider(hitCollider, hitPosition);
+				UpdateLieSurfaceFromContact(hitCollider, hitPosition);
 				float prevNormalVelocity = prevVelocity.Dot(normal);
 				bool landedFromFlight = State == PhysicsEnums.BallState.Flight;
 				bool isLanding = landedFromFlight || prevNormalVelocity < -0.5f;
@@ -487,6 +397,8 @@ public partial class GolfBall : CharacterBody3D
 					}
 
 					var parameters = CreatePhysicsParams();
+					if (landedFromFlight)
+						LogLandingSurfaceReaction(parameters, Velocity, Omega, normal);
 					var bounceResult = _ballPhysics.CalculateBounce(Velocity, Omega, normal, State, parameters);
 					Velocity = bounceResult.NewVelocity;
 					Omega = bounceResult.NewOmega;
@@ -533,7 +445,7 @@ public partial class GolfBall : CharacterBody3D
 			{
 				OnGround = true;
 				FloorNormal = groundNormal;
-				UpdateSurfaceFromCollider(groundCollider, groundPoint);
+				UpdateLieSurfaceFromContact(groundCollider, groundPoint);
 			}
 			else
 			{
@@ -634,8 +546,7 @@ public partial class GolfBall : CharacterBody3D
         AimYawOffsetDeg = 0.0f;
         LaunchSpinRpm = 0.0f;
         RolloutImpactSpinRpm = 0.0f;
-        _surfaceZoneStack.Clear();
-        SetSurface(GetConfiguredSurfaceType());
+        RefreshLieSurfaceFromGroundProbe();
         State = PhysicsEnums.BallState.Rest;
         OnGround = false;
     }
@@ -696,10 +607,9 @@ public partial class GolfBall : CharacterBody3D
         OnGround = false;
         _substepAccumulator = 0.0f;
         RolloutImpactSpinRpm = 0.0f;
-        _surfaceZoneStack.Clear();
-        SetSurface(GetConfiguredSurfaceType());
         // Launch from the current lie so course play can continue from where the ball stopped.
         SnapToGround();
+        RefreshLieSurfaceFromGroundProbe();
 
         Velocity = launchVelocity;
         Omega = launchOmega;

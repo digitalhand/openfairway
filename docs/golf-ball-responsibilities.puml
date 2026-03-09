@@ -1,0 +1,23 @@
+@startuml
+skinparam monochrome true
+
+class GolfBall
+class HoleSceneControllerBase
+class LieSurfaceResolver
+class SurfaceZone
+class PhysicsParamsFactory
+class BallPhysicsProfile
+class ShotSetup
+class BallPhysics
+class PhysicsAdapter
+
+HoleSceneControllerBase --> LieSurfaceResolver : default + zones + mesh labels
+SurfaceZone --> HoleSceneControllerBase : enter/exit signals
+GolfBall --> HoleSceneControllerBase : resolve contact surface via delegate
+GolfBall --> PhysicsParamsFactory : resolve runtime physics params
+GolfBall --> BallPhysicsProfile : ball-specific modifiers
+GolfBall --> ShotSetup : parse spin + build launch
+GolfBall --> BallPhysics : integrate + bounce
+PhysicsAdapter --> PhysicsParamsFactory : reuse param assembly
+
+@enduml
