@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Godot;
 using Godot.Collections;
@@ -19,6 +20,7 @@ public partial class GolfBall : CharacterBody3D
 	private const float GROUND_RAYCAST_UP = 2.0f;
 	private const float GROUND_RAYCAST_DOWN = 8.0f;
 	private const float GROUND_PROBE_DISTANCE = 0.08f;
+	private const string GREEN_GRID_ITEM_NAME = "GreenMesh";
 
 	// Signals
 	[Signal]
@@ -147,6 +149,9 @@ public partial class GolfBall : CharacterBody3D
 	/// </summary>
 	public void SetSurface(PhysicsEnums.SurfaceType surface)
 	{
+		if (SurfaceType == surface)
+			return;
+
 		SurfaceType = surface;
 		ApplySurfaceParams();
 		PhysicsLogger.Info($"[Surface] Set to {surface}: u_k={_kineticFriction:F3}, u_kr={_rollingFriction:F4}, nu_g={_grassViscosity:F5}");
@@ -194,6 +199,58 @@ public partial class GolfBall : CharacterBody3D
 		_rollingFriction = (float)parameters["u_kr"];
 		_grassViscosity = (float)parameters["nu_g"];
 		_criticalAngle = (float)parameters["theta_c"];
+	}
+
+	private void UpdateSurfaceFromCollider(Node collider, Vector3 worldPoint)
+	{
+		// Explicit surface zones have priority over inferred geometry surfaces.
+		if (_surfaceZoneStack.Count > 0)
+			return;
+
+		if (TryResolveSurfaceFromCollider(collider, worldPoint, out var resolved))
+		{
+			SetSurface(resolved);
+			return;
+		}
+
+		SetSurface(GetConfiguredSurfaceType());
+	}
+
+	private bool TryResolveSurfaceFromCollider(
+		Node collider,
+		Vector3 worldPoint,
+		out PhysicsEnums.SurfaceType surface)
+	{
+		surface = GetConfiguredSurfaceType();
+		GridMap gridMap = FindGridMapFromCollider(collider);
+		if (gridMap == null || gridMap.MeshLibrary == null)
+			return false;
+
+		Vector3 localPoint = gridMap.ToLocal(worldPoint);
+		Vector3I cell = gridMap.LocalToMap(localPoint);
+		int itemId = gridMap.GetCellItem(cell);
+		if (itemId < 0)
+			return false;
+
+		string itemName = gridMap.MeshLibrary.GetItemName(itemId);
+		if (string.Equals(itemName, GREEN_GRID_ITEM_NAME, StringComparison.OrdinalIgnoreCase))
+		{
+			surface = PhysicsEnums.SurfaceType.Green;
+			return true;
+		}
+
+		return false;
+	}
+
+	private static GridMap FindGridMapFromCollider(Node collider)
+	{
+		for (Node cursor = collider; cursor != null; cursor = cursor.GetParent())
+		{
+			if (cursor is GridMap gridMap)
+				return gridMap;
+		}
+
+		return null;
 	}
 
 	/// <summary>
@@ -252,6 +309,7 @@ public partial class GolfBall : CharacterBody3D
 			_rollingFriction,
 			_grassViscosity,
 			_criticalAngle,
+			SurfaceType,
 			FloorNormal,
 			RolloutImpactSpinRpm
 		);
@@ -304,6 +362,9 @@ public partial class GolfBall : CharacterBody3D
 
 		Vector3 hitPosition = (Vector3)hit["position"];
 		Vector3 hitNormal = ((Vector3)hit["normal"]).Normalized();
+		Node hitCollider = hit.ContainsKey("collider") && hit["collider"].Obj is Node collider
+			? collider
+			: null;
 		if (hitNormal.LengthSquared() < 0.000001f)
 			hitNormal = Vector3.Up;
 
@@ -311,6 +372,7 @@ public partial class GolfBall : CharacterBody3D
 		FloorNormal = hitNormal;
 		Velocity = RemoveVelocityAlongNormal(Velocity, hitNormal, removeBothDirections: false);
 		OnGround = true;
+		UpdateSurfaceFromCollider(hitCollider, hitPosition);
 
 		if (State == PhysicsEnums.BallState.Flight)
 		{
@@ -322,9 +384,11 @@ public partial class GolfBall : CharacterBody3D
 		return true;
 	}
 
-	private bool TryProbeGround(out Vector3 groundNormal)
+	private bool TryProbeGround(out Vector3 groundNormal, out Node groundCollider, out Vector3 groundPoint)
 	{
 		groundNormal = Vector3.Up;
+		groundCollider = null;
+		groundPoint = GlobalPosition;
 
 		var world = GetWorld3D();
 		if (world == null)
@@ -342,7 +406,11 @@ public partial class GolfBall : CharacterBody3D
 		if (hit.Count == 0)
 			return false;
 
+		groundPoint = (Vector3)hit["position"];
 		groundNormal = ((Vector3)hit["normal"]).Normalized();
+		groundCollider = hit.ContainsKey("collider") && hit["collider"].Obj is Node collider
+			? collider
+			: null;
 		if (groundNormal.LengthSquared() < 0.000001f)
 			groundNormal = Vector3.Up;
 
@@ -354,10 +422,13 @@ public partial class GolfBall : CharacterBody3D
 		if (collision != null)
 		{
 			Vector3 normal = collision.GetNormal();
+			Node hitCollider = collision.GetCollider() as Node;
+			Vector3 hitPosition = collision.GetPosition();
 
 			if (IsGroundNormal(normal))
 			{
 				FloorNormal = normal;
+				UpdateSurfaceFromCollider(hitCollider, hitPosition);
 				float prevNormalVelocity = prevVelocity.Dot(normal);
 				bool landedFromFlight = State == PhysicsEnums.BallState.Flight;
 				bool isLanding = landedFromFlight || prevNormalVelocity < -0.5f;
@@ -413,10 +484,13 @@ public partial class GolfBall : CharacterBody3D
 		else
 		{
 			// No collision - only stay grounded if terrain is still directly beneath the ball.
-			if (State != PhysicsEnums.BallState.Flight && wasOnGround && TryProbeGround(out Vector3 groundNormal))
+			if (State != PhysicsEnums.BallState.Flight &&
+				wasOnGround &&
+				TryProbeGround(out Vector3 groundNormal, out Node groundCollider, out Vector3 groundPoint))
 			{
 				OnGround = true;
 				FloorNormal = groundNormal;
+				UpdateSurfaceFromCollider(groundCollider, groundPoint);
 			}
 			else
 			{

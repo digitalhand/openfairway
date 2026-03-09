@@ -47,15 +47,17 @@ public class EnumsTests
         Assert.That(System.Enum.IsDefined(typeof(PhysicsEnums.SurfaceType), PhysicsEnums.SurfaceType.FairwaySoft));
         Assert.That(System.Enum.IsDefined(typeof(PhysicsEnums.SurfaceType), PhysicsEnums.SurfaceType.Rough));
         Assert.That(System.Enum.IsDefined(typeof(PhysicsEnums.SurfaceType), PhysicsEnums.SurfaceType.Firm));
+        Assert.That(System.Enum.IsDefined(typeof(PhysicsEnums.SurfaceType), PhysicsEnums.SurfaceType.Green));
     }
 
     [Test]
     public void Surface_HasCorrectValues()
     {
-        // Verify enum numeric values match GDScript (0, 1, 2, 3)
+        // Verify enum numeric values match GDScript (0, 1, 2, 3, 4)
         Assert.That((int)PhysicsEnums.SurfaceType.Fairway, Is.EqualTo(0));
         Assert.That((int)PhysicsEnums.SurfaceType.FairwaySoft, Is.EqualTo(1));
         Assert.That((int)PhysicsEnums.SurfaceType.Rough, Is.EqualTo(2));
         Assert.That((int)PhysicsEnums.SurfaceType.Firm, Is.EqualTo(3));
+        Assert.That((int)PhysicsEnums.SurfaceType.Green, Is.EqualTo(4));
     }
 }

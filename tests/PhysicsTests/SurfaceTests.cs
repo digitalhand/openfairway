@@ -33,6 +33,7 @@ public class SurfaceTests
         Assert.That(System.Enum.IsDefined(typeof(PhysicsEnums.SurfaceType), PhysicsEnums.SurfaceType.FairwaySoft));
         Assert.That(System.Enum.IsDefined(typeof(PhysicsEnums.SurfaceType), PhysicsEnums.SurfaceType.Rough));
         Assert.That(System.Enum.IsDefined(typeof(PhysicsEnums.SurfaceType), PhysicsEnums.SurfaceType.Firm));
+        Assert.That(System.Enum.IsDefined(typeof(PhysicsEnums.SurfaceType), PhysicsEnums.SurfaceType.Green));
     }
 
     // Full validation of Surface.GetParams() happens in-game where Godot runtime is available

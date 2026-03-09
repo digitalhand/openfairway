@@ -54,8 +54,19 @@ public partial class BallPhysics : RefCounted
         if (onGround)
         {
             // When on ground, normal force cancels gravity vertically
-            // Only apply horizontal friction/drag forces
+            // while gravity still contributes along the local slope tangent.
+            Vector3 floorNormal = parameters.FloorNormal.LengthSquared() > 0.000001f
+                ? parameters.FloorNormal.Normalized()
+                : Vector3.Up;
+
+            Vector3 gravityAlongSlope = gravity - floorNormal * gravity.Dot(floorNormal);
+
+            // Ground integration is handled in world-space with collision response.
+            // Keep the along-slope gravity contribution in horizontal axes only.
+            gravityAlongSlope.Y = 0.0f;
+
             Vector3 groundForces = CalculateGroundForces(velocity, omega, parameters);
+            groundForces += gravityAlongSlope;
             groundForces.Y = 0.0f;  // Zero out any vertical component
             return groundForces;
         }
@@ -400,29 +411,40 @@ public partial class BallPhysics : RefCounted
             float impactAngleDeg = Mathf.RadToDeg(impactAngle);
             float criticalAngleDeg = Mathf.RadToDeg(parameters.CriticalAngle);
             float impactSpeed = vel.Length();
+            bool isGreenSurface = parameters.SurfaceType == PhysicsEnums.SurfaceType.Green;
+            bool isSteepImpact = impactAngle >= parameters.CriticalAngle;
 
-            // Use Penner model only if BOTH: steep angle AND high energy (> 20 m/s ≈ 45 mph)
-            if (impactAngle < parameters.CriticalAngle || impactSpeed < 20.0f)
+            // Non-green lies keep the low-energy guard to prevent unrealistic
+            // chip spin-back. Greens allow steep-impact Penner behavior even below
+            // 20 m/s so high-spin flop/wedge shots can naturally check/spin back.
+            bool shouldUsePenner = isSteepImpact && (impactSpeed >= 20.0f || isGreenSurface);
+
+            if (!shouldUsePenner)
             {
                 // Shallow angle OR low energy (chip shots): use simple retention
                 // This prevents chip shots from rolling backward even with high spin
                 newTangentSpeed = speedTangent * tangentialRetention;
-                if (impactSpeed < 20.0f)
+                if (!isSteepImpact)
+                {
+                    PhysicsLogger.Verbose($"  Bounce: Shallow angle ({impactAngleDeg:F2}° < {criticalAngleDeg:F2}°) - using simple retention");
+                }
+                else if (impactSpeed < 20.0f && !isGreenSurface)
                 {
                     PhysicsLogger.Verbose($"  Bounce: Low energy ({impactSpeed:F2} m/s < 20 m/s) - using simple retention");
                 }
                 else
                 {
-                    PhysicsLogger.Verbose($"  Bounce: Shallow angle ({impactAngleDeg:F2}° < {criticalAngleDeg:F2}°) - using simple retention");
+                    PhysicsLogger.Verbose($"  Bounce: Using simple retention (surface={parameters.SurfaceType}, speed={impactSpeed:F2} m/s)");
                 }
                 PhysicsLogger.Verbose($"    speedTangent={speedTangent:F2} m/s, newTangentSpeed={newTangentSpeed:F2} m/s");
             }
             else
             {
-                // Steep angle AND high energy (full wedge): Use Penner model - backspin creates reverse velocity
+                // Penner tangential model for steep impacts:
+                // backspin term can reverse tangential velocity (spin-back) when large enough.
                 newTangentSpeed = tangentialRetention * vel.Length() * Mathf.Sin(impactAngle - parameters.CriticalAngle) -
                     2.0f * RADIUS * omegaTangentMagnitude / 7.0f;
-                PhysicsLogger.Verbose($"  Bounce: High energy ({impactSpeed:F2} m/s) steep angle ({impactAngleDeg:F2}° > {criticalAngleDeg:F2}°) - using Penner model");
+                PhysicsLogger.Verbose($"  Bounce: Penner model ({parameters.SurfaceType}) speed={impactSpeed:F2} m/s angle={impactAngleDeg:F2}° crit={criticalAngleDeg:F2}°");
                 PhysicsLogger.Verbose($"    speedTangent={speedTangent:F2} m/s, newTangentSpeed={newTangentSpeed:F2} m/s");
             }
         }

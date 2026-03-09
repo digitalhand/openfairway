@@ -134,6 +134,7 @@ public partial class SurfaceZone : Area3D
 			PhysicsEnums.SurfaceType.FairwaySoft => new Color(0.1f, 0.45f, 0.95f, 0.20f),
 			PhysicsEnums.SurfaceType.Rough => new Color(0.9f, 0.35f, 0.08f, 0.24f),
 			PhysicsEnums.SurfaceType.Firm => new Color(0.75f, 0.75f, 0.75f, 0.20f),
+			PhysicsEnums.SurfaceType.Green => new Color(0.15f, 0.95f, 0.35f, 0.20f),
 			_ => new Color(1.0f, 1.0f, 1.0f, 0.20f)
 		};
 	}

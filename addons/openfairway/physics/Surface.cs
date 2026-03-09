@@ -66,6 +66,18 @@ public partial class Surface : RefCounted
                     { "theta_c", 0.25f }  // ~14°
                 },
 
+            PhysicsEnums.SurfaceType.Green =>
+                // Putting green:
+                // - Higher impact grip (u_k/theta_c) supports check/spin-back for steep high-spin wedges.
+                // - Lower rolling resistance/vegetation drag keeps post-check motion realistic for short-cut turf.
+                new Dictionary
+                {
+                    { "u_k", 0.58f },
+                    { "u_kr", 0.028f },
+                    { "nu_g", 0.0009f },
+                    { "theta_c", 0.36f }  // ~21°
+                },
+
             _ =>
                 // Default to current normal fairway tuning
                 new Dictionary

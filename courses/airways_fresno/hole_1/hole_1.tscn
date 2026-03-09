@@ -47,6 +47,7 @@
 [ext_resource type="PackedScene" uid="uid://bbbci0q1y1bq5" path="res://courses/greens/gimme_circle.tscn" id="44_kvf51"]
 [ext_resource type="PackedScene" uid="uid://cio4rx16su2am" path="res://assets/flag_osg.gltf" id="47_ff4pe"]
 [ext_resource type="Texture2D" uid="uid://cf6x6ew4vnul6" path="res://assets/OSG_Logo.png" id="48_4svp1"]
+[ext_resource type="MeshLibrary" uid="uid://b22xg44ilv3fq" path="res://assets/meshes/green_surface.tres" id="48_feo2l"]
 
 [sub_resource type="Gradient" id="Gradient_c2xig"]
 offsets = PackedFloat32Array(0.2, 1)
@@ -272,88 +273,6 @@ fog_height_density = 0.6897
 
 [sub_resource type="Resource" id="Resource_hbh3r"]
 script = ExtResource("18_gqfs3")
-
-[sub_resource type="Resource" id="Resource_vcr6a"]
-script = ExtResource("20_k0egi")
-amount = 300
-restrict_height = true
-reference_frame = 1
-
-[sub_resource type="Resource" id="Resource_ff4pe"]
-script = ExtResource("21_wle5o")
-position = Vector3(0.15, 0.15, 0.15)
-rotation = Vector3(20, 360, 20)
-scale = Vector3(0.1, 0.1, 0.1)
-reference_frame = 2
-
-[sub_resource type="Resource" id="Resource_ouuv2"]
-script = ExtResource("22_usg56")
-offset_step = 0.2
-consecutive_step_multiplier = 0.75
-restrict_height = true
-
-[sub_resource type="Resource" id="Resource_ees7k"]
-script = ExtResource("23_prv2u")
-ray_length = 5.0
-ray_offset = 5.0
-remove_points_on_miss = false
-
-[sub_resource type="Resource" id="Resource_p2p4c"]
-script = ExtResource("24_cujyd")
-terrain_node = NodePath("../Terrain3D")
-align_with_collision_normal = true
-
-[sub_resource type="Resource" id="Resource_xpanb"]
-script = ExtResource("18_aye4c")
-stack = Array[ExtResource("19_86nby")]([SubResource("Resource_vcr6a"), SubResource("Resource_ff4pe"), SubResource("Resource_ouuv2"), SubResource("Resource_ees7k"), SubResource("Resource_p2p4c")])
-
-[sub_resource type="Resource" id="Resource_jeglo"]
-script = ExtResource("36_qi1v7")
-size = Vector3(72.35005, 31.954197, 204.35777)
-metadata/_custom_type_script = "uid://ce1g4kduwmgpw"
-
-[sub_resource type="Resource" id="Resource_tfo1n"]
-script = ExtResource("36_qi1v7")
-size = Vector3(62.458298, 12.953845, 25.59433)
-
-[sub_resource type="Resource" id="Resource_7sr1d"]
-script = ExtResource("20_k0egi")
-amount = 300
-restrict_height = true
-reference_frame = 1
-
-[sub_resource type="Resource" id="Resource_3grb0"]
-script = ExtResource("21_wle5o")
-position = Vector3(0.15, 0.15, 0.15)
-rotation = Vector3(20, 360, 20)
-scale = Vector3(0.1, 0.1, 0.1)
-reference_frame = 2
-
-[sub_resource type="Resource" id="Resource_7lmvj"]
-script = ExtResource("22_usg56")
-offset_step = 0.2
-consecutive_step_multiplier = 0.75
-restrict_height = true
-
-[sub_resource type="Resource" id="Resource_hfyaq"]
-script = ExtResource("23_prv2u")
-ray_length = 5.0
-ray_offset = 5.0
-remove_points_on_miss = false
-
-[sub_resource type="Resource" id="Resource_hf64j"]
-script = ExtResource("24_cujyd")
-terrain_node = NodePath("../Terrain3D")
-align_with_collision_normal = true
-
-[sub_resource type="Resource" id="Resource_2nyuv"]
-script = ExtResource("18_aye4c")
-stack = Array[ExtResource("19_86nby")]([SubResource("Resource_7sr1d"), SubResource("Resource_3grb0"), SubResource("Resource_7lmvj"), SubResource("Resource_hfyaq"), SubResource("Resource_hf64j")])
-
-[sub_resource type="Resource" id="Resource_jyqk1"]
-script = ExtResource("36_qi1v7")
-size = Vector3(238.05638, 1, 32.699203)
-metadata/_custom_type_script = "uid://ce1g4kduwmgpw"
 
 [sub_resource type="Resource" id="Resource_awo2l"]
 script = ExtResource("20_k0egi")
@@ -670,53 +589,6 @@ process_priority = 300
 process_physics_priority = 300
 script = ExtResource("19_gqfs3")
 
-[node name="trees" type="Node3D" parent="." unique_id=626236560]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.305649, 0, -21.806234)
-script = ExtResource("17_aawvo")
-keep_static_colliders = true
-force_rebuild_on_load = false
-modifier_stack = SubResource("Resource_xpanb")
-Performance/use_chunks = true
-Performance/chunk_dimensions = Vector3(15, 15, 15)
-metadata/_custom_type_script = "uid://fcpjrmi6out4"
-
-[node name="ScatterItem" type="Node3D" parent="trees" unique_id=679643395]
-script = ExtResource("25_w6ydi")
-proportion = 5
-source_scale_multiplier = 3.0
-path = "uid://caqxfqurbp3ku"
-
-[node name="ScatterShape" type="Node3D" parent="trees" unique_id=942244766]
-transform = Transform3D(1, 0, -2.98023e-08, 0, 1, 0, 2.98023e-08, 0, 1, -1.9889965, 0.22750854, -18.382065)
-script = ExtResource("26_qi1v7")
-shape = SubResource("Resource_jeglo")
-
-[node name="ScatterShape_delete" type="Node3D" parent="trees" unique_id=508511546]
-transform = Transform3D(1, 0, -2.98023e-08, 0, 1, 0, 2.98023e-08, 0, 1, 11.766214, 0.22750854, 18.40085)
-script = ExtResource("26_qi1v7")
-negative = true
-shape = SubResource("Resource_tfo1n")
-
-[node name="trees_left" type="Node3D" parent="." unique_id=1255789592]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 83.37401, 0, -106.53229)
-script = ExtResource("17_aawvo")
-keep_static_colliders = true
-force_rebuild_on_load = false
-modifier_stack = SubResource("Resource_2nyuv")
-Performance/use_chunks = true
-Performance/chunk_dimensions = Vector3(15, 15, 15)
-metadata/_custom_type_script = "uid://fcpjrmi6out4"
-
-[node name="ScatterItem" type="Node3D" parent="trees_left" unique_id=752055116]
-script = ExtResource("25_w6ydi")
-proportion = 5
-path = "uid://caqxfqurbp3ku"
-
-[node name="ScatterShape" type="Node3D" parent="trees_left" unique_id=426435999]
-transform = Transform3D(1, 0, -2.98023e-08, 0, 1, 0, 2.98023e-08, 0, 1, 29.31121, 0, -32.371582)
-script = ExtResource("26_qi1v7")
-shape = SubResource("Resource_jyqk1")
-
 [node name="trees_left_tall" type="Node3D" parent="." unique_id=45244480]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 83.37401, 0, -106.53229)
 script = ExtResource("17_aawvo")
@@ -859,3 +731,10 @@ skeleton = NodePath("")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 184.04437, 2.0791407, -26.357153)
 mesh = SubResource("ArrayMesh_vwjc8")
 skeleton = NodePath("")
+
+[node name="GridMap" type="GridMap" parent="." unique_id=1790161198]
+mesh_library = ExtResource("48_feo2l")
+cell_center_y = false
+data = {
+"cells": PackedInt32Array(17, 65532, 0, 17, 65533, 0, 17, 65534, 0, 16, 65534, 0, 16, 65535, 0, 17, 65535, 0, 17, 0, 0, 17, 1, 0, 16, 1, 0, 16, 0, 0, 15, 65534, 0, 15, 65533, 0, 15, 65532, 0, 15, 65531, 0, 15, 65535, 0, 15, 0, 0, 15, 1, 0, 17, 65531, 0, 27, 65531, 0, 26, 65531, 0, 25, 65531, 0, 24, 65531, 0, 23, 65531, 0, 22, 65531, 0, 21, 65531, 0, 20, 65531, 0, 19, 65531, 0, 26, 65532, 0, 26, 65533, 0, 26, 65534, 0, 26, 65535, 0, 26, 0, 0, 26, 1, 0, 25, 1, 0, 25, 2, 0, 24, 2, 0, 23, 2, 0, 22, 2, 0, 22, 1, 0, 21, 1, 0, 20, 1, 0, 19, 1, 0, 18, 1, 0, 20, 2, 0, 21, 2, 0, 21, 0, 0, 22, 0, 0, 23, 0, 0, 24, 0, 0, 24, 65535, 0, 25, 0, 0, 24, 65534, 0, 23, 65534, 0, 23, 65533, 0, 24, 65533, 0, 24, 65532, 0, 23, 65532, 0, 22, 65533, 0, 21, 65533, 0, 20, 65533, 0, 19, 65533, 0, 20, 65534, 0, 21, 65534, 0, 22, 65534, 0, 19, 65534, 0, 19, 65535, 0, 20, 65535, 0, 20, 0, 0, 28, 65531, 0, 28, 65532, 0, 28, 65533, 0, 29, 65533, 0, 29, 65534, 0, 29, 65535, 0, 29, 0, 0, 28, 0, 0, 28, 65534, 0, 28, 65535, 0, 29, 1, 0, 28, 1, 0, 28, 2, 0, 27, 1, 0, 27, 2, 0, 26, 2, 0, 29, 2, 0, 29, 65532, 0, 29, 65531, 0, 30, 65531, 0, 31, 65531, 0, 31, 65532, 0, 31, 65533, 0, 31, 65534, 0, 31, 65535, 0, 32, 65535, 0, 31, 0, 0, 31, 1, 0, 31, 2, 0, 32, 65531, 0, 32, 65532, 0, 32, 65533, 0, 32, 65534, 0, 32, 0, 0, 32, 1, 0, 32, 2, 0, 33, 2, 0)
+}

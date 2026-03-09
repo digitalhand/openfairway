@@ -27,6 +27,15 @@ public partial class PhysicsAdapter : RefCounted
     /// </summary>
     public Dictionary SimulateShotFromJson(Dictionary shot)
     {
+        return SimulateShotFromJson(shot, PhysicsEnums.SurfaceType.Fairway, Vector3.Up);
+    }
+
+    /// <summary>
+    /// Simulate a shot from JSON data on a specific surface and floor normal.
+    /// Useful for regression checks such as green/slope-specific rollout behavior.
+    /// </summary>
+    public Dictionary SimulateShotFromJson(Dictionary shot, PhysicsEnums.SurfaceType surface, Vector3 floorNormal)
+    {
         var ballDict = shot.ContainsKey("BallData") ? (Dictionary)shot["BallData"] : shot;
         if (ballDict == null || ballDict.Count == 0)
         {
@@ -46,7 +55,8 @@ public partial class PhysicsAdapter : RefCounted
         Vector3 omega = (Vector3)launch["omega"];
         Vector3 shotDir = (Vector3)launch["shot_direction"];
 
-        var parameters = CreateParams(Vector3.Up, PhysicsEnums.SurfaceType.Fairway);
+        Vector3 contactNormal = floorNormal.LengthSquared() > 0.000001f ? floorNormal.Normalized() : Vector3.Up;
+        var parameters = CreateParams(contactNormal, surface);
 
         Vector3 pos = new Vector3(0.0f, START_HEIGHT, 0.0f);
         PhysicsEnums.BallState state = PhysicsEnums.BallState.Flight;
@@ -55,6 +65,9 @@ public partial class PhysicsAdapter : RefCounted
         bool carryRecorded = false;
         float hangTimeS = 0.0f;
         float apexM = pos.Y;
+        bool firstImpactSpinback = false;
+        float firstImpactTangentIn = 0.0f;
+        float firstImpactTangentOut = 0.0f;
 
         float initialSpeed = velocity.Length();
         float initialSpinRatio = initialSpeed > 0.001f ? omega.Length() * BallPhysics.RADIUS / initialSpeed : 0.0f;
@@ -93,12 +106,33 @@ public partial class PhysicsAdapter : RefCounted
             if (hasImpact)
             {
                 pos.Y = 0.0f;
-                var bounce = _physics.CalculateBounce(velocity, omega, Vector3.Up, state, parameters);
+                Vector3 preImpactTangent = velocity - contactNormal * velocity.Dot(contactNormal);
+                var bounce = _physics.CalculateBounce(velocity, omega, contactNormal, state, parameters);
                 velocity = bounce.NewVelocity;
                 omega = bounce.NewOmega;
                 state = bounce.NewState;
                 onGround = state != PhysicsEnums.BallState.Flight;
                 velocity.Y = Mathf.Max(velocity.Y, 0.0f);
+
+                if (!carryRecorded)
+                {
+                    Vector3 postImpactTangent = velocity - contactNormal * velocity.Dot(contactNormal);
+                    float preTanMag = preImpactTangent.Length();
+                    float postTanMag = postImpactTangent.Length();
+
+                    firstImpactTangentIn = preTanMag;
+                    firstImpactTangentOut = postTanMag;
+
+                    if (preTanMag > 0.01f && postTanMag > 0.01f)
+                    {
+                        float directionDot = preImpactTangent.Normalized().Dot(postImpactTangent.Normalized());
+                        firstImpactSpinback = directionDot < -0.001f;
+                        if (firstImpactSpinback)
+                        {
+                            firstImpactTangentOut = -postTanMag;
+                        }
+                    }
+                }
 
                 if (!carryRecorded)
                 {
@@ -144,7 +178,11 @@ public partial class PhysicsAdapter : RefCounted
             { "initial_spin_ratio", initialSpinRatio },
             { "initial_cd", initialCd },
             { "initial_cl", initialCl },
-            { "peak_cl", peakCl }
+            { "peak_cl", peakCl },
+            { "surface", surface.ToString() },
+            { "first_impact_spinback", firstImpactSpinback },
+            { "first_impact_tangent_in_mps", firstImpactTangentIn },
+            { "first_impact_tangent_out_mps", firstImpactTangentOut }
         };
     }
 
@@ -163,6 +201,7 @@ public partial class PhysicsAdapter : RefCounted
             (float)surfaceParams["u_kr"],
             (float)surfaceParams["nu_g"],
             (float)surfaceParams["theta_c"],
+            surface,
             floorNormal
         );
     }

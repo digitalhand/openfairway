@@ -10,5 +10,6 @@ enum SurfaceType {
     FAIRWAY, # Fast rollout
     FAIRWAY_SOFT, # Medium rollout 
     ROUGH, # Slow rollout
-    FIRM # Green (fastest) rollout
+    FIRM, # Hardpan / cart-path style
+    GREEN # Putting green (spin check / possible spinback)
 }

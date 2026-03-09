@@ -15,6 +15,7 @@ public partial class PhysicsParams : Resource
     [Export] public float RollingFriction { get; set; }
     [Export] public float GrassViscosity { get; set; }
     [Export] public float CriticalAngle { get; set; }
+    [Export] public PhysicsEnums.SurfaceType SurfaceType { get; set; } = PhysicsEnums.SurfaceType.Fairway;
     /// <summary>
     /// Surface/Floor normal at the ball's ground contact point.
     /// Expected to be a unit vector; zero-length is treated as Vector3.Up (flat ground).
@@ -33,6 +34,7 @@ public partial class PhysicsParams : Resource
         float rollingFriction,
         float grassViscosity,
         float criticalAngle,
+        PhysicsEnums.SurfaceType surfaceType,
         Vector3 floorNormal,
         float rolloutImpactSpin = 0.0f)
     {
@@ -44,6 +46,7 @@ public partial class PhysicsParams : Resource
         RollingFriction = rollingFriction;
         GrassViscosity = grassViscosity;
         CriticalAngle = criticalAngle;
+        SurfaceType = surfaceType;
         FloorNormal = floorNormal;
         RolloutImpactSpin = rolloutImpactSpin;
     }
