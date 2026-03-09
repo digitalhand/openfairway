@@ -15,7 +15,7 @@ public partial class PhysicsAdapter : RefCounted
     private const float DEFAULT_TEMP_F = 75.0f;
     private const float DEFAULT_ALT_FT = 0.0f;
     private const float MAX_TIME = 12.0f;
-    private const float DT = 1.0f / 240.0f;
+    private const float DT = BallPhysics.SIMULATION_DT;
 
     private readonly BallPhysics _physics = new();
     private readonly Aerodynamics _aero = new();
@@ -72,8 +72,7 @@ public partial class PhysicsAdapter : RefCounted
         float initialSpeed = velocity.Length();
         float initialSpinRatio = initialSpeed > 0.001f ? omega.Length() * BallPhysics.RADIUS / initialSpeed : 0.0f;
         float initialRe = parameters.AirDensity * initialSpeed * BallPhysics.RADIUS * 2.0f / parameters.AirViscosity;
-        float initialSpinDragMultiplier = 1.0f + BallPhysics.SPIN_DRAG_MULTIPLIER_COEFF * initialSpinRatio * initialSpinRatio;
-        initialSpinDragMultiplier = Mathf.Min(initialSpinDragMultiplier, BallPhysics.SPIN_DRAG_MULTIPLIER_MAX);
+        float initialSpinDragMultiplier = BallPhysics.GetSpinDragMultiplier(initialSpinRatio);
         float initialCd = _aero.GetCd(initialRe) * initialSpinDragMultiplier * parameters.DragScale;
         float initialCl = _aero.GetCl(initialRe, initialSpinRatio) * parameters.LiftScale;
         float peakCl = 0.0f;
@@ -93,11 +92,7 @@ public partial class PhysicsAdapter : RefCounted
                 }
             }
 
-            Vector3 force = _physics.CalculateForces(velocity, omega, onGround, parameters);
-            Vector3 torque = _physics.CalculateTorques(velocity, omega, onGround, parameters);
-
-            velocity += (force / BallPhysics.MASS) * DT;
-            omega += (torque / BallPhysics.MOMENT_OF_INERTIA) * DT;
+            _physics.IntegrateStep(ref velocity, ref omega, onGround, parameters, DT);
 
             pos += velocity * DT;
             apexM = Mathf.Max(apexM, pos.Y);

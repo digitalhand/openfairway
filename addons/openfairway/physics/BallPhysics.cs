@@ -13,16 +13,23 @@ public partial class BallPhysics : RefCounted
     public const float RADIUS = 0.021335f;  // m (regulation golf ball)
     public const float CROSS_SECTION = Mathf.Pi * RADIUS * RADIUS;  // m²
     public const float MOMENT_OF_INERTIA = 0.4f * MASS * RADIUS * RADIUS;  // kg*m²
+    public const float SIMULATION_HZ = 120.0f;  // shared integration rate for runtime + headless
+    public const float SIMULATION_DT = 1.0f / SIMULATION_HZ;
     public const float SPIN_DECAY_TAU = 5.0f;  // Spin decay time constant (seconds)
     public const float SPIN_DRAG_MULTIPLIER_COEFF = 2.8f;
     public const float SPIN_DRAG_MULTIPLIER_MAX = 1.35f;
+    public const float SPIN_DRAG_MULTIPLIER_HIGH_SPIN_MAX = 1.17f;
 
     // Read-only properties for GDScript access to constants (private set satisfies [Export] requirement)
     [Export] public float BallMass { get => MASS; private set { } }
     [Export] public float BallRadius { get => RADIUS; private set { } }
     [Export] public float BallCrossSection { get => CROSS_SECTION; private set { } }
     [Export] public float BallMomentOfInertia { get => MOMENT_OF_INERTIA; private set { } }
+    [Export] public float SimulationHz { get => SIMULATION_HZ; private set { } }
+    [Export] public float SimulationDt { get => SIMULATION_DT; private set { } }
     [Export] public float SpinDecayTau { get => SPIN_DECAY_TAU; private set { } }
+    [Export] public float SpinDragMultiplierMax { get => SPIN_DRAG_MULTIPLIER_MAX; private set { } }
+    [Export] public float SpinDragMultiplierHighSpinMax { get => SPIN_DRAG_MULTIPLIER_HIGH_SPIN_MAX; private set { } }
 
     // Spin friction tuning constants
     private const float CHIP_SPEED_THRESHOLD = 20.0f;     // m/s — below this, reduced spin friction
@@ -37,6 +44,8 @@ public partial class BallPhysics : RefCounted
 
     // Friction blending
     private const float FRICTION_BLEND_SPEED = 15.0f;     // m/s — blending threshold for rolling/kinetic friction
+    private const float HIGH_SPIN_DRAG_SR_START = 0.40f;
+    private const float HIGH_SPIN_DRAG_SR_END = 0.50f;
 
     private readonly Aerodynamics _aero = new();
 
@@ -230,10 +239,9 @@ public partial class BallPhysics : RefCounted
         float reynolds = parameters.AirDensity * speed * RADIUS * 2.0f / parameters.AirViscosity;
 
         // Spin-aware drag term:
-        // low-spin driver shots remain near baseline Cd, while high-spin
-        // approach shots get additional drag without a global hard floor.
-        float spinDragMultiplier = 1.0f + SPIN_DRAG_MULTIPLIER_COEFF * spinRatio * spinRatio;
-        spinDragMultiplier = Mathf.Min(spinDragMultiplier, SPIN_DRAG_MULTIPLIER_MAX);
+        // preserve current mid-spin behavior while preventing over-penalized
+        // carry in very high-spin wedge/flop trajectories.
+        float spinDragMultiplier = GetSpinDragMultiplier(spinRatio);
 
         float cd = _aero.GetCd(reynolds) * spinDragMultiplier * parameters.DragScale;
         float cl = _aero.GetCl(reynolds, spinRatio) * parameters.LiftScale;
@@ -254,6 +262,28 @@ public partial class BallPhysics : RefCounted
     }
 
     /// <summary>
+    /// Compute spin-drag multiplier with a high-spin cap transition.
+    /// Keeps driver/mid-iron drag near prior behavior while reducing excess
+    /// drag for very high spin-ratio shots (wedge/flop regime).
+    /// </summary>
+    public static float GetSpinDragMultiplier(float spinRatio)
+    {
+        if (spinRatio <= 0.0f)
+            return 1.0f;
+
+        float normalizedHighSpin = Mathf.Clamp(
+            (spinRatio - HIGH_SPIN_DRAG_SR_START) / (HIGH_SPIN_DRAG_SR_END - HIGH_SPIN_DRAG_SR_START),
+            0.0f,
+            1.0f
+        );
+        float highSpinWeight = normalizedHighSpin * normalizedHighSpin * (3.0f - 2.0f * normalizedHighSpin);
+        float effectiveCap = Mathf.Lerp(SPIN_DRAG_MULTIPLIER_MAX, SPIN_DRAG_MULTIPLIER_HIGH_SPIN_MAX, highSpinWeight);
+
+        float spinDragMultiplier = 1.0f + SPIN_DRAG_MULTIPLIER_COEFF * spinRatio * spinRatio;
+        return Mathf.Min(spinDragMultiplier, effectiveCap);
+    }
+
+    /// <summary>
     /// Calculate total torques acting on the ball
     /// </summary>
     public Vector3 CalculateTorques(
@@ -271,6 +301,24 @@ public partial class BallPhysics : RefCounted
             // Spin decay torque (exponential decay model)
             return -MOMENT_OF_INERTIA * omega / SPIN_DECAY_TAU;
         }
+    }
+
+    /// <summary>
+    /// Integrate velocity and spin one step with a shared fixed time step.
+    /// Used by both runtime and headless simulators to keep trajectories aligned.
+    /// </summary>
+    public void IntegrateStep(
+        ref Vector3 velocity,
+        ref Vector3 omega,
+        bool onGround,
+        PhysicsParams parameters,
+        float dt)
+    {
+        Vector3 force = CalculateForces(velocity, omega, onGround, parameters);
+        Vector3 torque = CalculateTorques(velocity, omega, onGround, parameters);
+
+        velocity += (force / MASS) * dt;
+        omega += (torque / MOMENT_OF_INERTIA) * dt;
     }
 
     /// <summary>

@@ -21,6 +21,8 @@ public partial class GolfBall : CharacterBody3D
 	private const float GROUND_RAYCAST_DOWN = 8.0f;
 	private const float GROUND_PROBE_DISTANCE = 0.08f;
 	private const string GREEN_GRID_ITEM_NAME = "GreenMesh";
+	private const float PHYSICS_SUBSTEP_DT = BallPhysics.SIMULATION_DT;
+	private const int MAX_SUBSTEPS_PER_FRAME = 12;
 
 	// Signals
 	[Signal]
@@ -44,6 +46,7 @@ public partial class GolfBall : CharacterBody3D
 
 	// Settings reference for signal cleanup
 	private GameSettings _gameSettings;
+	private float _substepAccumulator = 0.0f;
 
 	// Terrain3D data reference for height queries (cached on _Ready)
 	private GodotObject _terrainData;
@@ -265,37 +268,66 @@ public partial class GolfBall : CharacterBody3D
 	public override void _PhysicsProcess(double delta)
 	{
 		if (State == PhysicsEnums.BallState.Rest)
+		{
+			_substepAccumulator = 0.0f;
 			return;
+		}
 
+		_substepAccumulator += (float)delta;
+		int substeps = 0;
+		while (_substepAccumulator >= PHYSICS_SUBSTEP_DT && substeps < MAX_SUBSTEPS_PER_FRAME)
+		{
+			if (!StepPhysics(PHYSICS_SUBSTEP_DT))
+			{
+				_substepAccumulator = 0.0f;
+				return;
+			}
+
+			_substepAccumulator -= PHYSICS_SUBSTEP_DT;
+			substeps++;
+
+			if (State == PhysicsEnums.BallState.Rest)
+			{
+				_substepAccumulator = 0.0f;
+				return;
+			}
+		}
+
+		// Prevent runaway catch-up loops under stalls while preserving continuity.
+		if (substeps == MAX_SUBSTEPS_PER_FRAME && _substepAccumulator > PHYSICS_SUBSTEP_DT)
+		{
+			_substepAccumulator = PHYSICS_SUBSTEP_DT;
+		}
+	}
+
+	private bool StepPhysics(float dt)
+	{
 		bool wasOnGround = OnGround;
 		Vector3 prevVelocity = Velocity;
 
-		// Calculate forces and torques using BallPhysics
 		var parameters = CreatePhysicsParams();
-		Vector3 totalForce = _ballPhysics.CalculateForces(Velocity, Omega, wasOnGround, parameters);
-		Vector3 totalTorque = _ballPhysics.CalculateTorques(Velocity, Omega, wasOnGround, parameters);
+		Vector3 velocity = Velocity;
+		Vector3 omega = Omega;
+		_ballPhysics.IntegrateStep(ref velocity, ref omega, wasOnGround, parameters, dt);
+		Velocity = velocity;
+		Omega = omega;
 
-		// Update velocity and angular velocity
-		Velocity += (totalForce / BallPhysics.MASS) * (float)delta;
-		Omega += (totalTorque / BallPhysics.MOMENT_OF_INERTIA) * (float)delta;
-
-		// Safety bounds check
 		if (CheckOutOfBounds())
-			return;
+			return false;
 
-		// Move and handle collisions
 		var collision = MoveAndCollide(
-			Velocity * (float)delta,
+			Velocity * dt,
 			testOnly: false,
 			safeMargin: COLLISION_SAFE_MARGIN
 		);
 		HandleCollision(collision, wasOnGround, prevVelocity);
 
-		// Check for rest
 		if (Velocity.Length() < 0.1f && State != PhysicsEnums.BallState.Rest)
 		{
 			EnterRestState();
 		}
+
+		return true;
 	}
 
 	private PhysicsParams CreatePhysicsParams()
@@ -529,6 +561,7 @@ public partial class GolfBall : CharacterBody3D
 		State = PhysicsEnums.BallState.Rest;
 		Velocity = Vector3.Zero;
 		Omega = Vector3.Zero;
+		_substepAccumulator = 0.0f;
 		EmitSignal(SignalName.BallAtRest);
 	}
 
@@ -586,6 +619,7 @@ public partial class GolfBall : CharacterBody3D
         SnapToGround();
         Velocity = Vector3.Zero;
         Omega = Vector3.Zero;
+        _substepAccumulator = 0.0f;
         AimYawOffsetDeg = 0.0f;
         LaunchSpinRpm = 0.0f;
         RolloutImpactSpinRpm = 0.0f;
@@ -649,6 +683,7 @@ public partial class GolfBall : CharacterBody3D
         // Set state
         State = PhysicsEnums.BallState.Flight;
         OnGround = false;
+        _substepAccumulator = 0.0f;
         RolloutImpactSpinRpm = 0.0f;
         _surfaceZoneStack.Clear();
         SetSurface(GetConfiguredSurfaceType());
