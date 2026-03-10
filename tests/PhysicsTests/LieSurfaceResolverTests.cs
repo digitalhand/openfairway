@@ -6,10 +6,10 @@ namespace PhysicsTests;
 [TestFixture]
 public class LieSurfaceResolverTests
 {
-    [TestCase("surface:green", PhysicsEnums.SurfaceType.Green)]
-    [TestCase("surface:fairway_soft", PhysicsEnums.SurfaceType.FairwaySoft)]
-    [TestCase("surface:fairway-soft", PhysicsEnums.SurfaceType.FairwaySoft)]
-    [TestCase("surface:rough", PhysicsEnums.SurfaceType.Rough)]
+    [TestCase("Fairway", PhysicsEnums.SurfaceType.Fairway)]
+    [TestCase("Green", PhysicsEnums.SurfaceType.Green)]
+    [TestCase("Rough", PhysicsEnums.SurfaceType.Rough)]
+    [TestCase(" fairway ", PhysicsEnums.SurfaceType.Fairway)]
     public void TryParseMeshLibraryLabel_ParsesSupportedLabels(string label, PhysicsEnums.SurfaceType expected)
     {
         bool parsed = LieSurfaceResolver.TryParseMeshLibraryLabel(label, out var surface);
@@ -19,9 +19,17 @@ public class LieSurfaceResolverTests
     }
 
     [Test]
-    public void TryParseMeshLibraryLabel_RejectsLegacyUnprefixedName()
+    public void TryParseMeshLibraryLabel_RejectsUnsupportedLegacyLabel()
     {
-        bool parsed = LieSurfaceResolver.TryParseMeshLibraryLabel("GreenMesh", out _);
+        bool parsed = LieSurfaceResolver.TryParseMeshLibraryLabel("surface:green", out _);
+
+        Assert.That(parsed, Is.False);
+    }
+
+    [Test]
+    public void TryParseMeshLibraryLabel_RejectsUnsupportedSurfaceTypeName()
+    {
+        bool parsed = LieSurfaceResolver.TryParseMeshLibraryLabel("Firm", out _);
 
         Assert.That(parsed, Is.False);
     }

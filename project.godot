@@ -21,7 +21,7 @@ config/features=PackedStringArray("4.6", "C#", "Mobile")
 
 [autoload]
 
-PhantomCameraManager="*res://addons/phantom_camera/scripts/managers/phantom_camera_manager.gd"
+PhantomCameraManager="*uid://duq6jhf6unyis"
 GlobalSettings="*res://utils/Settings/GlobalSettings.cs"
 TcpServerService="*res://tcp/TcpServer.cs"
 GameProgressStore="*res://game/save/GameProgressStore.cs"
@@ -39,7 +39,7 @@ project/assembly_name="OpenFairway"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/openfairway/plugin.cfg", "res://addons/phantom_camera/plugin.cfg", "res://addons/terrain_3d/plugin.cfg")
+enabled=PackedStringArray("res://addons/openfairway/plugin.cfg", "res://addons/phantom_camera/plugin.cfg")
 
 [filesystem]
 

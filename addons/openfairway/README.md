@@ -130,13 +130,15 @@ That line is the quickest way to confirm the resolved lie surface and the bounce
 Use one of these two authoring paths:
 
 1. **Base lie surface from `GridMap`**
-   - Name `MeshLibrary` items with the `surface:` prefix.
-   - Supported labels: `surface:fairway`, `surface:fairway_soft`, `surface:rough`, `surface:firm`, `surface:green`.
-   - `LieSurfaceResolver` reads those labels at the ball's contact point.
+   - Name `MeshLibrary` items with the plain surface names used by `res://assets/meshes/surface_types.tres`.
+   - Supported item names: `Fairway`, `Green`, `Rough`.
+   - `LieSurfaceResolver` reads those MeshLibrary item names at the ball's contact point.
 2. **Local override from `SurfaceZone`**
    - Add `res://game/SurfaceZone.cs` to an `Area3D`.
    - Set its `SurfaceType`.
    - Use this for patches that should override the base `GridMap` result.
+
+`PhysicsEnums.SurfaceType.FairwaySoft` and `PhysicsEnums.SurfaceType.Firm` remain available for settings and `SurfaceZone` overrides. They are not currently authored through `surface_types.tres`.
 
 If you build a custom ball/controller flow, keep the same ownership boundary: resolve a `SurfaceType` outside the ball, then pass that surface into the physics parameter path.
 

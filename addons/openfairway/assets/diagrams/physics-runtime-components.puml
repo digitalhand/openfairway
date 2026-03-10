@@ -25,7 +25,7 @@ package "Physics Runtime" {
 HoleSceneControllerBase --> GolfBall : launch + resolve surface delegate
 HoleSceneControllerBase --> LieSurfaceResolver : default surface + zones + grid maps
 SurfaceZone --> HoleSceneControllerBase : enter/exit signals
-GridMap --> LieSurfaceResolver : surface:* mesh labels
+GridMap --> LieSurfaceResolver : Fairway/Green/Rough item names
 
 GolfBall --> ShotSetup : parse launch data
 GolfBall --> PhysicsParamsFactory : Create(...)

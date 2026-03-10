@@ -28,7 +28,7 @@ loop each 240 Hz step
     alt active zone override
       Resolver -> Zone : use top of zone stack
     else grid surface lookup
-      Resolver -> Grid : probe surface:* cells
+      Resolver -> Grid : probe Fairway/Green/Rough cells
     else fallback
       Resolver -> Resolver : use default surface
     end

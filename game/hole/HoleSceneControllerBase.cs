@@ -358,9 +358,7 @@ public abstract partial class HoleSceneControllerBase : Node3D
         ResetRoundView();
         SetStrokeCount(0);
         ClearRoundProgress();
-        ResetLieSurfaceAfterTeleport();
-        CallDeferred(nameof(SetCameraToStartImmediate));
-        QueueFlagMarkerResetToTarget();
+        ResetBallAtStart(resetMarkers: true);
     }
 
     public override void _Process(double delta)
@@ -443,10 +441,8 @@ public abstract partial class HoleSceneControllerBase : Node3D
             if ((bool)_gameSettings.AutoBallReset.Value)
             {
                 _displaySession.Reset();
-                _gameplayUi.SetData(_displaySession.Current.ToDictionary());
-                _shotTracker.ResetBall();
-                ResetLieSurfaceAfterTeleport();
-                CallDeferred(nameof(SetCameraToStartImmediate));
+                _gameplayUi?.SetData(_displaySession.Current.ToDictionary());
+                ResetBallAtStart(resetMarkers: false);
             }
         }
         catch (System.Exception ex)
@@ -785,10 +781,7 @@ public abstract partial class HoleSceneControllerBase : Node3D
         ResetRoundView();
         SetStrokeCount(0);
         ClearRoundProgress();
-        _shotTracker.ResetBall();
-        ResetLieSurfaceAfterTeleport();
-        CallDeferred(nameof(SetCameraToStartImmediate));
-        QueueFlagMarkerResetToTarget();
+        ResetBallAtStart(resetMarkers: true);
         OnHoleRoundCompleted();
     }
 
@@ -851,6 +844,16 @@ public abstract partial class HoleSceneControllerBase : Node3D
         _shotMarkerController.OnRoundReset();
         _displaySession.Reset();
         _gameplayUi?.SetData(_displaySession.Current.ToDictionary());
+    }
+
+    private void ResetBallAtStart(bool resetMarkers)
+    {
+        _shotTracker?.ResetBall();
+        ResetLieSurfaceAfterTeleport();
+        CallDeferred(nameof(SetCameraToStartImmediate));
+
+        if (resetMarkers)
+            QueueFlagMarkerResetToTarget();
     }
 
     private string GetSceneId()

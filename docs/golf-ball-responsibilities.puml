@@ -11,7 +11,7 @@ class ShotSetup
 class BallPhysics
 class PhysicsAdapter
 
-HoleSceneControllerBase --> LieSurfaceResolver : default + zones + mesh labels
+HoleSceneControllerBase --> LieSurfaceResolver : default + zones + MeshLibrary item names
 SurfaceZone --> HoleSceneControllerBase : enter/exit signals
 GolfBall --> HoleSceneControllerBase : resolve contact surface via delegate
 GolfBall --> PhysicsParamsFactory : resolve runtime physics params

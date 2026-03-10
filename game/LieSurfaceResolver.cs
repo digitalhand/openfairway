@@ -1,14 +1,12 @@
-using System;
 using System.Collections.Generic;
 using Godot;
 
 /// <summary>
 /// Controller-owned lie surface resolver. It owns default surface selection,
-/// active zone overrides, and GridMap mesh-library label parsing.
+/// active zone overrides, and GridMap mesh-library item parsing.
 /// </summary>
 public sealed class LieSurfaceResolver
 {
-    private const string SurfaceLabelPrefix = "surface:";
     private readonly List<PhysicsEnums.SurfaceType> _zoneStack = new();
     private readonly List<GridMap> _surfaceGridMaps = new();
 
@@ -105,13 +103,10 @@ public sealed class LieSurfaceResolver
     public static bool TryParseMeshLibraryLabel(string label, out PhysicsEnums.SurfaceType surface)
     {
         surface = default;
-        if (string.IsNullOrWhiteSpace(label) ||
-            !label.StartsWith(SurfaceLabelPrefix, StringComparison.OrdinalIgnoreCase))
-        {
+        if (string.IsNullOrWhiteSpace(label))
             return false;
-        }
 
-        string token = label.Substring(SurfaceLabelPrefix.Length)
+        string token = label
             .Trim()
             .ToLowerInvariant()
             .Replace('-', '_')
@@ -123,17 +118,8 @@ public sealed class LieSurfaceResolver
                 surface = PhysicsEnums.SurfaceType.Fairway;
                 return true;
 
-            case "fairway_soft":
-            case "fairwaysoft":
-                surface = PhysicsEnums.SurfaceType.FairwaySoft;
-                return true;
-
             case "rough":
                 surface = PhysicsEnums.SurfaceType.Rough;
-                return true;
-
-            case "firm":
-                surface = PhysicsEnums.SurfaceType.Firm;
                 return true;
 
             case "green":
