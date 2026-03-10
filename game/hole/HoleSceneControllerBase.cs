@@ -211,7 +211,13 @@ public abstract partial class HoleSceneControllerBase : Node3D
         if (_tcpServer != null)
             _tcpServer.HitBall += OnTcpClientHitBall;
 
-        var globalSettings = GetNode<GlobalSettings>("/root/GlobalSettings");
+        var globalSettings = GetNodeOrNull<GlobalSettings>("/root/GlobalSettings");
+        if (globalSettings == null)
+        {
+            GD.PushError($"{GetType().Name}: GlobalSettings not found at /root/GlobalSettings. Settings-driven features will be disabled.");
+            return;
+        }
+
         _gameSettings = globalSettings.GameSettings;
         _appSettings = globalSettings.AppSettings;
         _gameSettings.CameraFollowMode.SettingChanged += OnCameraFollowChanged;
@@ -311,6 +317,8 @@ public abstract partial class HoleSceneControllerBase : Node3D
         _lifecycleCts?.Dispose();
         _lifecycleCts = null;
         _resetCts?.Cancel();
+        _resetCts?.Dispose();
+        _resetCts = null;
         _goalCompletionFlow?.Cancel();
         _shotCameraController.CancelTransientTweens();
         _goalZones.Clear();
@@ -418,6 +426,7 @@ public abstract partial class HoleSceneControllerBase : Node3D
 
             // Cancel any previous reset timer and start a new one
             _resetCts?.Cancel();
+            _resetCts?.Dispose();
             _resetCts = new CancellationTokenSource();
             var token = _resetCts.Token;
 
@@ -733,6 +742,12 @@ public abstract partial class HoleSceneControllerBase : Node3D
         if (ball != _ball)
             return;
 
+        if (!Enum.IsDefined(typeof(PhysicsEnums.SurfaceType), surfaceTypeValue))
+        {
+            PhysicsLogger.Error($"OnBallEnteredSurfaceZone: invalid SurfaceType value {surfaceTypeValue}");
+            return;
+        }
+
         _lieSurfaceResolver.EnterZone((PhysicsEnums.SurfaceType)surfaceTypeValue);
         RefreshBallLieSurfaceAtCurrentPosition();
     }
@@ -741,6 +756,12 @@ public abstract partial class HoleSceneControllerBase : Node3D
     {
         if (ball != _ball)
             return;
+
+        if (!Enum.IsDefined(typeof(PhysicsEnums.SurfaceType), surfaceTypeValue))
+        {
+            PhysicsLogger.Error($"OnBallExitedSurfaceZone: invalid SurfaceType value {surfaceTypeValue}");
+            return;
+        }
 
         _lieSurfaceResolver.ExitZone((PhysicsEnums.SurfaceType)surfaceTypeValue);
         RefreshBallLieSurfaceAtCurrentPosition();
@@ -914,7 +935,14 @@ public abstract partial class HoleSceneControllerBase : Node3D
         if (_ball == null || _gameSettings == null)
             return;
 
-        _lieSurfaceResolver.SetDefaultSurface((PhysicsEnums.SurfaceType)(int)_gameSettings.SurfaceType.Value);
+        int surfaceValue = (int)_gameSettings.SurfaceType.Value;
+        if (!Enum.IsDefined(typeof(PhysicsEnums.SurfaceType), surfaceValue))
+        {
+            PhysicsLogger.Error($"ApplySurfaceToBall: invalid SurfaceType setting value {surfaceValue}");
+            return;
+        }
+
+        _lieSurfaceResolver.SetDefaultSurface((PhysicsEnums.SurfaceType)surfaceValue);
         RefreshBallLieSurfaceAtCurrentPosition();
     }
 

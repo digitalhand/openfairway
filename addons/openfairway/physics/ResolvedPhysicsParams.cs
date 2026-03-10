@@ -23,6 +23,7 @@ public sealed class ResolvedPhysicsParams
     public float SpinbackSpinEndRpm { get; }
     public float SpinbackSpeedStartMps { get; }
     public float SpinbackSpeedEndMps { get; }
+    public float InitialLaunchAngleDeg { get; }
 
     public ResolvedPhysicsParams(
         float airDensity,
@@ -41,7 +42,8 @@ public sealed class ResolvedPhysicsParams
         float spinbackSpinStartRpm,
         float spinbackSpinEndRpm,
         float spinbackSpeedStartMps,
-        float spinbackSpeedEndMps)
+        float spinbackSpeedEndMps,
+        float initialLaunchAngleDeg)
     {
         AirDensity = airDensity;
         AirViscosity = airViscosity;
@@ -60,6 +62,7 @@ public sealed class ResolvedPhysicsParams
         SpinbackSpinEndRpm = spinbackSpinEndRpm;
         SpinbackSpeedStartMps = spinbackSpeedStartMps;
         SpinbackSpeedEndMps = spinbackSpeedEndMps;
+        InitialLaunchAngleDeg = initialLaunchAngleDeg;
     }
 
     public PhysicsParams ToPhysicsParams()
@@ -81,7 +84,8 @@ public sealed class ResolvedPhysicsParams
             SpinbackSpinStartRpm,
             SpinbackSpinEndRpm,
             SpinbackSpeedStartMps,
-            SpinbackSpeedEndMps
+            SpinbackSpeedEndMps,
+            InitialLaunchAngleDeg
         );
     }
 }

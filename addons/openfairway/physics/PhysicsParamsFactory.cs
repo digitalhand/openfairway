@@ -14,7 +14,8 @@ public sealed class PhysicsParamsFactory
         PhysicsEnums.SurfaceType surfaceType,
         Vector3 floorNormal,
         float rolloutImpactSpin = 0.0f,
-        BallPhysicsProfile ballProfile = null)
+        BallPhysicsProfile ballProfile = null,
+        float initialLaunchAngleDeg = 0.0f)
     {
         BallPhysicsProfile profile = ballProfile ?? new BallPhysicsProfile();
         SurfacePhysicsSettings surface = SurfacePhysicsCatalog.Get(surfaceType);
@@ -36,7 +37,8 @@ public sealed class PhysicsParamsFactory
             surface.SpinbackSpinStartRpm,
             surface.SpinbackSpinEndRpm,
             surface.SpinbackSpeedStartMps,
-            surface.SpinbackSpeedEndMps
+            surface.SpinbackSpeedEndMps,
+            initialLaunchAngleDeg
         );
     }
 }

@@ -30,6 +30,7 @@ public partial class PhysicsParams : Resource
     [Export] public float SpinbackSpinEndRpm { get; set; }
     [Export] public float SpinbackSpeedStartMps { get; set; }
     [Export] public float SpinbackSpeedEndMps { get; set; }
+    [Export] public float InitialLaunchAngleDeg { get; set; }
 
     public PhysicsParams() { }
 
@@ -50,7 +51,8 @@ public partial class PhysicsParams : Resource
         float spinbackSpinStartRpm = 0.0f,
         float spinbackSpinEndRpm = 0.0f,
         float spinbackSpeedStartMps = 0.0f,
-        float spinbackSpeedEndMps = 0.0f)
+        float spinbackSpeedEndMps = 0.0f,
+        float initialLaunchAngleDeg = 0.0f)
     {
         AirDensity = airDensity;
         AirViscosity = airViscosity;
@@ -69,5 +71,6 @@ public partial class PhysicsParams : Resource
         SpinbackSpinEndRpm = spinbackSpinEndRpm;
         SpinbackSpeedStartMps = spinbackSpeedStartMps;
         SpinbackSpeedEndMps = spinbackSpeedEndMps;
+        InitialLaunchAngleDeg = initialLaunchAngleDeg;
     }
 }

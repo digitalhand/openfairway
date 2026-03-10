@@ -7,6 +7,7 @@ var shots := {
 	"Drive":      "res://assets/data/drive_test_shot.json",
 	"Wood Low":   "res://assets/data/wood_low_test_shot.json",
 	"Wedge":      "res://assets/data/wedge_test_shot.json",
+	"Wedge2":      "res://assets/data/wedge_test_shot2.json",
 	"Bump":       "res://assets/data/bump_test_shot.json",
 	"Bump & Run": "res://assets/data/bump_and_run.json",
 	"Approach":   "res://assets/data/approach_test_shot.json",
@@ -16,6 +17,7 @@ var shots := {
 	"Flop":       "res://assets/data/flop_test_shot.json",
 	"Chip":       "res://assets/data/chip_test_shot.json",
 	"Putt 10ft":  "res://assets/data/putt_ten_feet.json",
+	"Free Shot:  "res://assets/data/free_shot.json",
 }
 
 func _init() -> void:

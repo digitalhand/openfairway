@@ -1,4 +1,3 @@
-using System;
 using Godot;
 
 /// <summary>
@@ -19,18 +18,12 @@ public partial class Aerodynamics : RefCounted
 	private const float DYN_VISCOSITY_ZERO_DEGREE = 1.716e-05f;  // kg/(m*s)
 	private const float SUTHERLAND_CONSTANT = 198.72f;  // K (source: NASA)
 	private const float FEET_TO_METERS = 0.3048f;
-	private const float HIGH_RE_START = 75000.0f;
-	private const float HIGH_RE_CL_MAX = 0.275f;
-	private const float HIGH_RE_SPIN_GAIN = 10.0f;
-	private const float HIGH_SPIN_CL_ATTENUATION_START = 0.42f;
-	private const float HIGH_SPIN_CL_ATTENUATION_END = 0.72f;
-	private const float HIGH_SPIN_CL_ATTENUATION_MAX = 0.08f;
 
 	// Physically realistic coefficient bounds for dimpled golf balls in-play.
 	// Sources in project docs (Bearman/Harvey, R&A studies) place Cd and Cl
 	// in a narrower range than the prior ad-hoc high-Re fit.
-	public const float CL_MAX = HIGH_RE_CL_MAX;
-	public const float CD_MIN = 0.22f;
+	public const float CL_MAX = FlightAerodynamicsModel.ClMax;
+	public const float CD_MIN = FlightAerodynamicsModel.CdMin;
 
 	// Read-only property for GDScript access to constant (private set satisfies [Export] requirement)
 	[Export] public float ClMax { get => CL_MAX; private set { } }
@@ -106,13 +99,7 @@ public partial class Aerodynamics : RefCounted
 	/// <returns>Drag coefficient (Cd)</returns>
 	public float GetCd(float Re)
 	{
-		if (Re < 50000.0f)
-			return 0.5f;
-		if (Re > 200000.0f)
-			return 0.2f;
-
-		// Polynomial fit to experimental data
-		return 1.1948f - 0.0000209661f * Re + 1.42472e-10f * Re * Re - 3.14383e-16f * Re * Re * Re;
+		return FlightAerodynamicsModel.GetCd(Re);
 	}
 
 	/// <summary>
@@ -124,95 +111,6 @@ public partial class Aerodynamics : RefCounted
 	/// <returns>Lift coefficient (Cl)</returns>
 	public float GetCl(float Re, float spinRatio)
 	{
-		float spin = Mathf.Max(0.0f, spinRatio);
-		if (spin <= 0.0f)
-			return 0.0f;
-
-		// Low Reynolds number - effectively negligible Magnus lift for this model.
-		if (Re < 50000.0f)
-			return 0.0f;
-
-		// High Reynolds number - use saturating lift curve.
-		if (Re >= HIGH_RE_START)
-			return ApplyHighSpinLiftAttenuation(spin, Mathf.Clamp(ClHighRe(spin), 0.0f, CL_MAX));
-
-		// Interpolation between polynomial models for 50k <= Re <= 75k
-		int[] reValues = { 50000, 60000, 65000, 70000, 75000 };
-		int reHighIndex = reValues.Length - 1;
-
-		for (int i = 0; i < reValues.Length; i++)
-		{
-			if (Re <= reValues[i])
-			{
-				reHighIndex = i;
-				break;
-			}
-		}
-
-		int reLowIndex = Mathf.Max(reHighIndex - 1, 0);
-
-		Func<float, float>[] clFunctions = {
-			ClRe50k,
-			ClRe60k,
-			ClRe65k,
-			ClRe70k,
-			ClHighRe
-		};
-
-		float clLow = Mathf.Max(0.0f, clFunctions[reLowIndex](spin));
-		float clHigh = Mathf.Max(0.0f, clFunctions[reHighIndex](spin));
-		float reLow = reValues[reLowIndex];
-		float reHigh = reValues[reHighIndex];
-
-		float weight = 0.0f;
-		if (reHigh != reLow)
-		{
-			weight = (Re - reLow) / (reHigh - reLow);
-		}
-
-		float clInterpolated = Mathf.Lerp(clLow, clHigh, weight);
-		return Mathf.Clamp(clInterpolated, 0.0f, CL_MAX);
-	}
-
-	// Polynomial models for different Reynolds number ranges
-	private float ClRe50k(float S)
-	{
-		return 0.0472121f + 2.84795f * S - 23.4342f * S * S + 45.4849f * S * S * S;
-	}
-
-	private float ClRe60k(float S)
-	{
-		return 0.320524f - 4.7032f * S + 14.0613f * S * S;
-	}
-
-	private float ClRe65k(float S)
-	{
-		return 0.266667f - 4.0f * S + 13.3333f * S * S;
-	}
-
-	private float ClRe70k(float S)
-	{
-		return 0.0496189f + 0.00211396f * S + 2.34201f * S * S;
-	}
-
-	private float ClHighRe(float S)
-	{
-		// Saturating spin-lift law for high-Re flight:
-		// - preserves low-spin driver lift (needed for realistic carry),
-		// - limits high-spin ballooning for approach/wedge trajectories.
-		return HIGH_RE_CL_MAX * (1.0f - Mathf.Exp(-HIGH_RE_SPIN_GAIN * S));
-	}
-
-	private float ApplyHighSpinLiftAttenuation(float spinRatio, float cl)
-	{
-		float attenuationT = Mathf.Clamp(
-			(spinRatio - HIGH_SPIN_CL_ATTENUATION_START) /
-			(HIGH_SPIN_CL_ATTENUATION_END - HIGH_SPIN_CL_ATTENUATION_START),
-			0.0f,
-			1.0f
-		);
-		attenuationT = attenuationT * attenuationT * (3.0f - 2.0f * attenuationT);
-		float attenuation = 1.0f - HIGH_SPIN_CL_ATTENUATION_MAX * attenuationT;
-		return cl * attenuation;
+		return FlightAerodynamicsModel.GetCl(Re, spinRatio);
 	}
 }

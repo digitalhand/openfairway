@@ -264,13 +264,19 @@ Current surface tuning intent:
 
 ## Distance Benchmarks
 
-Run all 9 test shots headlessly and produce a carry/total/rollout distance table:
+Run the headless benchmark suite and produce a carry/total/rollout table for the current benchmark shot set in [`run_benchmarks.gd`](/home/jesher/Code/Github/digitalhand/openfairway/run_benchmarks.gd):
 
 ```bash
 godot --headless --script run_benchmarks.gd
 ```
 
-This is the standard way to validate physics changes. See `tests/PhysicsTests/README.md` for baseline distances and the full testing workflow.
+For carry work, also run the Godot-backed Garmin carry-window suite:
+
+```bash
+dotnet test --filter "Category=GarminCarryWindow"
+```
+
+Use the benchmark script for broad flight/rollout trend checking and the Garmin suite for carry-window regression. See [`tests/PhysicsTests/README.md`](/home/jesher/Code/Github/digitalhand/openfairway/tests/PhysicsTests/README.md) for the full workflow and expected diagnostics.
 
 ## Known Feature Gaps
 
@@ -309,6 +315,7 @@ addons/openfairway/
     ├── Aerodynamics.cs   Cd/Cl coefficients, air properties
     ├── Surface.cs        Surface parameter presets
     ├── ShotSetup.cs      Spin parsing & launch vector utilities
+    ├── FlightAerodynamicsModel.cs Shared flight coefficient model and diagnostics sample
     ├── PhysicsAdapter.cs Headless shot simulator
     ├── PhysicsEnums.cs   C# enum definitions (static class)
     └── README.md         Physics formulas and tuning guide
@@ -317,6 +324,7 @@ addons/openfairway/
 ## Documentation
 
 - **[Addon README](addons/openfairway/README.md)** — installation, API usage, runtime architecture, surface integration, formulas, tuning guide, and rendered physics diagrams
+- **[Physics Tests README](tests/PhysicsTests/README.md)** — benchmark workflow, carry-window regression, and CI-safe formula coverage
 
 ## Units Convention
 

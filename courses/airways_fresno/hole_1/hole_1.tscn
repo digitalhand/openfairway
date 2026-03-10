@@ -29,6 +29,9 @@ sky_custom_fov = 49.0
 ambient_light_source = 3
 reflected_light_source = 2
 tonemap_mode = 2
+ssao_enabled = true
+ssao_radius = 2.0
+ssao_power = 3.1057951
 fog_density = 0.001
 fog_height = -485.52
 fog_height_density = 0.6897
@@ -180,7 +183,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 184.04437, 2.0791407, -26.357
 mesh = SubResource("ArrayMesh_vwjc8")
 skeleton = NodePath("")
 
-[node name="GridMap" type="GridMap" parent="." unique_id=1191080488]
+[node name="SurfaceGrid" type="GridMap" parent="." unique_id=1191080488]
 mesh_library = ExtResource("14_epdaf")
 cell_size = Vector3(4, 4, 4)
 cell_center_y = false
