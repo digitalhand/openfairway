@@ -17,6 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      APP_NAME: OpenFairway
 
     steps:
     - name: Checkout repository
@@ -57,15 +59,13 @@ jobs:
 
     - name: Resolve project file
       run: |
-        if [[ -f "OpenFairway.csproj" ]]; then
-          echo "PROJECT_FILE=OpenFairway.csproj" >> "$GITHUB_ENV"
-        elif [[ -f "OpenShotGolf.csproj" ]]; then
-          echo "PROJECT_FILE=OpenShotGolf.csproj" >> "$GITHUB_ENV"
-        else
-          echo "Error: No root project file found (expected OpenFairway.csproj or OpenShotGolf.csproj)."
+        if [[ ! -f "OpenFairway.csproj" ]]; then
+          echo "Error: OpenFairway.csproj was not found at the repository root."
           ls -la
           exit 1
         fi
+
+        echo "PROJECT_FILE=OpenFairway.csproj" >> "$GITHUB_ENV"
 
     - name: Restore dependencies
       run: dotnet restore "${{ env.PROJECT_FILE }}"
@@ -89,15 +89,25 @@ jobs:
     - name: Rename release archives
       run: |
         cd "${{ steps.export.outputs.archive_directory }}"
-        mv Linux.zip OpenShotGolf_Linux.zip
-        mv "Windows Desktop.zip" OpenShotGolf_Windows.zip
-        
+        ls -la
+
+        linux_archive="$(find . -maxdepth 1 -type f -iname '*linux*.zip' -printf '%f\n' | head -n 1)"
+        windows_archive="$(find . -maxdepth 1 -type f -iname '*windows*.zip' -printf '%f\n' | head -n 1)"
+
+        if [[ -z "$linux_archive" || -z "$windows_archive" ]]; then
+          echo "Error: Expected Linux and Windows zip archives after export."
+          exit 1
+        fi
+
+        mv "$linux_archive" "${APP_NAME}_Linux.zip"
+        mv "$windows_archive" "${APP_NAME}_Windows.zip"
+
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2
       with:
         tag_name: ${{ env.RELEASE_TAG }}
         target_commitish: ${{ env.RELEASE_SHA }}
-        name: OpenFairway Game ${{ env.RELEASE_TAG }}
+        name: ${{ env.APP_NAME }} Game ${{ env.RELEASE_TAG }}
         files: |
           ${{ steps.export.outputs.archive_directory }}/*
         generate_release_notes: true
