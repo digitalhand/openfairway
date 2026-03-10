@@ -155,7 +155,11 @@ public partial class CourseHud : Control
 
 	public void SetData(Dictionary data)
 	{
-		var units = (PhysicsEnums.Units)(int)GetNode<GlobalSettings>("/root/GlobalSettings").GameSettings.GameUnits.Value;
+		var globalSettings = GetNodeOrNull<GlobalSettings>("/root/GlobalSettings");
+		if (globalSettings?.GameSettings == null)
+			return;
+
+		var units = (PhysicsEnums.Units)(int)globalSettings.GameSettings.GameUnits.Value;
 		string speedUnit = units == PhysicsEnums.Units.Imperial ? "mph" : "m/s";
 
 		_panelDistance.SetData(data["Distance"].ToString());

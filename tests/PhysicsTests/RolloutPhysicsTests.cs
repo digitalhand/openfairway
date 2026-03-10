@@ -10,6 +10,23 @@ namespace OpenFairway.Tests
     [TestFixture]
     public class RolloutPhysicsTests
     {
+        private static FlightAerodynamicsSample BuildFlightSample(float speedMps, float spinRatio, float initialLaunchAngleDeg)
+        {
+            float spinRadPerSecond = spinRatio * speedMps / BallPhysics.RADIUS;
+            Vector3 velocity = new Vector3(speedMps, 0.0f, 0.0f);
+            Vector3 omega = new Vector3(0.0f, 0.0f, spinRadPerSecond);
+
+            return BallPhysics.SampleFlightAerodynamics(
+                velocity,
+                omega,
+                airDensity: 1.225f,
+                airViscosity: 1.81e-05f,
+                dragScale: 1.0f,
+                liftScale: 1.0f,
+                initialLaunchAngleDeg: initialLaunchAngleDeg
+            );
+        }
+
         /// <summary>
         /// Simulates GetSpinFrictionMultiplier calculation from BallPhysics.cs
         /// </summary>
@@ -185,6 +202,133 @@ namespace OpenFairway.Tests
             Assert.That(newSpinMult, Is.EqualTo(1.52f).Within(0.01f));
             Assert.That(newSpinMult / oldSpinMult, Is.EqualTo(1.22f).Within(0.02f),
                 "New formula should give ~22% higher base multiplier for bump shots");
+        }
+
+        [Test]
+        [Category("RolloutPhysics")]
+        public void SampleFlightAerodynamics_WedgeBand_UsesRelievedDrag()
+        {
+            FlightAerodynamicsSample sample = BuildFlightSample(24.45f, 0.45f, 26.8f);
+
+            Assert.That(sample.Reynolds, Is.InRange(70000.0f, 71000.0f));
+            Assert.That(sample.SpinDragMultiplier, Is.InRange(1.07f, 1.08f));
+            Assert.That(sample.LowLaunchLiftScale, Is.EqualTo(1.0f).Within(0.0001f));
+            Assert.That(sample.LiftCoefficient, Is.GreaterThan(0.20f));
+        }
+
+        [Test]
+        [Category("RolloutPhysics")]
+        public void SampleFlightAerodynamics_LowLaunchWood_UsesLiftRecovery()
+        {
+            FlightAerodynamicsSample sample = BuildFlightSample(51.18f, 0.18f, 6.9f);
+
+            Assert.That(sample.Reynolds, Is.InRange(145000.0f, 149000.0f));
+            Assert.That(sample.SpinDragMultiplier, Is.EqualTo(1.13f).Within(0.01f));
+            Assert.That(sample.LowLaunchLiftScale, Is.InRange(1.06f, 1.08f));
+        }
+
+        [Test]
+        [Category("RolloutPhysics")]
+        public void SampleFlightAerodynamics_CheckedBand_ReboundsAboveWedgeRelief()
+        {
+            FlightAerodynamicsSample wedgeSample = BuildFlightSample(24.45f, 0.45f, 26.8f);
+            FlightAerodynamicsSample checkedSample = BuildFlightSample(33.57f, 0.70f, 38.5f);
+
+            Assert.That(checkedSample.Reynolds, Is.InRange(96000.0f, 98000.0f));
+            Assert.That(checkedSample.SpinDragMultiplier, Is.InRange(1.16f, 1.17f));
+            Assert.That(checkedSample.LowLaunchLiftScale, Is.EqualTo(1.0f).Within(0.0001f));
+            Assert.That(checkedSample.SpinDragMultiplier, Is.GreaterThan(wedgeSample.SpinDragMultiplier));
+        }
+
+        [Test]
+        [Category("RolloutPhysics")]
+        public void SpinDragMultiplier_MidSpinBand_KeepsFullCapUntilReliefWindow()
+        {
+            float multiplier = BallPhysics.GetSpinDragMultiplier(0.30f, 120000.0f);
+
+            Assert.That(multiplier, Is.EqualTo(1.20f).Within(0.001f),
+                "Approach-mid spin ratios should keep the full cap until the wedge-relief band starts.");
+        }
+
+        [Test]
+        [Category("RolloutPhysics")]
+        public void SpinDragMultiplier_WedgeBand_RelievesDragWithoutUsingUltraHighSpinCap()
+        {
+            float multiplier = BallPhysics.GetSpinDragMultiplier(0.45f, 75000.0f);
+
+            Assert.That(multiplier, Is.InRange(1.07f, 1.08f),
+                "Wedge spin ratios in the transitional-Re band should enter the reduced-drag relief band.");
+        }
+
+        [Test]
+        [Category("RolloutPhysics")]
+        public void SpinDragMultiplier_HighReWedgeBand_FadesBackTowardFullDragCap()
+        {
+            float multiplier = BallPhysics.GetSpinDragMultiplier(0.45f, 103000.0f);
+
+            Assert.That(multiplier, Is.InRange(1.19f, 1.20f),
+                "The wedge relief should fade out in the higher-Re regime.");
+        }
+
+        [Test]
+        [Category("RolloutPhysics")]
+        public void SpinDragMultiplier_CheckedBand_ReboundsAboveWedgeBand()
+        {
+            float wedgeBandMultiplier = BallPhysics.GetSpinDragMultiplier(0.45f, 75000.0f);
+            float checkedBandMultiplier = BallPhysics.GetSpinDragMultiplier(0.70f, 95000.0f);
+
+            Assert.That(checkedBandMultiplier, Is.GreaterThan(wedgeBandMultiplier),
+                "Checked spin ratios should rebound above the wedge drag cap.");
+            Assert.That(checkedBandMultiplier, Is.InRange(1.15f, 1.16f));
+        }
+
+        [Test]
+        [Category("RolloutPhysics")]
+        public void SpinDragMultiplier_UltraHighSpin_ReachesReboundCap()
+        {
+            float wedgeBandMultiplier = BallPhysics.GetSpinDragMultiplier(0.45f, 75000.0f);
+            float ultraHighSpinMultiplier = BallPhysics.GetSpinDragMultiplier(0.88f, 90000.0f);
+
+            Assert.That(ultraHighSpinMultiplier, Is.GreaterThan(wedgeBandMultiplier),
+                "Flop spin ratios should continue to the ultra-high-spin rebound cap.");
+            Assert.That(ultraHighSpinMultiplier, Is.InRange(1.20f, 1.21f));
+        }
+
+        [Test]
+        [Category("RolloutPhysics")]
+        public void LowLaunchLiftScale_WoodBand_GetsRecovery()
+        {
+            float scale = BallPhysics.GetLowLaunchLiftScale(6.7f, 0.18f, 145000.0f);
+
+            Assert.That(scale, Is.InRange(1.07f, 1.08f),
+                "Low-launch, high-Re wood shots should get the lift recovery bump.");
+        }
+
+        [Test]
+        [Category("RolloutPhysics")]
+        public void LowLaunchLiftScale_HighLaunchShots_GetNoRecovery()
+        {
+            float scale = BallPhysics.GetLowLaunchLiftScale(13.2f, 0.16f, 152884.0f);
+
+            Assert.That(scale, Is.EqualTo(1.0f).Within(0.0001f));
+        }
+
+        [Test]
+        [Category("RolloutPhysics")]
+        public void LowLaunchLiftScale_HighSpinShots_GetNoRecovery()
+        {
+            float scale = BallPhysics.GetLowLaunchLiftScale(6.7f, 0.30f, 145000.0f);
+
+            Assert.That(scale, Is.EqualTo(1.0f).Within(0.0001f));
+        }
+
+        [Test]
+        [Category("RolloutPhysics")]
+        public void LowLaunchLiftScale_LowReShots_GetNoRecovery()
+        {
+            float scale = BallPhysics.GetLowLaunchLiftScale(6.7f, 0.18f, 120000.0f);
+
+            Assert.That(scale, Is.EqualTo(1.0f).Within(0.0001f));
         }
     }
 

@@ -62,6 +62,7 @@ public partial class GolfBall : CharacterBody3D
 	public Vector3 ShotStartPos { get; set; } = Vector3.Zero;
 	public Vector3 ShotDirection { get; set; } = new Vector3(1.0f, 0.0f, 0.0f);  // Normalized horizontal direction
 	public float AimYawOffsetDeg { get; set; } = 0.0f;  // Camera/world rotation offset applied at launch
+	public float LaunchAngleDeg { get; private set; } = 0.0f;
 	public float LaunchSpinRpm { get; set; } = 0.0f;  // Stored for bounce calculations
 	public float RolloutImpactSpinRpm { get; set; } = 0.0f;  // Spin when first landing (for friction calculation)
 
@@ -85,7 +86,14 @@ public partial class GolfBall : CharacterBody3D
 
 	private void ConnectSettings()
 	{
-		_gameSettings = GetNode<GlobalSettings>("/root/GlobalSettings").GameSettings;
+		var globalSettings = GetNodeOrNull<GlobalSettings>("/root/GlobalSettings");
+		if (globalSettings?.GameSettings == null)
+		{
+			GD.PushError($"{nameof(GolfBall)}: GlobalSettings.GameSettings not found at /root/GlobalSettings. Physics environment updates will be disabled.");
+			return;
+		}
+
+		_gameSettings = globalSettings.GameSettings;
 		_gameSettings.Temperature.SettingChanged += OnEnvironmentChanged;
 		_gameSettings.Altitude.SettingChanged += OnEnvironmentChanged;
 		_gameSettings.GameUnits.SettingChanged += OnEnvironmentChanged;
@@ -109,15 +117,17 @@ public partial class GolfBall : CharacterBody3D
 
 	private void UpdateEnvironment()
 	{
-		var settings = GetNode<GlobalSettings>("/root/GlobalSettings").GameSettings;
-		var units = (PhysicsEnums.Units)(int)settings.GameUnits.Value;
+		if (_gameSettings == null)
+			return;
+
+		var units = (PhysicsEnums.Units)(int)_gameSettings.GameUnits.Value;
 		_airDensity = _aerodynamics.GetAirDensity(
-			(float)settings.Altitude.Value,
-			(float)settings.Temperature.Value,
+			(float)_gameSettings.Altitude.Value,
+			(float)_gameSettings.Temperature.Value,
 			units
 		);
 		_airViscosity = _aerodynamics.GetDynamicViscosity(
-			(float)settings.Temperature.Value,
+			(float)_gameSettings.Temperature.Value,
 			units
 		);
 	}
@@ -129,12 +139,14 @@ public partial class GolfBall : CharacterBody3D
 
 	private void OnDragScaleChanged(Variant value)
 	{
-		_dragScale = (float)GetNode<GlobalSettings>("/root/GlobalSettings").GameSettings.DragScale.Value;
+		if (_gameSettings != null)
+			_dragScale = (float)_gameSettings.DragScale.Value;
 	}
 
 	private void OnLiftScaleChanged(Variant value)
 	{
-		_liftScale = (float)GetNode<GlobalSettings>("/root/GlobalSettings").GameSettings.LiftScale.Value;
+		if (_gameSettings != null)
+			_liftScale = (float)_gameSettings.LiftScale.Value;
 	}
 
 	public void SetLieSurface(PhysicsEnums.SurfaceType surface)
@@ -263,8 +275,9 @@ public partial class GolfBall : CharacterBody3D
 			_liftScale,
 			SurfaceType,
 			FloorNormal,
-			RolloutImpactSpinRpm,
-			BallProfile
+			rolloutImpactSpin: RolloutImpactSpinRpm,
+			ballProfile: BallProfile,
+			initialLaunchAngleDeg: LaunchAngleDeg
 		).ToPhysicsParams();
 	}
 
@@ -611,11 +624,12 @@ public partial class GolfBall : CharacterBody3D
         SnapToGround();
         RefreshLieSurfaceFromGroundProbe();
 
-        Velocity = launchVelocity;
-        Omega = launchOmega;
-        ShotStartPos = Position;
-        ShotDirection = launchDirection;
-        LaunchSpinRpm = totalSpin;
+		Velocity = launchVelocity;
+		Omega = launchOmega;
+		ShotStartPos = Position;
+		ShotDirection = launchDirection;
+		LaunchAngleDeg = vlaDeg;
+		LaunchSpinRpm = totalSpin;
 
         PrintLaunchDebug(data, speedMph * ShotSetup.MPS_PER_MPH, vlaDeg, hlaDeg, totalSpin, spinAxis);
     }
@@ -632,14 +646,16 @@ public partial class GolfBall : CharacterBody3D
         PhysicsLogger.Info($"Dynamic viscosity: {_airViscosity:F11}");
 
         float ReInitial = _airDensity * speedMps * BallPhysics.RADIUS * 2.0f / _airViscosity;
-        float spinRatio = speedMps > 0.1f ? (spin * ShotSetup.RAD_PER_RPM) * BallPhysics.RADIUS / speedMps : 0.0f;
-        float ClInitial = _aerodynamics.GetCl(ReInitial, spinRatio);
-        PhysicsLogger.Info($"Reynolds number: {ReInitial:F0}");
-        PhysicsLogger.Info($"Spin ratio: {spinRatio:F3}");
-        PhysicsLogger.Info($"Cl (before scale): {ClInitial:F3}, after: {ClInitial * _liftScale:F3}");
-        PhysicsLogger.Info($"Initial velocity: {Velocity}");
-        PhysicsLogger.Info($"Initial omega: {Omega} ({Omega.Length() / ShotSetup.RAD_PER_RPM:F0} rpm)");
-        PhysicsLogger.Info($"Shot direction: {ShotDirection}");
+		float spinRatio = speedMps > 0.1f ? (spin * ShotSetup.RAD_PER_RPM) * BallPhysics.RADIUS / speedMps : 0.0f;
+		float ClInitial = _aerodynamics.GetCl(ReInitial, spinRatio);
+		float lowLaunchLiftScale = BallPhysics.GetLowLaunchLiftScale(vla, spinRatio, ReInitial);
+		PhysicsLogger.Info($"Reynolds number: {ReInitial:F0}");
+		PhysicsLogger.Info($"Spin ratio: {spinRatio:F3}");
+		PhysicsLogger.Info($"Cl (before scale): {ClInitial:F3}, after: {ClInitial * _liftScale:F3}");
+		PhysicsLogger.Info($"Low-launch lift scale: {lowLaunchLiftScale:F3}");
+		PhysicsLogger.Info($"Initial velocity: {Velocity}");
+		PhysicsLogger.Info($"Initial omega: {Omega} ({Omega.Length() / ShotSetup.RAD_PER_RPM:F0} rpm)");
+		PhysicsLogger.Info($"Shot direction: {ShotDirection}");
         PhysicsLogger.Info("===================");
     }
 }

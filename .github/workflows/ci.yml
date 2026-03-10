@@ -20,7 +20,9 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '8.0.x'
+        dotnet-version: |
+          8.0.x
+          9.0.x
 
     - name: Restore dependencies
       run: dotnet restore OpenFairway.sln
@@ -57,7 +59,9 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '8.0.x'
+        dotnet-version: |
+          8.0.x
+          9.0.x
 
     - name: Restore dependencies
       run: dotnet restore OpenFairway.sln
@@ -87,11 +91,11 @@ jobs:
     - name: Run gdlint on project GDScript files
       run: |
         # Lint only project GDScript files (exclude third-party addons)
-        find . -name "*.gd" -path "./addons/openfairway/*.gd" -exec gdlint {} + || true
-        find . -name "*.gd" -path "./game/*.gd" -exec gdlint {} + || true
-        find . -name "*.gd" -path "./ui/*.gd" -exec gdlint {} + || true
-        find . -name "*.gd" -path "./utils/*.gd" -exec gdlint {} + || true
-        find . -name "*.gd" -path "./tcp/*.gd" -exec gdlint {} + || true
+        find ./addons/openfairway -name "*.gd" -exec gdlint {} + || true
+        find ./game -name "*.gd" -exec gdlint {} + || true
+        find ./ui -name "*.gd" -exec gdlint {} + || true
+        find ./utils -name "*.gd" -exec gdlint {} + || true
+        find ./tcp -name "*.gd" -exec gdlint {} + || true
       continue-on-error: true  # Don't fail build on GDScript linting warnings
 
   check-physics-formulas:
@@ -105,7 +109,9 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '8.0.x'
+        dotnet-version: |
+          8.0.x
+          9.0.x
 
     - name: Restore dependencies
       run: dotnet restore OpenFairway.sln
@@ -149,7 +155,9 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '8.0.x'
+        dotnet-version: |
+          8.0.x
+          9.0.x
 
     - name: Build for security analysis
       run: dotnet build OpenFairway.sln --configuration Release

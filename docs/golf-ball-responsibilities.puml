@@ -8,7 +8,10 @@ class SurfaceZone
 class PhysicsParamsFactory
 class BallPhysicsProfile
 class ShotSetup
+class Aerodynamics
 class BallPhysics
+class FlightAerodynamicsModel
+class FlightAerodynamicsSample
 class PhysicsAdapter
 
 HoleSceneControllerBase --> LieSurfaceResolver : default + zones + MeshLibrary item names
@@ -18,6 +21,12 @@ GolfBall --> PhysicsParamsFactory : resolve runtime physics params
 GolfBall --> BallPhysicsProfile : ball-specific modifiers
 GolfBall --> ShotSetup : parse spin + build launch
 GolfBall --> BallPhysics : integrate + bounce
+PhysicsAdapter --> ShotSetup : parse spin + build launch
 PhysicsAdapter --> PhysicsParamsFactory : reuse param assembly
+PhysicsAdapter --> BallPhysics : reuse shared simulation path
+PhysicsAdapter --> FlightAerodynamicsModel : sample initial/peak carry diagnostics
+BallPhysics --> FlightAerodynamicsModel : sample drag/lift/Re/SR
+FlightAerodynamicsModel --> FlightAerodynamicsSample : produce shared coefficient snapshot
+Aerodynamics --> FlightAerodynamicsModel : wrap shared Cd/Cl model
 
 @enduml

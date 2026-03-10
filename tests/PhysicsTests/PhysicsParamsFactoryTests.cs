@@ -18,7 +18,8 @@ public class PhysicsParamsFactoryTests
             liftScale: 1.0f,
             surfaceType: PhysicsEnums.SurfaceType.Green,
             floorNormal: Vector3.Up,
-            rolloutImpactSpin: 3200.0f
+            rolloutImpactSpin: 3200.0f,
+            initialLaunchAngleDeg: 6.7f
         );
 
         Assert.That(resolved.SurfaceType, Is.EqualTo(PhysicsEnums.SurfaceType.Green));
@@ -29,6 +30,7 @@ public class PhysicsParamsFactoryTests
         Assert.That(resolved.SpinbackResponseScale, Is.EqualTo(1.12f).Within(0.0001f));
         Assert.That(resolved.SpinbackThetaBoostMax, Is.EqualTo(0.12f).Within(0.0001f));
         Assert.That(resolved.RolloutImpactSpin, Is.EqualTo(3200.0f).Within(0.0001f));
+        Assert.That(resolved.InitialLaunchAngleDeg, Is.EqualTo(6.7f).Within(0.0001f));
     }
 
     [Test]

@@ -1,0 +1,32 @@
+{
+    "DeviceID": "Garmin-R10",
+    "Units": "Yards",
+    "ShotNumber": 4,
+    "APIVersion": "1",
+    "BallData": {
+    "Speed": 124.2,
+    "SpinAxis": 4.8,
+    "TotalSpin": 4528,
+    "BackSpin": 4512,
+    "SideSpin": 378,
+    "HLA": -8.1,
+    "VLA": 6.7,
+    "CarryDistance": 0
+    },
+    "ClubData": {
+        "Speed": 77.91942286834717,
+        "AngleOfAttack": -5.156200885772705,
+        "FaceToTarget": -0.7355174422264099,
+        "Lie": 0,
+        "Loft": 0,
+        "Path": -0.17841219902038574,
+        "SpeedAtImpact": 77.91942286834717,
+        "VerticalFaceImpact": 0,
+        "HorizontalFaceImpact": 0,
+        "ClosureRate": 0
+    },
+    "ShotDataOptions": {
+        "ContainsBallData": true,
+        "ContainsClubData": true
+    }
+}

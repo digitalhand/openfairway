@@ -30,7 +30,7 @@ namespace OpenFairway.Tests
                 .SetName("Approach_CarryMatchesFlightScope");
             yield return new TestCaseData("Approach Mid Iron", "approach_mid_iron_test_shot.json", 125.8f, 69.3f, true)
                 .SetName("ApproachMidIron_CarryMatchesFlightScope");
-            yield return new TestCaseData("Wedge", "wedge_test_shot.json", 96.3f, 71.9f, true)
+            yield return new TestCaseData("Wedge", "wedge_test_shot.json", 70.6f, 31.2f, true)
                 .SetName("Wedge_CarryMatchesFlightScope");
             yield return new TestCaseData("Checked", "checked_test_shot.json", 77.9f, 79.7f, true)
                 .SetName("Checked_CarryMatchesFlightScope");

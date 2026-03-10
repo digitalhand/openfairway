@@ -51,10 +51,10 @@ public class AerodynamicsTests
     }
 
     [Test]
-    public void GetCd_LowReynolds_Returns0Point5()
+    public void GetCd_LowReynolds_ReturnsDimpledFloor()
     {
         float cd = _aero.GetCd(30000.0f);
-        Assert.That(cd, Is.EqualTo(0.5f));
+        Assert.That(cd, Is.EqualTo(0.38f).Within(0.001f));
     }
 
     [Test]
@@ -79,9 +79,11 @@ public class AerodynamicsTests
         float cd1 = _aero.GetCd(49999.0f);
         float cd2 = _aero.GetCd(50001.0f);
 
-        // cd1 should be 0.5 (low Re), cd2 should be polynomial
-        Assert.That(cd1, Is.EqualTo(0.5f));
-        Assert.That(cd2, Is.LessThan(0.5f));
+        // cd1 is in the smoothstep blend (near top), cd2 is polynomial
+        Assert.That(cd1, Is.InRange(0.44f, 0.47f));
+        Assert.That(cd2, Is.InRange(0.44f, 0.47f));
+        // Smooth transition — no large discontinuity
+        Assert.That(Mathf.Abs(cd1 - cd2), Is.LessThan(0.01f));
     }
 
     [Test]

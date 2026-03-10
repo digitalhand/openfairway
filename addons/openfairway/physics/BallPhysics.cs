@@ -16,9 +16,11 @@ public partial class BallPhysics : RefCounted
     public const float SIMULATION_HZ = 120.0f;  // shared integration rate for runtime + headless
     public const float SIMULATION_DT = 1.0f / SIMULATION_HZ;
     public const float SPIN_DECAY_TAU = 5.0f;  // Spin decay time constant (seconds)
-    public const float SPIN_DRAG_MULTIPLIER_COEFF = 2.5f;
-    public const float SPIN_DRAG_MULTIPLIER_MAX = 1.35f;
-    public const float SPIN_DRAG_MULTIPLIER_HIGH_SPIN_MAX = 1.22f;
+    public const float SPIN_DRAG_MULTIPLIER_COEFF = FlightAerodynamicsModel.SpinDragMultiplierCoeff;
+    public const float SPIN_DRAG_MULTIPLIER_MAX = FlightAerodynamicsModel.SpinDragMultiplierMax;
+    public const float SPIN_DRAG_MULTIPLIER_HIGH_SPIN_MAX = FlightAerodynamicsModel.SpinDragMultiplierHighSpinMax;
+    public const float SPIN_DRAG_MULTIPLIER_ULTRA_HIGH_SPIN_MAX = FlightAerodynamicsModel.SpinDragMultiplierUltraHighSpinMax;
+    public const float LOW_LAUNCH_LIFT_RECOVERY_MAX = FlightAerodynamicsModel.LowLaunchLiftRecoveryMax;
 
     // Read-only properties for GDScript access to constants (private set satisfies [Export] requirement)
     [Export] public float BallMass { get => MASS; private set { } }
@@ -44,9 +46,6 @@ public partial class BallPhysics : RefCounted
 
     // Friction blending
     private const float FRICTION_BLEND_SPEED = 15.0f;     // m/s — blending threshold for rolling/kinetic friction
-    private const float HIGH_SPIN_DRAG_SR_START = 0.34f;
-    private const float HIGH_SPIN_DRAG_SR_END = 0.44f;
-    private readonly Aerodynamics _aero = new();
 
     /// <summary>
     /// Calculate total forces acting on the ball
@@ -253,23 +252,20 @@ public partial class BallPhysics : RefCounted
         Vector3 omega,
         PhysicsParams parameters)
     {
-        float speed = velocity.Length();
-        if (speed < 0.5f)
+        FlightAerodynamicsSample airSample = SampleFlightAerodynamics(
+            velocity,
+            omega,
+            parameters.AirDensity,
+            parameters.AirViscosity,
+            parameters.DragScale,
+            parameters.LiftScale,
+            parameters.InitialLaunchAngleDeg
+        );
+        if (!airSample.HasAerodynamics)
             return Vector3.Zero;
 
-        float spinRatio = omega.Length() * RADIUS / speed;
-        float reynolds = parameters.AirDensity * speed * RADIUS * 2.0f / parameters.AirViscosity;
-
-        // Spin-aware drag term:
-        // preserve current mid-spin behavior while preventing over-penalized
-        // carry in very high-spin wedge/flop trajectories.
-        float spinDragMultiplier = GetSpinDragMultiplier(spinRatio);
-
-        float cd = _aero.GetCd(reynolds) * spinDragMultiplier * parameters.DragScale;
-        float cl = _aero.GetCl(reynolds, spinRatio) * parameters.LiftScale;
-
         // Drag force (opposite to velocity)
-        Vector3 drag = -0.5f * cd * parameters.AirDensity * CROSS_SECTION * velocity * speed;
+        Vector3 drag = -0.5f * airSample.DragCoefficient * parameters.AirDensity * CROSS_SECTION * velocity * airSample.Speed;
 
         // Magnus force (perpendicular to velocity and spin axis)
         Vector3 magnus = Vector3.Zero;
@@ -277,32 +273,56 @@ public partial class BallPhysics : RefCounted
         if (omegaLen > 0.1f)
         {
             Vector3 omegaCrossVel = omega.Cross(velocity);
-            magnus = 0.5f * cl * parameters.AirDensity * CROSS_SECTION * omegaCrossVel * speed / omegaLen;
+            magnus = 0.5f * airSample.LiftCoefficient * parameters.AirDensity * CROSS_SECTION * omegaCrossVel * airSample.Speed / omegaLen;
         }
 
         return drag + magnus;
     }
 
     /// <summary>
-    /// Compute spin-drag multiplier with a high-spin cap transition.
-    /// Keeps driver/mid-iron drag near prior behavior while reducing excess
-    /// drag for very high spin-ratio shots (wedge/flop regime).
+    /// Compute spin-drag multiplier with a transitional-Re high-spin relief
+    /// window and an ultra-high-spin rebound. This keeps wedge shots from
+    /// carrying excessive spin-drag while preserving higher drag in the
+    /// checked/flop regime.
     /// </summary>
     public static float GetSpinDragMultiplier(float spinRatio)
     {
-        if (spinRatio <= 0.0f)
-            return 1.0f;
+        return FlightAerodynamicsModel.GetSpinDragMultiplier(spinRatio);
+    }
 
-        float normalizedHighSpin = Mathf.Clamp(
-            (spinRatio - HIGH_SPIN_DRAG_SR_START) / (HIGH_SPIN_DRAG_SR_END - HIGH_SPIN_DRAG_SR_START),
-            0.0f,
-            1.0f
+    public static float GetSpinDragMultiplier(float spinRatio, float reynolds)
+    {
+        return FlightAerodynamicsModel.GetSpinDragMultiplier(spinRatio, reynolds);
+    }
+
+    /// <summary>
+    /// Recover a small amount of lift for low-launch, high-Re wood/driver shots.
+    /// This branch is intentionally narrow so it only catches the wood1/wood_low
+    /// type trajectories without reopening the broader driver and wedge tuning.
+    /// </summary>
+    public static float GetLowLaunchLiftScale(float initialLaunchAngleDeg, float spinRatio, float reynolds)
+    {
+        return FlightAerodynamicsModel.GetLowLaunchLiftScale(initialLaunchAngleDeg, spinRatio, reynolds);
+    }
+
+    internal static FlightAerodynamicsSample SampleFlightAerodynamics(
+        Vector3 velocity,
+        Vector3 omega,
+        float airDensity,
+        float airViscosity,
+        float dragScale,
+        float liftScale,
+        float initialLaunchAngleDeg)
+    {
+        return FlightAerodynamicsModel.Sample(
+            velocity,
+            omega,
+            airDensity,
+            airViscosity,
+            dragScale,
+            liftScale,
+            initialLaunchAngleDeg
         );
-        float highSpinWeight = normalizedHighSpin * normalizedHighSpin * (3.0f - 2.0f * normalizedHighSpin);
-        float effectiveCap = Mathf.Lerp(SPIN_DRAG_MULTIPLIER_MAX, SPIN_DRAG_MULTIPLIER_HIGH_SPIN_MAX, highSpinWeight);
-
-        float spinDragMultiplier = 1.0f + SPIN_DRAG_MULTIPLIER_COEFF * spinRatio * spinRatio;
-        return Mathf.Min(spinDragMultiplier, effectiveCap);
     }
 
     /// <summary>

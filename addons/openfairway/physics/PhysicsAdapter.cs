@@ -46,16 +46,18 @@ public partial class PhysicsAdapter : RefCounted
         float vla = (float)(ballDict.ContainsKey("VLA") ? ballDict["VLA"] : 0.0);
         float hla = (float)(ballDict.ContainsKey("HLA") ? ballDict["HLA"] : 0.0);
         var spinData = _shotSetup.ParseSpin(ballDict);
+        float backspin = (float)spinData["backspin"];
+        float sidespin = (float)spinData["sidespin"];
         float totalSpin = (float)spinData["total"];
         float spinAxis = (float)spinData["axis"];
 
-        var launch = _shotSetup.BuildLaunchVectors(speedMph, vla, hla, totalSpin, spinAxis);
+        var launch = _shotSetup.BuildLaunchVectorsFromComponents(speedMph, vla, hla, backspin, sidespin);
         Vector3 velocity = (Vector3)launch["velocity"];
         Vector3 omega = (Vector3)launch["omega"];
         Vector3 shotDir = (Vector3)launch["shot_direction"];
 
         Vector3 contactNormal = floorNormal.LengthSquared() > 0.000001f ? floorNormal.Normalized() : Vector3.Up;
-        var parameters = CreateParams(contactNormal, surface);
+        var parameters = CreateParams(contactNormal, surface, vla);
 
         Vector3 pos = new Vector3(0.0f, START_HEIGHT, 0.0f);
         PhysicsEnums.BallState state = PhysicsEnums.BallState.Flight;
@@ -70,12 +72,15 @@ public partial class PhysicsAdapter : RefCounted
         float firstImpactTangentIn = 0.0f;
         float firstImpactTangentOut = 0.0f;
 
-        float initialSpeed = velocity.Length();
-        float initialSpinRatio = initialSpeed > 0.001f ? omega.Length() * BallPhysics.RADIUS / initialSpeed : 0.0f;
-        float initialRe = parameters.AirDensity * initialSpeed * BallPhysics.RADIUS * 2.0f / parameters.AirViscosity;
-        float initialSpinDragMultiplier = BallPhysics.GetSpinDragMultiplier(initialSpinRatio);
-        float initialCd = _aero.GetCd(initialRe) * initialSpinDragMultiplier * parameters.DragScale;
-        float initialCl = _aero.GetCl(initialRe, initialSpinRatio) * parameters.LiftScale;
+        FlightAerodynamicsSample initialAirSample = BallPhysics.SampleFlightAerodynamics(
+            velocity,
+            omega,
+            parameters.AirDensity,
+            parameters.AirViscosity,
+            parameters.DragScale,
+            parameters.LiftScale,
+            parameters.InitialLaunchAngleDeg
+        );
         float peakCl = 0.0f;
 
         int steps = (int)(MAX_TIME / DT);
@@ -83,13 +88,18 @@ public partial class PhysicsAdapter : RefCounted
         {
             if (!onGround)
             {
-                float aeroSpeed = velocity.Length();
-                if (aeroSpeed > 0.001f)
+                FlightAerodynamicsSample airSample = BallPhysics.SampleFlightAerodynamics(
+                    velocity,
+                    omega,
+                    parameters.AirDensity,
+                    parameters.AirViscosity,
+                    parameters.DragScale,
+                    parameters.LiftScale,
+                    parameters.InitialLaunchAngleDeg
+                );
+                if (airSample.HasAerodynamics)
                 {
-                    float spinRatio = omega.Length() * BallPhysics.RADIUS / aeroSpeed;
-                    float reynolds = parameters.AirDensity * aeroSpeed * BallPhysics.RADIUS * 2.0f / parameters.AirViscosity;
-                    float cl = _aero.GetCl(reynolds, spinRatio) * parameters.LiftScale;
-                    peakCl = Mathf.Max(peakCl, cl);
+                    peakCl = Mathf.Max(peakCl, airSample.LiftCoefficient);
                 }
             }
 
@@ -178,10 +188,17 @@ public partial class PhysicsAdapter : RefCounted
             { "first_impact_time_s", hangTimeS },
             { "landing_speed_mps", landingSpeedMps },
             { "landing_angle_deg", landingAngleDeg },
-            { "initial_re", initialRe },
-            { "initial_spin_ratio", initialSpinRatio },
-            { "initial_cd", initialCd },
-            { "initial_cl", initialCl },
+            { "initial_re", initialAirSample.Reynolds },
+            { "initial_spin_ratio", initialAirSample.SpinRatio },
+            { "initial_launch_angle_deg", vla },
+            { "initial_low_launch_lift_scale", initialAirSample.LowLaunchLiftScale },
+            { "initial_spin_drag_multiplier", initialAirSample.SpinDragMultiplier },
+            { "initial_backspin_rpm", backspin },
+            { "initial_sidespin_rpm", sidespin },
+            { "initial_total_spin_rpm", totalSpin },
+            { "initial_spin_axis_deg", spinAxis },
+            { "initial_cd", initialAirSample.DragCoefficient },
+            { "initial_cl", initialAirSample.LiftCoefficient },
             { "peak_cl", peakCl },
             { "surface", surface.ToString() },
             { "first_impact_spinback", firstImpactSpinback },
@@ -190,7 +207,7 @@ public partial class PhysicsAdapter : RefCounted
         };
     }
 
-    private PhysicsParams CreateParams(Vector3 floorNormal, PhysicsEnums.SurfaceType surface)
+    private PhysicsParams CreateParams(Vector3 floorNormal, PhysicsEnums.SurfaceType surface, float initialLaunchAngleDeg)
     {
         float airDensity = _aero.GetAirDensity(DEFAULT_ALT_FT, DEFAULT_TEMP_F, PhysicsEnums.Units.Imperial);
         float airViscosity = _aero.GetDynamicViscosity(DEFAULT_TEMP_F, PhysicsEnums.Units.Imperial);
@@ -203,7 +220,8 @@ public partial class PhysicsAdapter : RefCounted
             surface,
             floorNormal,
             rolloutImpactSpin: 0.0f,
-            ballProfile: _ballProfile
+            ballProfile: _ballProfile,
+            initialLaunchAngleDeg: initialLaunchAngleDeg
         ).ToPhysicsParams();
     }
 }

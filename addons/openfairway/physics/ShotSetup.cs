@@ -98,14 +98,28 @@ public partial class ShotSetup : RefCounted
     public Dictionary BuildLaunchVectors(float speedMph, float vlaDeg, float hlaDeg,
                                           float totalSpinRpm, float spinAxisDeg)
     {
+        float backspinRpm = totalSpinRpm * Mathf.Cos(Mathf.DegToRad(spinAxisDeg));
+        float sidespinRpm = totalSpinRpm * Mathf.Sin(Mathf.DegToRad(spinAxisDeg));
+
+        return BuildLaunchVectorsFromComponents(speedMph, vlaDeg, hlaDeg, backspinRpm, sidespinRpm);
+    }
+
+    /// <summary>
+    /// Build launch vectors from measured backspin and sidespin components.
+    /// The spin vector is constructed in shot-local space, then rotated with
+    /// the launch frame so backspin/sidespin stay aligned with the shot plane.
+    /// </summary>
+    public Dictionary BuildLaunchVectorsFromComponents(float speedMph, float vlaDeg, float hlaDeg,
+        float backspinRpm, float sidespinRpm)
+    {
         float speedMps = speedMph * MPS_PER_MPH;
 
-        Vector3 velocity = new Vector3(speedMps, 0, 0)
+        Vector3 velocity = new Vector3(speedMps, 0.0f, 0.0f)
             .Rotated(Vector3.Forward, Mathf.DegToRad(-vlaDeg))
             .Rotated(Vector3.Up, Mathf.DegToRad(-hlaDeg));
 
-        Vector3 omega = new Vector3(0.0f, 0.0f, totalSpinRpm * RAD_PER_RPM)
-            .Rotated(Vector3.Right, Mathf.DegToRad(spinAxisDeg));
+        Vector3 omega = new Vector3(0.0f, -sidespinRpm * RAD_PER_RPM, backspinRpm * RAD_PER_RPM)
+            .Rotated(Vector3.Up, Mathf.DegToRad(-hlaDeg));
 
         Vector3 flatVelocity = new Vector3(velocity.X, 0.0f, velocity.Z);
         Vector3 shotDirection = flatVelocity.Length() > 0.001f ? flatVelocity.Normalized() : Vector3.Right;

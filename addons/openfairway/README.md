@@ -97,12 +97,12 @@ print("Force: ", force)
 
 ## Runtime Architecture
 
-- `BallPhysics` owns force, torque, integration, and bounce math.
-- `Aerodynamics` computes air density, viscosity, drag, and lift coefficients.
+- `BallPhysics` owns force, torque, integration, bounce math, and the shared flight-coefficient sampling path.
+- `Aerodynamics` computes air density, viscosity, and exposes the shared drag/lift coefficient model.
 - `PhysicsParamsFactory` is the canonical C# runtime path for combining environment, resolved surface, floor normal, rollout spin, and optional `BallPhysicsProfile`.
 - `SurfacePhysicsCatalog` is the single source of truth for surface tuning.
 - `Surface` is the GDScript-friendly wrapper over the same catalog values.
-- `PhysicsAdapter` reuses the same parameter assembly path for headless regression runs.
+- `PhysicsAdapter` reuses the same parameter assembly path and the same flight-coefficient sampling path for headless regression runs.
 
 ![Physics runtime components](assets/images/physics-runtime-components.png)
 
@@ -162,7 +162,7 @@ Useful exported constants:
 | `physics.ball_radius` | `0.021335` m | Regulation golf ball radius |
 | `physics.ball_cross_section` | `pi * r^2` | Cross-sectional area |
 | `physics.ball_moment_of_inertia` | `0.4 * m * r^2` | Moment of inertia |
-| `physics.simulation_dt` | `1 / 240.0` s | Internal simulation timestep |
+| `physics.simulation_dt` | `1 / 120.0` s | Internal simulation timestep |
 | `physics.spin_decay_tau` | `5.0` s | Air spin decay time constant |
 
 ```gdscript
@@ -202,6 +202,7 @@ Key fields:
 - `surface_type` tracks the resolved lie surface used for the step.
 - `floor_normal` should be a unit vector at the ground contact point.
 - `rollout_impact_spin` stores the spin captured at first landing.
+- `initial_launch_angle_deg` carries the original VLA into the shared flight model for low-launch lift recovery and diagnostics.
 - The `spinback_*` fields enable surface-weighted check and spinback behavior on steep, high-spin impacts.
 
 ### BounceResult
@@ -288,8 +289,8 @@ Shared launch parsing and vector building utilities.
 var setup = ShotSetup.new()
 
 var spin: Dictionary = setup.parse_spin({
-    "TotalSpin": 6500.0,
-    "SpinAxis": 15.0
+    "BackSpin": 6399.0,
+    "SideSpin": 793.0
 })
 
 var launch: Dictionary = setup.build_launch_vectors(
@@ -300,6 +301,8 @@ var launch: Dictionary = setup.build_launch_vectors(
     5.0
 )
 ```
+
+`ShotSetup.parse_spin()` prefers measured `BackSpin` / `SideSpin` when present and only falls back to `TotalSpin` / `SpinAxis` when component spin is missing.
 
 ### PhysicsAdapter
 
@@ -322,6 +325,16 @@ Returned keys include:
 - `total_yd`
 - `apex_ft`
 - `hang_time_s`
+- `initial_spin_ratio`
+- `initial_re`
+- `initial_launch_angle_deg`
+- `initial_low_launch_lift_scale`
+- `initial_spin_drag_multiplier`
+- `initial_backspin_rpm`
+- `initial_sidespin_rpm`
+- `initial_cd`
+- `initial_cl`
+- `peak_cl`
 - `surface`
 - `first_impact_spinback`
 - `first_impact_tangent_in_mps`
@@ -362,7 +375,8 @@ ResolvedPhysicsParams resolved = factory.Create(
     PhysicsEnums.SurfaceType.Green,
     Vector3.Up,
     rolloutImpactSpin: 5024.0f,
-    ballProfile: new BallPhysicsProfile()
+    ballProfile: new BallPhysicsProfile(),
+    initialLaunchAngleDeg: 12.5f
 );
 
 PhysicsParams parameters = resolved.ToPhysicsParams();
@@ -372,12 +386,21 @@ PhysicsParams parameters = resolved.ToPhysicsParams();
 
 The current flow is:
 
-1. Parse launch monitor data with `ShotSetup`.
+1. Parse launch monitor data with `ShotSetup`, preferring measured `BackSpin` / `SideSpin`.
 2. Resolve environment with `Aerodynamics`.
 3. Resolve lie surface outside the ball.
 4. Build runtime parameters through `PhysicsParamsFactory`.
-5. Integrate forces and torques in `BallPhysics`.
-6. On first impact, use the resolved surface to drive bounce, check, spinback, and rollout.
+5. Sample shared flight coefficients (`spin ratio`, `Re`, drag multiplier, lift recovery, `Cd`, `Cl`).
+6. Integrate forces and torques in `BallPhysics`.
+7. On first impact, use the resolved surface to drive bounce, check, spinback, and rollout.
+
+Carry-sensitive flight behavior in that shared path is:
+
+- Reynolds-aware drag coefficient with low-Re smoothing for dimpled-ball flight.
+- Spin-ratio lift coefficient with a reduced-gain mid-spin high-Re band.
+- Transitional-Re high-spin drag relief for wedge carry.
+- Ultra-high-spin drag rebound for checked/flop trajectories.
+- Low-launch lift recovery for wood/topped-style low-VLA shots.
 
 Core calculations:
 
@@ -388,6 +411,8 @@ Core calculations:
 - Contact velocity: `v_contact = v + omega x (-n * R)`
 
 `BallPhysics` uses `PhysicsParams.FloorNormal` for ground calculations, so slope-sensitive ground response and surface-sensitive rollout share the same parameter object.
+
+`PhysicsAdapter` reads the same coefficient path for `initial_cd`, `initial_cl`, `peak_cl`, `initial_spin_drag_multiplier`, and the related carry diagnostics, so runtime and headless analysis stay aligned.
 
 ## Bounce and Rollout
 
