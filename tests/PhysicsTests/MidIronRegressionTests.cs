@@ -22,7 +22,7 @@ namespace OpenFairway.Tests
         }
 
         [Test]
-        [Category("RolloutPhysics")]
+        [Category("PhysicsRuntime")]
         public void ApproachMidIron_Regression_CarryAndApex()
         {
             Dictionary shot = TestShotLoader.LoadTestShot("approach_mid_iron_test_shot.json");
@@ -51,7 +51,7 @@ namespace OpenFairway.Tests
         }
 
         [Test]
-        [Category("RolloutPhysics")]
+        [Category("PhysicsRuntime")]
         public void DriveShot_Regression_CarryAboveThreshold()
         {
             Dictionary shot = TestShotLoader.LoadTestShot("drive_test_shot.json");

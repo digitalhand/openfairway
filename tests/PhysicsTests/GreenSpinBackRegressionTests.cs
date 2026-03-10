@@ -16,7 +16,7 @@ namespace OpenFairway.Tests
         }
 
         [Test]
-        [Category("RolloutPhysics")]
+        [Category("PhysicsRuntime")]
         public void FlopShot_FlatGreen_MinimalRollout_WithImpactSpinback()
         {
             Dictionary shot = TestShotLoader.LoadTestShot("flop_test_shot.json");
@@ -46,7 +46,7 @@ namespace OpenFairway.Tests
         }
 
         [Test]
-        [Category("RolloutPhysics")]
+        [Category("PhysicsRuntime")]
         public void FlopShot_GreenSlope_InfluencesPostImpactTravelDirectionally()
         {
             Dictionary shot = TestShotLoader.LoadTestShot("flop_test_shot.json");

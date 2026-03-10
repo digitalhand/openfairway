@@ -18,7 +18,7 @@ namespace OpenFairway.Tests
         }
 
         [Test]
-        [Category("RolloutPhysics")]
+        [Category("PhysicsRuntime")]
         public void WedgeShot_Regression_CarryMatchesTarget()
         {
             Dictionary shot = TestShotLoader.LoadTestShot("wedge_test_shot.json");
@@ -39,7 +39,7 @@ namespace OpenFairway.Tests
         }
 
         [Test]
-        [Category("RolloutPhysics")]
+        [Category("PhysicsRuntime")]
         public void SharedIntegrator_UsesExpectedDefaultRate()
         {
             Assert.That(BallPhysics.SIMULATION_HZ, Is.EqualTo(120.0f).Within(0.001f));
