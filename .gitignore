@@ -21,6 +21,10 @@ mono_crash.*.json
 .vscode
 
 *addons/terrain_3d/bin/*
+!addons/terrain_3d/bin/libterrain.linux.debug.x86_64.so
+!addons/terrain_3d/bin/libterrain.linux.release.x86_64.so
+!addons/terrain_3d/bin/libterrain.windows.debug.x86_64.dll
+!addons/terrain_3d/bin/libterrain.windows.release.x86_64.dll
 
 gut_temp/
 gut_logs/

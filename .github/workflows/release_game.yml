@@ -67,8 +67,14 @@ jobs:
           exit 1
         fi
 
-    - name: Build solution
-      run: dotnet build "${{ env.PROJECT_FILE }}" --configuration Release
+    - name: Restore dependencies
+      run: dotnet restore "${{ env.PROJECT_FILE }}"
+
+    - name: Build editor assembly
+      run: dotnet build "${{ env.PROJECT_FILE }}" --configuration Debug --no-restore
+
+    - name: Build release assembly
+      run: dotnet build "${{ env.PROJECT_FILE }}" --configuration Release --no-restore
 
     - name: Export Godot build
       id: export

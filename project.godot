@@ -21,7 +21,7 @@ config/features=PackedStringArray("4.6", "C#", "Mobile")
 
 [autoload]
 
-PhantomCameraManager="*uid://duq6jhf6unyis"
+PhantomCameraManager="*res://addons/phantom_camera/scripts/managers/phantom_camera_manager.gd"
 GlobalSettings="*res://utils/Settings/GlobalSettings.cs"
 TcpServerService="*res://tcp/TcpServer.cs"
 GameProgressStore="*res://game/save/GameProgressStore.cs"
