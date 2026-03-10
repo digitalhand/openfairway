@@ -27,6 +27,8 @@ dotnet test --filter "Category=RolloutPhysics"
 Passed!  - Failed: 0, Passed: 10, Skipped: 0, Total: 10
 ```
 
+`MidIronRegressionTests.cs`, `WedgeRegressionTests.cs`, and `GreenSpinBackRegressionTests.cs` are intentionally **not** in this category because they instantiate Godot-backed physics classes and will crash under plain CI `dotnet test`.
+
 ### 2. Headless Distance Benchmarks (`run_benchmarks.gd`) ✅ Primary Validation Tool
 
 Run all 9 test shots through `PhysicsAdapter` headlessly via Godot. **This is the standard way to validate physics changes locally.**
@@ -51,13 +53,23 @@ Produces a table with carry/total/rollout for every shot. Compare output against
 | Flop | 68.1 mph | 45.50° | 12551 rpm | 66.7 | 67.1 | 0.5 |
 | Chip | 24.7 mph | 17.94° | 3204 rpm | 7.8 | 16.5 | 8.7 |
 
-### 3. Distance Regression Tests (`Category=DistanceBenchmark`)
+### 3. Runtime Regression Tests (`Category=PhysicsRuntime`)
+
+These tests exercise `PhysicsAdapter`, `BallPhysics`, and other Godot-backed physics classes. They are useful local regression guards, but they require a Godot runtime-backed test environment and must stay out of the CI-only `RolloutPhysics` filter.
+
+Run locally after opening the project in Godot:
+
+```bash
+dotnet test --filter "Category=PhysicsRuntime"
+```
+
+### 4. Distance Regression Tests (`Category=DistanceBenchmark`)
 
 These tests in `DistanceBenchmarkTests.cs` also use `PhysicsAdapter` but are structured as NUnit tests. They are an alternative to `run_benchmarks.gd` and require Godot runtime via `dotnet test`.
 
 Historical manual baselines are documented in `RolloutPhysicsTests.cs` under `ShotDistanceRegressionTests` (explicit/manual category only).
 
-### 4. Core Physics Tests ⚠️ Requires Godot Runtime (Local Only)
+### 5. Core Physics Tests ⚠️ Requires Godot Runtime (Local Only)
 
 Other test files in this directory require Godot runtime and **cannot run in CI**:
 - `AerodynamicsTests.cs` - Drag/lift coefficient calculations

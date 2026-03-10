@@ -2,13 +2,14 @@ using Godot;
 using Godot.Collections;
 
 /// <summary>
-/// Formats ball/shot data for UI display with unit conversion.
+/// Formats ball/shot data for UI display with unit conversion only.
+/// It does not own gameplay, lie, or physics setup responsibilities.
 /// </summary>
 public static class ShotFormatter
 {
-    private const float METERS_TO_YARDS = 1.09361f;
-    private const float METERS_TO_FEET = 3.28084f;
-    private const float MPH_TO_MPS = 0.44704f;
+    private const float METERS_TO_YARDS = ShotSetup.YARDS_PER_METER;
+    private const float METERS_TO_FEET = ShotSetup.FEET_PER_METER;
+    private const float MPH_TO_MPS = ShotSetup.MPS_PER_MPH;
 
     /// <summary>
     /// Format ball data for UI display.

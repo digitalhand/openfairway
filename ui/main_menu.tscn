@@ -1,28 +1,20 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene format=3 uid="uid://blh1b3b03jih3"]
 
-[ext_resource type="Script" path="res://ui/MainMenu.cs" id="1_main_menu_script"]
-[ext_resource type="Texture2D" path="res://assets/images/menu/menu_background.png" id="2_menu_bg"]
-[ext_resource type="Texture2D" path="res://assets/images/menu/range_small.png" id="3_range_image"]
-[ext_resource type="Texture2D" path="res://assets/images/menu/airways_small.png" id="4_courses_image"]
-[ext_resource type="Texture2D" path="res://addons/proton_scatter/icons/menu.svg" id="5_settings_icon"]
-[ext_resource type="Texture2D" path="res://assets/images/menu/exit_door.svg" id="6_exit_icon"]
+[ext_resource type="Script" uid="uid://ca1ppe2wg870x" path="res://ui/MainMenu.cs" id="1_main_menu_script"]
+[ext_resource type="Texture2D" uid="uid://cpay6q3bbgac0" path="res://assets/images/menu/menu_background.png" id="2_menu_bg"]
+[ext_resource type="Texture2D" uid="uid://bbloj57vw486l" path="res://assets/images/menu/range_small.png" id="3_range_image"]
+[ext_resource type="Texture2D" uid="uid://m5k31frm4cf6" path="res://assets/images/menu/airways_small.png" id="4_courses_image"]
+[ext_resource type="Texture2D" uid="uid://ddsajhxko3v6s" path="res://assets/images/menu/exit_door.svg" id="6_exit_icon"]
 [ext_resource type="PackedScene" path="res://ui/settings_panel.tscn" id="7_settings_panel"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_action_button"]
-bg_color = Color(0.0431373, 0.180392, 0.309804, 0.8)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(1, 1, 1, 0.25)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
-content_margin_left = 12.0
-content_margin_top = 6.0
-content_margin_right = 12.0
-content_margin_bottom = 6.0
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_banner_button"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_connection_dot"]
+bg_color = Color(0.141176, 0.760784, 0.364706, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tile_panel"]
 bg_color = Color(0.0431373, 0.180392, 0.309804, 0.8)
@@ -36,30 +28,9 @@ corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_settings_modal"]
-bg_color = Color(0.0431373, 0.180392, 0.309804, 0.8)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(1, 1, 1, 0.25)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_banner_button"]
-
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_click"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_connection_dot"]
-bg_color = Color(0.141176, 0.760784, 0.364706, 1)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
-
-[node name="MainMenu" type="Control"]
+[node name="MainMenu" type="Control" unique_id=2105196351]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -68,7 +39,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_main_menu_script")
 
-[node name="Background" type="TextureRect" parent="."]
+[node name="Background" type="TextureRect" parent="." unique_id=396940540]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -80,7 +51,7 @@ texture = ExtResource("2_menu_bg")
 expand_mode = 1
 stretch_mode = 6
 
-[node name="BackgroundTint" type="ColorRect" parent="."]
+[node name="BackgroundTint" type="ColorRect" parent="." unique_id=890970151]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -90,7 +61,7 @@ grow_vertical = 2
 mouse_filter = 2
 color = Color(0, 0, 0, 0.1)
 
-[node name="TopBanner" type="ColorRect" parent="."]
+[node name="TopBanner" type="ColorRect" parent="." unique_id=1127685587]
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
@@ -99,18 +70,7 @@ grow_horizontal = 2
 mouse_filter = 2
 color = Color(0.0431373, 0.180392, 0.309804, 0.92)
 
-[node name="TopBannerBottomStrip" type="ColorRect" parent="."]
-layout_mode = 1
-anchors_preset = 10
-anchor_top = 0.0
-anchor_right = 1.0
-anchor_bottom = 0.0
-offset_top = 64.0
-offset_bottom = 92.0
-grow_horizontal = 2
-color = Color(0.0627451, 0.0862745, 0.12549, 0.86)
-
-[node name="LeftButtons" type="HBoxContainer" parent="TopBanner"]
+[node name="LeftButtons" type="HBoxContainer" parent="TopBanner" unique_id=1605329636]
 layout_mode = 0
 anchor_bottom = 1.0
 offset_left = 16.0
@@ -120,61 +80,56 @@ offset_bottom = -12.0
 grow_vertical = 2
 theme_override_constants/separation = 20
 
-[node name="SettingsButton" type="Button" parent="TopBanner/LeftButtons"]
+[node name="SettingsButton" type="Button" parent="TopBanner/LeftButtons" unique_id=413088969]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
 theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
 theme_override_colors/icon_normal_color = Color(1, 1, 1, 1)
-theme_override_colors/icon_hover_color = Color(1, 1, 1, 1)
 theme_override_colors/icon_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_hover_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 23
 theme_override_styles/normal = SubResource("StyleBoxEmpty_banner_button")
-theme_override_styles/hover = SubResource("StyleBoxEmpty_banner_button")
 theme_override_styles/pressed = SubResource("StyleBoxEmpty_banner_button")
-theme_override_styles/focus = SubResource("StyleBoxEmpty_banner_button")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_banner_button")
 theme_override_styles/disabled = SubResource("StyleBoxEmpty_banner_button")
-icon = ExtResource("5_settings_icon")
-icon_alignment = 0
+theme_override_styles/focus = SubResource("StyleBoxEmpty_banner_button")
 text = "SETTINGS"
 
-[node name="ExitButton" type="Button" parent="TopBanner/LeftButtons"]
+[node name="ExitButton" type="Button" parent="TopBanner/LeftButtons" unique_id=622212416]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
 theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
 theme_override_colors/icon_normal_color = Color(1, 1, 1, 1)
-theme_override_colors/icon_hover_color = Color(1, 1, 1, 1)
 theme_override_colors/icon_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_hover_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 23
 theme_override_styles/normal = SubResource("StyleBoxEmpty_banner_button")
-theme_override_styles/hover = SubResource("StyleBoxEmpty_banner_button")
 theme_override_styles/pressed = SubResource("StyleBoxEmpty_banner_button")
-theme_override_styles/focus = SubResource("StyleBoxEmpty_banner_button")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_banner_button")
 theme_override_styles/disabled = SubResource("StyleBoxEmpty_banner_button")
-icon = ExtResource("6_exit_icon")
-icon_alignment = 0
+theme_override_styles/focus = SubResource("StyleBoxEmpty_banner_button")
 text = "EXIT"
+icon = ExtResource("6_exit_icon")
 
-[node name="TitleLabel" type="Label" parent="TopBanner"]
+[node name="TitleLabel" type="Label" parent="TopBanner" unique_id=1929281928]
 layout_mode = 0
 anchor_left = 0.5
-anchor_top = 0.0
 anchor_right = 0.5
 anchor_bottom = 1.0
 offset_left = -270.0
 offset_right = 270.0
 grow_vertical = 2
-mouse_filter = 2
 theme_override_colors/font_color = Color(0.93, 0.96, 0.98, 1)
-theme_override_colors/font_outline_color = Color(0.0, 0.05, 0.07, 0.9)
+theme_override_colors/font_outline_color = Color(0, 0.05, 0.07, 0.9)
 theme_override_constants/outline_size = 3
 theme_override_font_sizes/font_size = 44
 text = "Open Fairway"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="LaunchMonitorStatus" type="HBoxContainer" parent="TopBanner"]
+[node name="LaunchMonitorStatus" type="HBoxContainer" parent="TopBanner" unique_id=1597571926]
 visible = false
 layout_mode = 0
 anchor_left = 1.0
@@ -188,25 +143,34 @@ grow_horizontal = 0
 grow_vertical = 2
 theme_override_constants/separation = 10
 
-[node name="StatusSpacer" type="Control" parent="TopBanner/LaunchMonitorStatus"]
+[node name="StatusSpacer" type="Control" parent="TopBanner/LaunchMonitorStatus" unique_id=1596525613]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="ConnectionDot" type="PanelContainer" parent="TopBanner/LaunchMonitorStatus"]
+[node name="ConnectionDot" type="PanelContainer" parent="TopBanner/LaunchMonitorStatus" unique_id=319798143]
 custom_minimum_size = Vector2(12, 12)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_connection_dot")
 
-[node name="LaunchMonitorLabel" type="Label" parent="TopBanner/LaunchMonitorStatus"]
+[node name="LaunchMonitorLabel" type="Label" parent="TopBanner/LaunchMonitorStatus" unique_id=579666307]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.94, 0.98, 0.95, 1)
-theme_override_colors/font_outline_color = Color(0.0, 0.05, 0.07, 0.7)
+theme_override_colors/font_outline_color = Color(0, 0.05, 0.07, 0.7)
 theme_override_constants/outline_size = 2
 theme_override_font_sizes/font_size = 19
 text = "PiTrac LM 0.1"
 vertical_alignment = 1
 
-[node name="TilesRow" type="HBoxContainer" parent="."]
+[node name="TopBannerBottomStrip" type="ColorRect" parent="." unique_id=487400903]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 64.0
+offset_bottom = 92.0
+grow_horizontal = 2
+color = Color(0.0627451, 0.0862745, 0.12549, 0.86)
+
+[node name="TilesRow" type="HBoxContainer" parent="." unique_id=1297763302]
 layout_mode = 0
 anchor_left = 0.5
 anchor_top = 1.0
@@ -218,41 +182,30 @@ offset_right = 241.0
 offset_bottom = -60.0
 theme_override_constants/separation = 40
 
-[node name="RangeTile" type="PanelContainer" parent="TilesRow"]
+[node name="RangeTile" type="PanelContainer" parent="TilesRow" unique_id=1557089078]
 custom_minimum_size = Vector2(221, 221)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_tile_panel")
 
-[node name="RangeImage" type="TextureRect" parent="TilesRow/RangeTile"]
-layout_mode = 0
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
+[node name="RangeImage" type="TextureRect" parent="TilesRow/RangeTile" unique_id=1988706272]
+layout_mode = 2
 mouse_filter = 2
 texture = ExtResource("3_range_image")
 expand_mode = 1
 stretch_mode = 6
 
-[node name="RangeTextBackdrop" type="ColorRect" parent="TilesRow/RangeTile"]
-layout_mode = 0
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_top = -56.0
-grow_horizontal = 2
-grow_vertical = 0
+[node name="RangeTextBackdrop" type="ColorRect" parent="TilesRow/RangeTile" unique_id=775089152]
+layout_mode = 2
 mouse_filter = 2
 color = Color(0, 0, 0, 0.35)
 
-[node name="RangeLabel" type="Label" parent="TilesRow/RangeTile/RangeTextBackdrop"]
+[node name="RangeLabel" type="Label" parent="TilesRow/RangeTile/RangeTextBackdrop" unique_id=473833637]
 layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_bottom = -2.0
 grow_horizontal = 2
 grow_vertical = 0
-mouse_filter = 2
 theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 0.75)
 theme_override_constants/outline_size = 3
@@ -261,41 +214,30 @@ text = "RANGE"
 horizontal_alignment = 1
 vertical_alignment = 2
 
-[node name="CoursesTile" type="PanelContainer" parent="TilesRow"]
+[node name="CoursesTile" type="PanelContainer" parent="TilesRow" unique_id=526476943]
 custom_minimum_size = Vector2(221, 221)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_tile_panel")
 
-[node name="CoursesImage" type="TextureRect" parent="TilesRow/CoursesTile"]
-layout_mode = 0
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
+[node name="CoursesImage" type="TextureRect" parent="TilesRow/CoursesTile" unique_id=1439879185]
+layout_mode = 2
 mouse_filter = 2
 texture = ExtResource("4_courses_image")
 expand_mode = 1
 stretch_mode = 6
 
-[node name="CoursesTextBackdrop" type="ColorRect" parent="TilesRow/CoursesTile"]
-layout_mode = 0
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_top = -56.0
-grow_horizontal = 2
-grow_vertical = 0
+[node name="CoursesTextBackdrop" type="ColorRect" parent="TilesRow/CoursesTile" unique_id=1601338124]
+layout_mode = 2
 mouse_filter = 2
 color = Color(0, 0, 0, 0.35)
 
-[node name="CoursesLabel" type="Label" parent="TilesRow/CoursesTile/CoursesTextBackdrop"]
+[node name="CoursesLabel" type="Label" parent="TilesRow/CoursesTile/CoursesTextBackdrop" unique_id=1635519181]
 layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_bottom = -2.0
 grow_horizontal = 2
 grow_vertical = 0
-mouse_filter = 2
 theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 0.75)
 theme_override_constants/outline_size = 3
@@ -304,21 +246,16 @@ text = "COURSES"
 horizontal_alignment = 1
 vertical_alignment = 2
 
-[node name="CoursesButton" type="Button" parent="TilesRow/CoursesTile"]
-layout_mode = 0
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
+[node name="CoursesButton" type="Button" parent="TilesRow/CoursesTile" unique_id=147103126]
+layout_mode = 2
 mouse_default_cursor_shape = 2
 theme_override_styles/normal = SubResource("StyleBoxEmpty_click")
-theme_override_styles/hover = SubResource("StyleBoxEmpty_click")
 theme_override_styles/pressed = SubResource("StyleBoxEmpty_click")
-theme_override_styles/focus = SubResource("StyleBoxEmpty_click")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_click")
 theme_override_styles/disabled = SubResource("StyleBoxEmpty_click")
-text = ""
+theme_override_styles/focus = SubResource("StyleBoxEmpty_click")
 
-[node name="VersionLabel" type="Label" parent="."]
+[node name="VersionLabel" type="Label" parent="." unique_id=26695758]
 layout_mode = 0
 anchor_left = 1.0
 anchor_top = 1.0
@@ -336,4 +273,4 @@ text = "Version"
 horizontal_alignment = 2
 vertical_alignment = 1
 
-[node name="SettingsPanel" parent="." instance=ExtResource("7_settings_panel")]
+[node name="SettingsPanel" parent="." unique_id=46275039 instance=ExtResource("7_settings_panel")]

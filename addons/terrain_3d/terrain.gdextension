@@ -12,6 +12,8 @@ Terrain3D = "res://addons/terrain_3d/icons/terrain3d.svg"
 windows.debug.x86_64 = "res://addons/terrain_3d/bin/libterrain.windows.debug.x86_64.dll"
 windows.release.x86_64 = "res://addons/terrain_3d/bin/libterrain.windows.release.x86_64.dll"
 
+linux.debug.editor.x86_64 = "res://addons/terrain_3d/bin/libterrain.linux.debug.x86_64.so"
+linux.release.editor.x86_64 = "res://addons/terrain_3d/bin/libterrain.linux.release.x86_64.so"
 linux.debug.x86_64 = "res://addons/terrain_3d/bin/libterrain.linux.debug.x86_64.so"
 linux.release.x86_64 = "res://addons/terrain_3d/bin/libterrain.linux.release.x86_64.so"
 linux.debug.arm64 = "res://addons/terrain_3d/bin/libterrain.linux.debug.arm64.so"

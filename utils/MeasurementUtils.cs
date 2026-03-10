@@ -2,8 +2,8 @@ using Godot;
 
 public static class MeasurementUtils
 {
-    public const float MetersToYards = 1.09361f;
-    public const float MetersToFeet = 3.28084f;
+    public const float MetersToYards = ShotSetup.YARDS_PER_METER;
+    public const float MetersToFeet = ShotSetup.FEET_PER_METER;
     public const float ShortDistanceFeetThresholdYards = 10.0f;
 
     public static int HorizontalDistanceYards(Vector3 from, Vector3 to)

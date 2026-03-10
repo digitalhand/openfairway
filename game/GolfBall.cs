@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+using System;
 using Godot;
 using Godot.Collections;
 
@@ -9,457 +9,487 @@ using Godot.Collections;
 /// </summary>
 public partial class GolfBall : CharacterBody3D
 {
-	// Keep a small collision recovery distance so the ball can settle into terrain lows.
-	// These should maybe be in physics lib? 
-	// TODO rethink patterns to decouple, and just pass values instead? 
-	private const float COLLISION_SAFE_MARGIN = 0.0005f;
-	private const float BELOW_GROUND_RECOVERY_Y = -0.5f;
-	private const float FALLTHROUGH_FAILSAFE_Y = -5.0f;
-	private const float GROUND_SNAP_OFFSET = 0.001f;
-	private const float GROUND_RAYCAST_UP = 2.0f;
-	private const float GROUND_RAYCAST_DOWN = 8.0f;
-	private const float GROUND_PROBE_DISTANCE = 0.08f;
-
-	// Signals
-	[Signal]
-	public delegate void BallAtRestEventHandler();
-	[Signal]
-	public delegate void BallLandedEventHandler();
-
-	// Physics instances
-	private readonly BallPhysics _ballPhysics = new();
-	private readonly Aerodynamics _aerodynamics = new();
-	private readonly Surface _surfaceHelper = new();
-	private readonly ShotSetup _shotSetup = new();
-
-	// State — ball center sits one radius above ground so it rests on the surface
-	public const float TEE_HEIGHT = BallPhysics.RADIUS;
-	public static readonly Vector3 START_POSITION = new Vector3(1.0f, TEE_HEIGHT, 0.0f);
-	public PhysicsEnums.BallState State { get; set; } = PhysicsEnums.BallState.Rest;
-	public Vector3 Omega { get; set; } = Vector3.Zero;  // Angular velocity (rad/s)
-	public bool OnGround { get; set; } = false;
-	public Vector3 FloorNormal { get; set; } = Vector3.Up;
-
-	// Settings reference for signal cleanup
-	private GameSettings _gameSettings;
-
-	// Terrain3D data reference for height queries (cached on _Ready)
-	private GodotObject _terrainData;
-
-	// Surface parameters
-	public PhysicsEnums.SurfaceType SurfaceType { get; set; } = PhysicsEnums.SurfaceType.Fairway;
-	private readonly List<PhysicsEnums.SurfaceType> _surfaceZoneStack = new();
-	private float _kineticFriction = 0.42f;
-	private float _rollingFriction = 0.18f;
-	private float _grassViscosity = 0.0020f;
-	private float _criticalAngle = 0.30f;  // radians
-
-	// Environment
-	private float _airDensity;
-	private float _airViscosity;
-	private float _dragScale = 1.0f;
-	private float _liftScale = 1.0f;
-
-	// Shot tracking
-	public Vector3 ShotStartPos { get; set; } = Vector3.Zero;
-	public Vector3 ShotDirection { get; set; } = new Vector3(1.0f, 0.0f, 0.0f);  // Normalized horizontal direction
-	public float AimYawOffsetDeg { get; set; } = 0.0f;  // Camera/world rotation offset applied at launch
-	public float LaunchSpinRpm { get; set; } = 0.0f;  // Stored for bounce calculations
-	public float RolloutImpactSpinRpm { get; set; } = 0.0f;  // Spin when first landing (for friction calculation)
-
-	public override void _Ready()
-	{
-		CacheTerrainData();
-		ConnectSettings();
-		SetSurface(GetConfiguredSurfaceType());
-		UpdateEnvironment();
-	}
-
-	private void CacheTerrainData()
-	{
-		var terrain = GetTree().Root.FindChild("Terrain3D", true, false);
-		if (terrain == null)
-			return;
-
-		var data = terrain.Get("data");
-		if (data.Obj is GodotObject obj)
-			_terrainData = obj;
-	}
-
-	private void ConnectSettings()
-	{
-		_gameSettings = GetNode<GlobalSettings>("/root/GlobalSettings").GameSettings;
-		_gameSettings.Temperature.SettingChanged += OnEnvironmentChanged;
-		_gameSettings.Altitude.SettingChanged += OnEnvironmentChanged;
-		_gameSettings.GameUnits.SettingChanged += OnEnvironmentChanged;
-		_gameSettings.DragScale.SettingChanged += OnDragScaleChanged;
-		_gameSettings.LiftScale.SettingChanged += OnLiftScaleChanged;
-		_dragScale = (float)_gameSettings.DragScale.Value;
-		_liftScale = (float)_gameSettings.LiftScale.Value;
-	}
-
-	public override void _ExitTree()
-	{
-		if (_gameSettings != null)
-		{
-			_gameSettings.Temperature.SettingChanged -= OnEnvironmentChanged;
-			_gameSettings.Altitude.SettingChanged -= OnEnvironmentChanged;
-			_gameSettings.GameUnits.SettingChanged -= OnEnvironmentChanged;
-			_gameSettings.DragScale.SettingChanged -= OnDragScaleChanged;
-			_gameSettings.LiftScale.SettingChanged -= OnLiftScaleChanged;
-		}
-	}
-
-	private void UpdateEnvironment()
-	{
-		var settings = GetNode<GlobalSettings>("/root/GlobalSettings").GameSettings;
-		var units = (PhysicsEnums.Units)(int)settings.GameUnits.Value;
-		_airDensity = _aerodynamics.GetAirDensity(
-			(float)settings.Altitude.Value,
-			(float)settings.Temperature.Value,
-			units
-		);
-		_airViscosity = _aerodynamics.GetDynamicViscosity(
-			(float)settings.Temperature.Value,
-			units
-		);
-	}
-
-	private void OnEnvironmentChanged(Variant value)
-	{
-		UpdateEnvironment();
-	}
-
-	private void OnDragScaleChanged(Variant value)
-	{
-		_dragScale = (float)GetNode<GlobalSettings>("/root/GlobalSettings").GameSettings.DragScale.Value;
-	}
-
-	private void OnLiftScaleChanged(Variant value)
-	{
-		_liftScale = (float)GetNode<GlobalSettings>("/root/GlobalSettings").GameSettings.LiftScale.Value;
-	}
-
-	/// <summary>
-	/// Set the surface type and update friction parameters
-	/// TODO: This is all messed up, needs more testing. 
-	/// Last major bug left. 
-	/// </summary>
-	public void SetSurface(PhysicsEnums.SurfaceType surface)
-	{
-		SurfaceType = surface;
-		ApplySurfaceParams();
-		PhysicsLogger.Info($"[Surface] Set to {surface}: u_k={_kineticFriction:F3}, u_kr={_rollingFriction:F4}, nu_g={_grassViscosity:F5}");
-	}
-
-	public void EnterSurfaceZone(PhysicsEnums.SurfaceType surface)
-	{
-		_surfaceZoneStack.Add(surface);
-		SetSurface(surface);
-	}
-
-	public void ExitSurfaceZone(PhysicsEnums.SurfaceType surface)
-	{
-		for (int i = _surfaceZoneStack.Count - 1; i >= 0; i--)
-		{
-			if (_surfaceZoneStack[i] != surface)
-				continue;
-
-			_surfaceZoneStack.RemoveAt(i);
-			break;
-		}
-
-		if (_surfaceZoneStack.Count > 0)
-		{
-			SetSurface(_surfaceZoneStack[_surfaceZoneStack.Count - 1]);
-		}
-		else
-		{
-			SetSurface(GetConfiguredSurfaceType());
-		}
-	}
-
-	private PhysicsEnums.SurfaceType GetConfiguredSurfaceType()
-	{
-		if (_gameSettings != null)
-			return (PhysicsEnums.SurfaceType)(int)_gameSettings.SurfaceType.Value;
-
-		return PhysicsEnums.SurfaceType.Fairway;
-	}
-
-	private void ApplySurfaceParams()
-	{
-		var parameters = _surfaceHelper.GetParams(SurfaceType);
-		_kineticFriction = (float)parameters["u_k"];
-		_rollingFriction = (float)parameters["u_kr"];
-		_grassViscosity = (float)parameters["nu_g"];
-		_criticalAngle = (float)parameters["theta_c"];
-	}
-
-	/// <summary>
-	/// Get downrange distance in meters (along initial shot direction)
-	/// </summary>
-	public float GetDownrangeMeters()
-	{
-		Vector3 delta = Position - ShotStartPos;
-		return delta.Dot(ShotDirection);
-	}
-
-	public override void _PhysicsProcess(double delta)
-	{
-		if (State == PhysicsEnums.BallState.Rest)
-			return;
-
-		bool wasOnGround = OnGround;
-		Vector3 prevVelocity = Velocity;
-
-		// Calculate forces and torques using BallPhysics
-		var parameters = CreatePhysicsParams();
-		Vector3 totalForce = _ballPhysics.CalculateForces(Velocity, Omega, wasOnGround, parameters);
-		Vector3 totalTorque = _ballPhysics.CalculateTorques(Velocity, Omega, wasOnGround, parameters);
-
-		// Update velocity and angular velocity
-		Velocity += (totalForce / BallPhysics.MASS) * (float)delta;
-		Omega += (totalTorque / BallPhysics.MOMENT_OF_INERTIA) * (float)delta;
-
-		// Safety bounds check
-		if (CheckOutOfBounds())
-			return;
-
-		// Move and handle collisions
-		var collision = MoveAndCollide(
-			Velocity * (float)delta,
-			testOnly: false,
-			safeMargin: COLLISION_SAFE_MARGIN
-		);
-		HandleCollision(collision, wasOnGround, prevVelocity);
-
-		// Check for rest
-		if (Velocity.Length() < 0.1f && State != PhysicsEnums.BallState.Rest)
-		{
-			EnterRestState();
-		}
-	}
-
-	private PhysicsParams CreatePhysicsParams()
-	{
-		return new PhysicsParams(
-			_airDensity,
-			_airViscosity,
-			_dragScale,
-			_liftScale,
-			_kineticFriction,
-			_rollingFriction,
-			_grassViscosity,
-			_criticalAngle,
-			FloorNormal,
-			RolloutImpactSpinRpm
-		);
-	}
-
-	private bool CheckOutOfBounds()
-	{
-		if (Mathf.Abs(Position.X) > 1000.0f || Mathf.Abs(Position.Z) > 1000.0f)
-		{
-			PhysicsLogger.Info($"WARNING: Ball out of bounds at: {Position}");
-			EnterRestState();
-			return true;
-		}
-
-		if (GlobalPosition.Y < BELOW_GROUND_RECOVERY_Y)
-		{
-			if (TryRecoverToGround())
-				return false;
-
-			if (GlobalPosition.Y > FALLTHROUGH_FAILSAFE_Y)
-				return false;
-
-			// This of course depends on const values preset. In some cases, these should be higher. 
-			// Example ball falling in a course where canyon is very high elevation?
-			PhysicsLogger.Info($"WARNING: Ball fell through ground at: {GlobalPosition}");
-			EnterRestState();
-			return true;
-		}
-
-		return false;
-	}
-
-	private bool TryRecoverToGround()
-	{
-		var world = GetWorld3D();
-		if (world == null)
-			return false;
-
-		Vector3 rayStart = GlobalPosition + Vector3.Up * GROUND_RAYCAST_UP;
-		Vector3 rayEnd = GlobalPosition + Vector3.Down * GROUND_RAYCAST_DOWN;
-
-		var query = PhysicsRayQueryParameters3D.Create(rayStart, rayEnd);
-		query.CollideWithAreas = false;
-		query.CollideWithBodies = true;
-		query.Exclude = new Array<Rid> { GetRid() };
-
-		var hit = world.DirectSpaceState.IntersectRay(query);
-		if (hit.Count == 0)
-			return false;
-
-		Vector3 hitPosition = (Vector3)hit["position"];
-		Vector3 hitNormal = ((Vector3)hit["normal"]).Normalized();
-		if (hitNormal.LengthSquared() < 0.000001f)
-			hitNormal = Vector3.Up;
-
-		GlobalPosition = hitPosition + hitNormal * (BallPhysics.RADIUS + GROUND_SNAP_OFFSET);
-		FloorNormal = hitNormal;
-		Velocity = RemoveVelocityAlongNormal(Velocity, hitNormal, removeBothDirections: false);
-		OnGround = true;
-
-		if (State == PhysicsEnums.BallState.Flight)
-		{
-			State = PhysicsEnums.BallState.Rollout;
-			EmitSignal(SignalName.BallLanded);
-		}
-
-		PhysicsLogger.Verbose($"Recovered ball-to-ground at {GlobalPosition} (normal: {hitNormal})");
-		return true;
-	}
-
-	private bool TryProbeGround(out Vector3 groundNormal)
-	{
-		groundNormal = Vector3.Up;
-
-		var world = GetWorld3D();
-		if (world == null)
-			return false;
-
-		Vector3 rayStart = GlobalPosition + Vector3.Up * 0.05f;
-		Vector3 rayEnd = GlobalPosition + Vector3.Down * (BallPhysics.RADIUS + GROUND_PROBE_DISTANCE);
-
-		var query = PhysicsRayQueryParameters3D.Create(rayStart, rayEnd);
-		query.CollideWithAreas = false;
-		query.CollideWithBodies = true;
-		query.Exclude = new Array<Rid> { GetRid() };
-
-		var hit = world.DirectSpaceState.IntersectRay(query);
-		if (hit.Count == 0)
-			return false;
-
-		groundNormal = ((Vector3)hit["normal"]).Normalized();
-		if (groundNormal.LengthSquared() < 0.000001f)
-			groundNormal = Vector3.Up;
-
-		return true;
-	}
-
-	private void HandleCollision(KinematicCollision3D collision, bool wasOnGround, Vector3 prevVelocity)
-	{
-		if (collision != null)
-		{
-			Vector3 normal = collision.GetNormal();
-
-			if (IsGroundNormal(normal))
-			{
-				FloorNormal = normal;
-				float prevNormalVelocity = prevVelocity.Dot(normal);
-				bool landedFromFlight = State == PhysicsEnums.BallState.Flight;
-				bool isLanding = landedFromFlight || prevNormalVelocity < -0.5f;
-
-				if (isLanding)
-				{
-					if (landedFromFlight)
-					{
-						PrintImpactDebug();
-						// Capture impact spin for friction calculation during rollout
-						// This preserves the "bite" effect even as spin decays
-						RolloutImpactSpinRpm = Omega.Length() / 0.10472f;
-					}
-
-					var parameters = CreatePhysicsParams();
-					var bounceResult = _ballPhysics.CalculateBounce(Velocity, Omega, normal, State, parameters);
-					Velocity = bounceResult.NewVelocity;
-					Omega = bounceResult.NewOmega;
-					State = bounceResult.NewState;
-					if (landedFromFlight && State == PhysicsEnums.BallState.Rollout)
-						EmitSignal(SignalName.BallLanded);
-
-					PhysicsLogger.Verbose($"  Velocity after bounce: {Velocity} ({Velocity.Length():F2} m/s)");
-
-					// If the bounce resulted in very low vertical velocity (damped bounce),
-					// keep the ball on the ground instead of letting it bounce again
-					float normalVelocity = Velocity.Dot(normal);
-					if (Mathf.Abs(normalVelocity) < 0.5f && State == PhysicsEnums.BallState.Rollout)
-					{
-						OnGround = true;
-						Velocity = RemoveVelocityAlongNormal(Velocity, normal, removeBothDirections: true);
-						PhysicsLogger.Verbose($"  -> Ball grounded, continuing roll at {Velocity.Length():F2} m/s");
-					}
-					else
-					{
-						OnGround = false;
-					}
-				}
-				else
-				{
-					OnGround = true;
-					Velocity = RemoveVelocityAlongNormal(Velocity, normal, removeBothDirections: false);
-				}
-			}
-			else
-			{
-				// Wall collision - damped reflection
-				OnGround = false;
-				FloorNormal = Vector3.Up;
-				Velocity = Velocity.Bounce(normal) * 0.30f;
-			}
-		}
-		else
-		{
-			// No collision - only stay grounded if terrain is still directly beneath the ball.
-			if (State != PhysicsEnums.BallState.Flight && wasOnGround && TryProbeGround(out Vector3 groundNormal))
-			{
-				OnGround = true;
-				FloorNormal = groundNormal;
-			}
-			else
-			{
-				OnGround = false;
-				FloorNormal = Vector3.Up;
-			}
-		}
-	}
-
-	private bool IsGroundNormal(Vector3 normal)
-	{
-		return normal.Y > 0.7f;
-	}
-
-	private static Vector3 RemoveVelocityAlongNormal(Vector3 velocity, Vector3 normal, bool removeBothDirections)
-	{
-		Vector3 floorNormal = normal.LengthSquared() > 0.000001f ? normal.Normalized() : Vector3.Up;
-		float normalComponent = velocity.Dot(floorNormal);
-
-		if (!removeBothDirections && normalComponent >= 0.0f)
-			return velocity;
-
-		return velocity - floorNormal * normalComponent;
-	}
-
-	private void PrintImpactDebug()
-	{
-		PhysicsLogger.Info($"FIRST IMPACT at pos: {Position}, downrange: {GetDownrangeMeters() * 1.09361f:F2} yds");
-		PhysicsLogger.Info($"  Velocity at impact: {Velocity} ({Velocity.Length():F2} m/s)");
-		PhysicsLogger.Info($"  Spin at impact: {Omega} ({Omega.Length() / 0.10472f:F0} rpm)");
-		PhysicsLogger.Info($"  Normal: {FloorNormal}");
-	}
-
-	private void EnterRestState()
-	{
-		State = PhysicsEnums.BallState.Rest;
-		Velocity = Vector3.Zero;
-		Omega = Vector3.Zero;
-		EmitSignal(SignalName.BallAtRest);
-	}
-
-	/// <summary>
-	/// Query terrain height at the ball's current X,Z and place it
+    // Keep a small collision recovery distance so the ball can settle into terrain lows.
+    private const float COLLISION_SAFE_MARGIN = 0.0005f;
+    private const float BELOW_GROUND_RECOVERY_Y = -0.5f;
+    private const float FALLTHROUGH_FAILSAFE_Y = -5.0f;
+    private const float GROUND_SNAP_OFFSET = 0.001f;
+    private const float GROUND_RAYCAST_UP = 2.0f;
+    private const float GROUND_RAYCAST_DOWN = 8.0f;
+    private const float GROUND_PROBE_DISTANCE = 0.08f;
+    private const float PHYSICS_SUBSTEP_DT = BallPhysics.SIMULATION_DT;
+    private const int MAX_SUBSTEPS_PER_FRAME = 12;
+
+    // Signals
+    [Signal]
+    public delegate void BallAtRestEventHandler();
+    [Signal]
+    public delegate void BallLandedEventHandler();
+
+    // Physics instances
+    private readonly BallPhysics _ballPhysics = new();
+    private readonly Aerodynamics _aerodynamics = new();
+    private readonly PhysicsParamsFactory _physicsParamsFactory = new();
+    private readonly ShotSetup _shotSetup = new();
+
+    // State — ball center sits one radius above ground so it rests on the surface
+    public const float TEE_HEIGHT = BallPhysics.RADIUS;
+    public static readonly Vector3 START_POSITION = new Vector3(1.0f, TEE_HEIGHT, 0.0f);
+    public PhysicsEnums.BallState State { get; set; } = PhysicsEnums.BallState.Rest;
+    public Vector3 Omega { get; set; } = Vector3.Zero;  // Angular velocity (rad/s)
+    public bool OnGround { get; set; } = false;
+    public Vector3 FloorNormal { get; set; } = Vector3.Up;
+
+    // Settings reference for signal cleanup
+    private GameSettings _gameSettings;
+    private float _substepAccumulator = 0.0f;
+
+    // Terrain3D data reference for height queries (cached on _Ready)
+    private GodotObject _terrainData;
+
+    public PhysicsEnums.SurfaceType SurfaceType { get; private set; } = PhysicsEnums.SurfaceType.Fairway;
+    public BallPhysicsProfile BallProfile { get; set; } = new();
+    public Func<Node, Vector3, PhysicsEnums.SurfaceType> ResolveLieSurface { get; set; }
+    public Func<string> DescribeLieSurfaceResolution { get; set; }
+
+    // Environment
+    private float _airDensity;
+    private float _airViscosity;
+    private float _dragScale = 1.0f;
+    private float _liftScale = 1.0f;
+
+    // Shot tracking
+    public Vector3 ShotStartPos { get; set; } = Vector3.Zero;
+    public Vector3 ShotDirection { get; set; } = new Vector3(1.0f, 0.0f, 0.0f);  // Normalized horizontal direction
+    public float AimYawOffsetDeg { get; set; } = 0.0f;  // Camera/world rotation offset applied at launch
+    public float LaunchSpinRpm { get; set; } = 0.0f;  // Stored for bounce calculations
+    public float RolloutImpactSpinRpm { get; set; } = 0.0f;  // Spin when first landing (for friction calculation)
+
+    public override void _Ready()
+    {
+        CacheTerrainData();
+        ConnectSettings();
+        UpdateEnvironment();
+    }
+
+    private void CacheTerrainData()
+    {
+        var terrain = GetTree().Root.FindChild("Terrain3D", true, false);
+        if (terrain == null)
+            return;
+
+        var data = terrain.Get("data");
+        if (data.Obj is GodotObject obj)
+            _terrainData = obj;
+    }
+
+    private void ConnectSettings()
+    {
+        _gameSettings = GetNode<GlobalSettings>("/root/GlobalSettings").GameSettings;
+        _gameSettings.Temperature.SettingChanged += OnEnvironmentChanged;
+        _gameSettings.Altitude.SettingChanged += OnEnvironmentChanged;
+        _gameSettings.GameUnits.SettingChanged += OnEnvironmentChanged;
+        _gameSettings.DragScale.SettingChanged += OnDragScaleChanged;
+        _gameSettings.LiftScale.SettingChanged += OnLiftScaleChanged;
+        _dragScale = (float)_gameSettings.DragScale.Value;
+        _liftScale = (float)_gameSettings.LiftScale.Value;
+    }
+
+    public override void _ExitTree()
+    {
+        if (_gameSettings != null)
+        {
+            _gameSettings.Temperature.SettingChanged -= OnEnvironmentChanged;
+            _gameSettings.Altitude.SettingChanged -= OnEnvironmentChanged;
+            _gameSettings.GameUnits.SettingChanged -= OnEnvironmentChanged;
+            _gameSettings.DragScale.SettingChanged -= OnDragScaleChanged;
+            _gameSettings.LiftScale.SettingChanged -= OnLiftScaleChanged;
+        }
+    }
+
+    private void UpdateEnvironment()
+    {
+        var settings = GetNode<GlobalSettings>("/root/GlobalSettings").GameSettings;
+        var units = (PhysicsEnums.Units)(int)settings.GameUnits.Value;
+        _airDensity = _aerodynamics.GetAirDensity(
+            (float)settings.Altitude.Value,
+            (float)settings.Temperature.Value,
+            units
+        );
+        _airViscosity = _aerodynamics.GetDynamicViscosity(
+            (float)settings.Temperature.Value,
+            units
+        );
+    }
+
+    private void OnEnvironmentChanged(Variant value)
+    {
+        UpdateEnvironment();
+    }
+
+    private void OnDragScaleChanged(Variant value)
+    {
+        _dragScale = (float)GetNode<GlobalSettings>("/root/GlobalSettings").GameSettings.DragScale.Value;
+    }
+
+    private void OnLiftScaleChanged(Variant value)
+    {
+        _liftScale = (float)GetNode<GlobalSettings>("/root/GlobalSettings").GameSettings.LiftScale.Value;
+    }
+
+    public void SetLieSurface(PhysicsEnums.SurfaceType surface)
+    {
+        if (SurfaceType == surface)
+            return;
+
+        SurfaceType = surface;
+        PhysicsLogger.Info($"[Surface] Active={SurfaceType}");
+    }
+
+    private void UpdateLieSurfaceFromContact(Node collider, Vector3 worldPoint)
+    {
+        if (ResolveLieSurface == null)
+            return;
+
+        SetLieSurface(ResolveLieSurface(collider, worldPoint));
+    }
+
+    private void RefreshLieSurfaceFromGroundProbe()
+    {
+        if (TryProbeGround(out _, out Node groundCollider, out Vector3 groundPoint))
+            UpdateLieSurfaceFromContact(groundCollider, groundPoint);
+    }
+
+    private void LogLandingSurfaceReaction(PhysicsParams parameters, Vector3 velocity, Vector3 omega, Vector3 normal)
+    {
+        float speed = velocity.Length();
+        float impactSpinRpm = omega.Length() / ShotSetup.RAD_PER_RPM;
+        float angleToNormal = velocity.AngleTo(normal);
+        float impactAngleDeg = Mathf.RadToDeg(Mathf.Abs(angleToNormal - Mathf.Pi / 2.0f));
+        float criticalAngleDeg = Mathf.RadToDeg(parameters.CriticalAngle);
+        float thetaBoostDeg = Mathf.RadToDeg(parameters.SpinbackThetaBoostMax);
+        string resolutionSource = DescribeLieSurfaceResolution?.Invoke();
+        string sourceSegment = string.IsNullOrWhiteSpace(resolutionSource)
+            ? string.Empty
+            : $" {resolutionSource}";
+
+        PhysicsLogger.Info(
+            $"[LandingSurface] surface={parameters.SurfaceType} speed={speed:F2}m/s impact_spin={impactSpinRpm:F0}rpm " +
+            $"rollout_spin={RolloutImpactSpinRpm:F0}rpm angle={impactAngleDeg:F1}deg theta_c={criticalAngleDeg:F1}deg " +
+            $"spin_scale={parameters.SpinbackResponseScale:F2} theta_boost={thetaBoostDeg:F1}deg{sourceSegment}"
+        );
+    }
+
+    /// <summary>
+    /// Get downrange distance in meters (along initial shot direction)
+    /// </summary>
+    public float GetDownrangeMeters()
+    {
+        Vector3 delta = Position - ShotStartPos;
+        return delta.Dot(ShotDirection);
+    }
+
+    public override void _PhysicsProcess(double delta)
+    {
+        if (State == PhysicsEnums.BallState.Rest)
+        {
+            _substepAccumulator = 0.0f;
+            return;
+        }
+
+        _substepAccumulator += (float)delta;
+        int substeps = 0;
+        while (_substepAccumulator >= PHYSICS_SUBSTEP_DT && substeps < MAX_SUBSTEPS_PER_FRAME)
+        {
+            if (!StepPhysics(PHYSICS_SUBSTEP_DT))
+            {
+                _substepAccumulator = 0.0f;
+                return;
+            }
+
+            _substepAccumulator -= PHYSICS_SUBSTEP_DT;
+            substeps++;
+
+            if (State == PhysicsEnums.BallState.Rest)
+            {
+                _substepAccumulator = 0.0f;
+                return;
+            }
+        }
+
+        // Prevent runaway catch-up loops under stalls while preserving continuity.
+        if (substeps == MAX_SUBSTEPS_PER_FRAME && _substepAccumulator > PHYSICS_SUBSTEP_DT)
+        {
+            _substepAccumulator = PHYSICS_SUBSTEP_DT;
+        }
+    }
+
+    private bool StepPhysics(float dt)
+    {
+        bool wasOnGround = OnGround;
+        Vector3 prevVelocity = Velocity;
+
+        var parameters = CreatePhysicsParams();
+        Vector3 velocity = Velocity;
+        Vector3 omega = Omega;
+        _ballPhysics.IntegrateStep(ref velocity, ref omega, wasOnGround, parameters, dt);
+        Velocity = velocity;
+        Omega = omega;
+
+        if (CheckOutOfBounds())
+            return false;
+
+        var collision = MoveAndCollide(
+            Velocity * dt,
+            testOnly: false,
+            safeMargin: COLLISION_SAFE_MARGIN
+        );
+        HandleCollision(collision, wasOnGround, prevVelocity);
+
+        if (Velocity.Length() < 0.1f && State != PhysicsEnums.BallState.Rest)
+        {
+            EnterRestState();
+        }
+
+        return true;
+    }
+
+    private PhysicsParams CreatePhysicsParams()
+    {
+        return _physicsParamsFactory.Create(
+            _airDensity,
+            _airViscosity,
+            _dragScale,
+            _liftScale,
+            SurfaceType,
+            FloorNormal,
+            RolloutImpactSpinRpm,
+            BallProfile
+        ).ToPhysicsParams();
+    }
+
+    private bool CheckOutOfBounds()
+    {
+        if (Mathf.Abs(Position.X) > 1000.0f || Mathf.Abs(Position.Z) > 1000.0f)
+        {
+            PhysicsLogger.Info($"WARNING: Ball out of bounds at: {Position}");
+            EnterRestState();
+            return true;
+        }
+
+        if (GlobalPosition.Y < BELOW_GROUND_RECOVERY_Y)
+        {
+            if (TryRecoverToGround())
+                return false;
+
+            if (GlobalPosition.Y > FALLTHROUGH_FAILSAFE_Y)
+                return false;
+
+            // This of course depends on const values preset. In some cases, these should be higher. 
+            // Example ball falling in a course where canyon is very high elevation?
+            PhysicsLogger.Info($"WARNING: Ball fell through ground at: {GlobalPosition}");
+            EnterRestState();
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool TryRecoverToGround()
+    {
+        var world = GetWorld3D();
+        if (world == null)
+            return false;
+
+        Vector3 rayStart = GlobalPosition + Vector3.Up * GROUND_RAYCAST_UP;
+        Vector3 rayEnd = GlobalPosition + Vector3.Down * GROUND_RAYCAST_DOWN;
+
+        var query = PhysicsRayQueryParameters3D.Create(rayStart, rayEnd);
+        query.CollideWithAreas = false;
+        query.CollideWithBodies = true;
+        query.Exclude = new Array<Rid> { GetRid() };
+
+        var hit = world.DirectSpaceState.IntersectRay(query);
+        if (hit.Count == 0)
+            return false;
+
+        Vector3 hitPosition = (Vector3)hit["position"];
+        Vector3 hitNormal = ((Vector3)hit["normal"]).Normalized();
+        Node hitCollider = hit.ContainsKey("collider") && hit["collider"].Obj is Node collider
+            ? collider
+            : null;
+        if (hitNormal.LengthSquared() < 0.000001f)
+            hitNormal = Vector3.Up;
+
+        GlobalPosition = hitPosition + hitNormal * (BallPhysics.RADIUS + GROUND_SNAP_OFFSET);
+        FloorNormal = hitNormal;
+        Velocity = RemoveVelocityAlongNormal(Velocity, hitNormal, removeBothDirections: false);
+        OnGround = true;
+        UpdateLieSurfaceFromContact(hitCollider, hitPosition);
+
+        if (State == PhysicsEnums.BallState.Flight)
+        {
+            State = PhysicsEnums.BallState.Rollout;
+            EmitSignal(SignalName.BallLanded);
+        }
+
+        PhysicsLogger.Verbose($"Recovered ball-to-ground at {GlobalPosition} (normal: {hitNormal})");
+        return true;
+    }
+
+    private bool TryProbeGround(out Vector3 groundNormal, out Node groundCollider, out Vector3 groundPoint)
+    {
+        groundNormal = Vector3.Up;
+        groundCollider = null;
+        groundPoint = GlobalPosition;
+
+        var world = GetWorld3D();
+        if (world == null)
+            return false;
+
+        Vector3 rayStart = GlobalPosition + Vector3.Up * 0.05f;
+        Vector3 rayEnd = GlobalPosition + Vector3.Down * (BallPhysics.RADIUS + GROUND_PROBE_DISTANCE);
+
+        var query = PhysicsRayQueryParameters3D.Create(rayStart, rayEnd);
+        query.CollideWithAreas = false;
+        query.CollideWithBodies = true;
+        query.Exclude = new Array<Rid> { GetRid() };
+
+        var hit = world.DirectSpaceState.IntersectRay(query);
+        if (hit.Count == 0)
+            return false;
+
+        groundPoint = (Vector3)hit["position"];
+        groundNormal = ((Vector3)hit["normal"]).Normalized();
+        groundCollider = hit.ContainsKey("collider") && hit["collider"].Obj is Node collider
+            ? collider
+            : null;
+        if (groundNormal.LengthSquared() < 0.000001f)
+            groundNormal = Vector3.Up;
+
+        return true;
+    }
+
+    private void HandleCollision(KinematicCollision3D collision, bool wasOnGround, Vector3 prevVelocity)
+    {
+        if (collision != null)
+        {
+            Vector3 normal = collision.GetNormal();
+            Node hitCollider = collision.GetCollider() as Node;
+            Vector3 hitPosition = collision.GetPosition();
+
+            if (IsGroundNormal(normal))
+            {
+                FloorNormal = normal;
+                UpdateLieSurfaceFromContact(hitCollider, hitPosition);
+                float prevNormalVelocity = prevVelocity.Dot(normal);
+                bool landedFromFlight = State == PhysicsEnums.BallState.Flight;
+                bool isLanding = landedFromFlight || prevNormalVelocity < -0.5f;
+
+                if (isLanding)
+                {
+                    if (landedFromFlight)
+                    {
+                        PrintImpactDebug();
+                        // Capture impact spin for friction calculation during rollout
+                        // This preserves the "bite" effect even as spin decays
+                        RolloutImpactSpinRpm = Omega.Length() / ShotSetup.RAD_PER_RPM;
+                    }
+
+                    var parameters = CreatePhysicsParams();
+                    if (landedFromFlight)
+                        LogLandingSurfaceReaction(parameters, Velocity, Omega, normal);
+                    var bounceResult = _ballPhysics.CalculateBounce(Velocity, Omega, normal, State, parameters);
+                    Velocity = bounceResult.NewVelocity;
+                    Omega = bounceResult.NewOmega;
+                    State = bounceResult.NewState;
+                    if (landedFromFlight && State == PhysicsEnums.BallState.Rollout)
+                        EmitSignal(SignalName.BallLanded);
+
+                    PhysicsLogger.Verbose($"  Velocity after bounce: {Velocity} ({Velocity.Length():F2} m/s)");
+
+                    // If the bounce resulted in very low vertical velocity (damped bounce),
+                    // keep the ball on the ground instead of letting it bounce again
+                    float normalVelocity = Velocity.Dot(normal);
+                    if (Mathf.Abs(normalVelocity) < 0.5f && State == PhysicsEnums.BallState.Rollout)
+                    {
+                        OnGround = true;
+                        Velocity = RemoveVelocityAlongNormal(Velocity, normal, removeBothDirections: true);
+                        PhysicsLogger.Verbose($"  -> Ball grounded, continuing roll at {Velocity.Length():F2} m/s");
+                    }
+                    else
+                    {
+                        OnGround = false;
+                    }
+                }
+                else
+                {
+                    OnGround = true;
+                    Velocity = RemoveVelocityAlongNormal(Velocity, normal, removeBothDirections: false);
+                }
+            }
+            else
+            {
+                // Wall collision - damped reflection
+                OnGround = false;
+                FloorNormal = Vector3.Up;
+                Velocity = Velocity.Bounce(normal) * 0.30f;
+            }
+        }
+        else
+        {
+            // No collision - only stay grounded if terrain is still directly beneath the ball.
+            if (State != PhysicsEnums.BallState.Flight &&
+                wasOnGround &&
+                TryProbeGround(out Vector3 groundNormal, out Node groundCollider, out Vector3 groundPoint))
+            {
+                OnGround = true;
+                FloorNormal = groundNormal;
+                UpdateLieSurfaceFromContact(groundCollider, groundPoint);
+            }
+            else
+            {
+                OnGround = false;
+                FloorNormal = Vector3.Up;
+            }
+        }
+    }
+
+    private bool IsGroundNormal(Vector3 normal)
+    {
+        return normal.Y > 0.7f;
+    }
+
+    private static Vector3 RemoveVelocityAlongNormal(Vector3 velocity, Vector3 normal, bool removeBothDirections)
+    {
+        Vector3 floorNormal = normal.LengthSquared() > 0.000001f ? normal.Normalized() : Vector3.Up;
+        float normalComponent = velocity.Dot(floorNormal);
+
+        if (!removeBothDirections && normalComponent >= 0.0f)
+            return velocity;
+
+        return velocity - floorNormal * normalComponent;
+    }
+
+    private void PrintImpactDebug()
+    {
+        PhysicsLogger.Info($"FIRST IMPACT at pos: {Position}, downrange: {GetDownrangeMeters() * ShotSetup.YARDS_PER_METER:F2} yds");
+        PhysicsLogger.Info($"  Velocity at impact: {Velocity} ({Velocity.Length():F2} m/s)");
+        PhysicsLogger.Info($"  Spin at impact: {Omega} ({Omega.Length() / ShotSetup.RAD_PER_RPM:F0} rpm)");
+        PhysicsLogger.Info($"  Normal: {FloorNormal}");
+    }
+
+    private void EnterRestState()
+    {
+        State = PhysicsEnums.BallState.Rest;
+        Velocity = Vector3.Zero;
+        Omega = Vector3.Zero;
+        _substepAccumulator = 0.0f;
+        EmitSignal(SignalName.BallAtRest);
+    }
+
+    /// <summary>
+    /// Query terrain height at the ball's current X,Z and place it
     /// TEE_HEIGHT metres above the surface.
     /// Uses Terrain3D data API first (works immediately, no physics frame needed),
     /// falls back to physics raycast.
@@ -512,11 +542,11 @@ public partial class GolfBall : CharacterBody3D
         SnapToGround();
         Velocity = Vector3.Zero;
         Omega = Vector3.Zero;
+        _substepAccumulator = 0.0f;
         AimYawOffsetDeg = 0.0f;
         LaunchSpinRpm = 0.0f;
         RolloutImpactSpinRpm = 0.0f;
-        _surfaceZoneStack.Clear();
-        SetSurface(GetConfiguredSurfaceType());
+        RefreshLieSurfaceFromGroundProbe();
         State = PhysicsEnums.BallState.Rest;
         OnGround = false;
     }
@@ -575,11 +605,11 @@ public partial class GolfBall : CharacterBody3D
         // Set state
         State = PhysicsEnums.BallState.Flight;
         OnGround = false;
+        _substepAccumulator = 0.0f;
         RolloutImpactSpinRpm = 0.0f;
-        _surfaceZoneStack.Clear();
-        SetSurface(GetConfiguredSurfaceType());
         // Launch from the current lie so course play can continue from where the ball stopped.
         SnapToGround();
+        RefreshLieSurfaceFromGroundProbe();
 
         Velocity = launchVelocity;
         Omega = launchOmega;
@@ -587,7 +617,7 @@ public partial class GolfBall : CharacterBody3D
         ShotDirection = launchDirection;
         LaunchSpinRpm = totalSpin;
 
-        PrintLaunchDebug(data, speedMph * 0.44704f, vlaDeg, hlaDeg, totalSpin, spinAxis);
+        PrintLaunchDebug(data, speedMph * ShotSetup.MPS_PER_MPH, vlaDeg, hlaDeg, totalSpin, spinAxis);
     }
 
     private void PrintLaunchDebug(Dictionary data, float speedMps, float vla, float hla, float spin, float axis)
@@ -602,13 +632,13 @@ public partial class GolfBall : CharacterBody3D
         PhysicsLogger.Info($"Dynamic viscosity: {_airViscosity:F11}");
 
         float ReInitial = _airDensity * speedMps * BallPhysics.RADIUS * 2.0f / _airViscosity;
-        float spinRatio = speedMps > 0.1f ? (spin * 0.10472f) * BallPhysics.RADIUS / speedMps : 0.0f;
+        float spinRatio = speedMps > 0.1f ? (spin * ShotSetup.RAD_PER_RPM) * BallPhysics.RADIUS / speedMps : 0.0f;
         float ClInitial = _aerodynamics.GetCl(ReInitial, spinRatio);
         PhysicsLogger.Info($"Reynolds number: {ReInitial:F0}");
         PhysicsLogger.Info($"Spin ratio: {spinRatio:F3}");
         PhysicsLogger.Info($"Cl (before scale): {ClInitial:F3}, after: {ClInitial * _liftScale:F3}");
         PhysicsLogger.Info($"Initial velocity: {Velocity}");
-        PhysicsLogger.Info($"Initial omega: {Omega} ({Omega.Length() / 0.10472f:F0} rpm)");
+        PhysicsLogger.Info($"Initial omega: {Omega} ({Omega.Length() / ShotSetup.RAD_PER_RPM:F0} rpm)");
         PhysicsLogger.Info($"Shot direction: {ShotDirection}");
         PhysicsLogger.Info("===================");
     }
