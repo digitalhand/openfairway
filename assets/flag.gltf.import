@@ -4,12 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://cio4rx16su2am"
-path="res://.godot/imported/flag_osg.gltf-70550dca2afa411359edb3935294d003.scn"
+path="res://.godot/imported/flag.gltf-4798a407535619a63e15c0d393cb78b7.scn"
 
 [deps]
 
-source_file="res://assets/flag_osg.gltf"
-dest_files=["res://.godot/imported/flag_osg.gltf-70550dca2afa411359edb3935294d003.scn"]
+source_file="res://assets/flag.gltf"
+dest_files=["res://.godot/imported/flag.gltf-4798a407535619a63e15c0d393cb78b7.scn"]
 
 [params]
 

@@ -16,7 +16,7 @@
 	"nodes":[
 		{
 			"mesh":0,
-			"name":"OSG_Logo",
+			"name":"OF_Logo",
 			"rotation":[
 				0.5,
 				0.5,
@@ -48,7 +48,7 @@
 		{
 			"alphaMode":"BLEND",
 			"doubleSided":true,
-			"name":"OSG_Logo",
+			"name":"OF_Logo",
 			"pbrMetallicRoughness":{
 				"baseColorTexture":{
 					"index":0
@@ -60,7 +60,7 @@
 	],
 	"meshes":[
 		{
-			"name":"OSG_Logo",
+			"name":"OF_Logo",
 			"primitives":[
 				{
 					"attributes":{
@@ -96,8 +96,8 @@
 	"images":[
 		{
 			"mimeType":"image/png",
-			"name":"OSG_Logo",
-			"uri":"OSG_Logo.png"
+			"name":"OF_Logo",
+			"uri":"../logo.png"
 		}
 	],
 	"accessors":[

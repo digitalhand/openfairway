@@ -18,6 +18,9 @@ config/name="OpenFairway"
 config/version="1.0.4"
 run/main_scene="res://ui/main_menu.tscn"
 config/features=PackedStringArray("4.6", "C#", "Mobile")
+boot_splash/bg_color=Color(0.25929382, 0.25929368, 0.25929365, 1)
+boot_splash/image="uid://jp3qeowujsgi"
+config/icon="uid://brlg0cmgh2ld8"
 
 [autoload]
 

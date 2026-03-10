@@ -12,8 +12,8 @@
 [ext_resource type="AudioStream" uid="uid://bwtjdtynrya6q" path="res://assets/sounds/birds_chirping.wav" id="41_kvf51"]
 [ext_resource type="AudioStream" uid="uid://b4napiey6vofb" path="res://assets/sounds/golf_ball_landing.wav" id="42_kvf51"]
 [ext_resource type="PackedScene" uid="uid://bbbci0q1y1bq5" path="res://courses/greens/gimme_circle.tscn" id="44_kvf51"]
-[ext_resource type="PackedScene" uid="uid://cio4rx16su2am" path="res://assets/flag_osg.gltf" id="47_ff4pe"]
-[ext_resource type="Texture2D" uid="uid://cf6x6ew4vnul6" path="res://assets/OSG_Logo.png" id="48_4svp1"]
+[ext_resource type="PackedScene" uid="uid://cio4rx16su2am" path="res://assets/flag.gltf" id="47_ff4pe"]
+[ext_resource type="Texture2D" uid="uid://jp3qeowujsgi" path="res://logo.png" id="48_4svp1"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_ckxn6"]
 sky_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
@@ -39,7 +39,7 @@ fog_height_density = 0.6897
 script = ExtResource("18_gqfs3")
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_8ddft"]
-resource_name = "OSG_Logo"
+resource_name = "Logo"
 transparency = 4
 cull_mode = 2
 albedo_texture = ExtResource("48_4svp1")
@@ -52,7 +52,7 @@ _surfaces = [{
 "format": 34896613377,
 "index_count": 6,
 "index_data": PackedByteArray("AAABAAIAAAADAAEA"),
-"name": "OSG_Logo",
+"name": "Logo",
 "primitive": 3,
 "uv_scale": Vector4(0, 0, 0, 0),
 "vertex_count": 4,
@@ -61,7 +61,7 @@ _surfaces = [{
 blend_shape_mode = 0
 
 [sub_resource type="ArrayMesh" id="ArrayMesh_tba0d"]
-resource_name = "flag_osg_OSG_Logo"
+resource_name = "flag_osg_OF_Logo"
 _surfaces = [{
 "aabb": AABB(-0.70717883, 0, -0.5, 1.4143577, 1e-05, 1),
 "attribute_data": PackedByteArray("AAD/////AAD/////AAAAAA=="),
@@ -69,7 +69,7 @@ _surfaces = [{
 "index_count": 6,
 "index_data": PackedByteArray("AAABAAIAAAADAAEA"),
 "material": SubResource("StandardMaterial3D_8ddft"),
-"name": "OSG_Logo",
+"name": "OF_Logo",
 "primitive": 3,
 "uv_scale": Vector4(0, 0, 0, 0),
 "vertex_count": 4,
@@ -112,6 +112,7 @@ shadow_mesh = SubResource("ArrayMesh_7inxy")
 
 [node name="Hole1" type="Node3D" unique_id=2143757499]
 script = ExtResource("1_sunpe")
+FlagPolePath = NodePath("flag_Imported/flag_pole")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=633229090]
 environment = SubResource("Environment_3l5n3")
@@ -162,19 +163,19 @@ stream = ExtResource("42_kvf51")
 [node name="GimmeCircle" parent="." unique_id=1788780328 instance=ExtResource("44_kvf51")]
 transform = Transform3D(6, 0, 0, 0, 6, 0, 0, 0, 6, 184.339, 0.15, -26.257)
 
-[node name="flag_osg" parent="." unique_id=1690264842 instance=ExtResource("47_ff4pe")]
+[node name="flag" parent="." unique_id=1690264842 instance=ExtResource("47_ff4pe")]
 visible = false
 metadata/run = false
 
-[node name="flag_osg_Imported" type="Node3D" parent="." unique_id=93235357]
+[node name="flag_Imported" type="Node3D" parent="." unique_id=93235357]
 metadata/run = false
 
-[node name="flag" type="MeshInstance3D" parent="flag_osg_Imported" unique_id=100998678]
+[node name="flag" type="MeshInstance3D" parent="flag_Imported" unique_id=100998678]
 transform = Transform3D(0, 0.45020556, 0, 0, 0, -0.45020556, -0.45020556, 0, 0, 184.0463, 2.9172254, -26.078962)
 mesh = SubResource("ArrayMesh_tba0d")
 skeleton = NodePath("")
 
-[node name="flag_pole" type="MeshInstance3D" parent="flag_osg_Imported" unique_id=965469347]
+[node name="flag_pole" type="MeshInstance3D" parent="flag_Imported" unique_id=965469347]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 184.04437, 2.0791407, -26.357153)
 mesh = SubResource("ArrayMesh_vwjc8")
 skeleton = NodePath("")
