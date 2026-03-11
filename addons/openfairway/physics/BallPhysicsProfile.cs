@@ -11,4 +11,12 @@ public sealed class BallPhysicsProfile
     public float GrassViscosityMultiplier { get; set; } = 1.0f;
     public float CriticalAngleOffsetRadians { get; set; } = 0.0f;
     public float SpinbackThetaBoostMultiplier { get; set; } = 1.0f;
+
+    public FlightProfile Flight { get; set; }
+    public BounceProfile Bounce { get; set; }
+    public RolloutProfile Rollout { get; set; }
+
+    public FlightProfile ResolvedFlight => Flight ?? FlightProfile.Default;
+    public BounceProfile ResolvedBounce => Bounce ?? BounceProfile.Default;
+    public RolloutProfile ResolvedRollout => Rollout ?? RolloutProfile.Default;
 }

@@ -7,7 +7,10 @@ var shots := {
 	"Drive":      "res://assets/data/drive_test_shot.json",
 	"Wood Low":   "res://assets/data/wood_low_test_shot.json",
 	"Wedge":      "res://assets/data/wedge_test_shot.json",
-	"Wedge2":      "res://assets/data/wedge_test_shot2.json",
+	"Wedge2":     "res://assets/data/wedge_test_shot2.json",
+	"P Wedge 1":  "res://assets/data/p_wedge_shot_1.json",
+	"Wedge S1":   "res://assets/data/wedge_shot_1.json",
+	"Wedge S2":   "res://assets/data/wedge_shot_2.json",
 	"Bump":       "res://assets/data/bump_test_shot.json",
 	"Bump & Run": "res://assets/data/bump_and_run.json",
 	"Approach":   "res://assets/data/approach_test_shot.json",
@@ -17,7 +20,9 @@ var shots := {
 	"Flop":       "res://assets/data/flop_test_shot.json",
 	"Chip":       "res://assets/data/chip_test_shot.json",
 	"Putt 10ft":  "res://assets/data/putt_ten_feet.json",
-	"Free Shot:  "res://assets/data/free_shot.json",
+	"Free Shot":  "res://assets/data/free_shot.json",
+	"Bug1 Short": "res://assets/data/bug1_wedge_short.json",
+	"Bug2 Long":  "res://assets/data/bug2_wedge_long.json",
 }
 
 func _init() -> void:
@@ -52,7 +57,7 @@ func _init() -> void:
 		var spin: float   = ball_data.get("TotalSpin", 0.0)
 		var axis: float   = ball_data.get("SpinAxis", 0.0)
 
-		var result := adapter.SimulateShotFromJson(data)
+		var result: Dictionary = adapter.SimulateShotFromJson(data)
 		var carry: float  = result.get("carry_yd", 0.0)
 		var total: float  = result.get("total_yd", 0.0)
 		var rollout: float = total - carry

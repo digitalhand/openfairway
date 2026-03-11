@@ -7,7 +7,8 @@ using Godot.Collections;
 /// Manages ball state, collisions, and delegates physics calculations
 /// to the BallPhysics class.
 /// </summary>
-public partial class GolfBall : CharacterBody3D
+
+public partial class GolfBall : CharacterBody3D // Player
 {
     // Keep a small collision recovery distance so the ball can settle into terrain lows.
     private const float COLLISION_SAFE_MARGIN = 0.0005f;
