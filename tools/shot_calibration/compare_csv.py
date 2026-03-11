@@ -1,106 +1,172 @@
 #!/usr/bin/env python
-"""Compare physics CSV against FlightScope CSV side-by-side.
+"""Compare physics CSV against FlightScope CSV and write a diff CSV.
 
 Usage:
     python tools/shot_calibration/compare_csv.py assets/data/calibration/physics.csv assets/data/calibration/flightscope.csv
+    python tools/shot_calibration/compare_csv.py assets/data/calibration/physics.csv assets/data/calibration/flightscope.csv --output /tmp/shot_diff_analysis.csv
 """
 
+import argparse
 import csv
+import os
 import sys
+
+
+SCRIPT_DIR = os.path.dirname(__file__)
+DEFAULT_OUTPUT_PATH = os.path.normpath(
+    os.path.join(SCRIPT_DIR, "..", "..", "assets", "data", "calibration", "shot_diff_analysis.csv")
+)
+
+OUTPUT_FIELDS = [
+    "shot_name",
+    "speed_mph",
+    "vla_deg",
+    "hla_deg",
+    "total_spin_rpm",
+    "spin_axis_deg",
+    "physics_carry_yd",
+    "flightscope_carry_yd",
+    "diff_carry_yd",
+    "physics_total_yd",
+    "flightscope_total_yd",
+    "diff_total_yd",
+    "physics_apex_ft",
+    "flightscope_apex_ft",
+    "diff_apex_ft",
+]
 
 
 def load_csv(path):
     """Load CSV indexed by shot_name."""
     rows = {}
-    with open(path, "r") as f:
+    with open(path, "r", newline="") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            rows[row["shot_name"]] = row
+            shot_name = row.get("shot_name", "").strip()
+            if shot_name:
+                rows[shot_name] = row
     return rows
 
 
-def fmt(val, width=8):
-    """Format a numeric value or dash if zero/missing."""
+def parse_float(value):
+    """Parse float from CSV field."""
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
     try:
-        v = float(val)
-        if v == 0.0:
-            return "-".rjust(width)
-        return f"{v:.1f}".rjust(width)
-    except (ValueError, TypeError):
-        return "-".rjust(width)
+        return float(text)
+    except ValueError:
+        return None
 
 
-def delta(a, b):
-    """Compute delta string between two values."""
-    try:
-        va, vb = float(a), float(b)
-        if va == 0.0 or vb == 0.0:
-            return "-".rjust(8)
-        return f"{va - vb:+.1f}".rjust(8)
-    except (ValueError, TypeError):
-        return "-".rjust(8)
+def parse_metric(value):
+    """Parse distance/height metric, where 0 means missing reference."""
+    parsed = parse_float(value)
+    if parsed is None or parsed == 0.0:
+        return None
+    return parsed
+
+
+def fmt_decimal(value, digits=1):
+    """Format decimal as string for CSV output; blank if missing."""
+    if value is None:
+        return ""
+    return f"{value:.{digits}f}"
+
+
+def choose_input_value(primary, fallback):
+    """Use primary input value when present; otherwise fallback."""
+    first = parse_float(primary)
+    if first is not None:
+        return first
+    return parse_float(fallback)
+
+
+def build_row(shot_name, physics_row, flightscope_row):
+    speed = choose_input_value(
+        physics_row.get("speed_mph"),
+        flightscope_row.get("speed_mph"),
+    )
+    vla = choose_input_value(
+        physics_row.get("vla_deg"),
+        flightscope_row.get("vla_deg"),
+    )
+    hla = choose_input_value(
+        physics_row.get("hla_deg"),
+        flightscope_row.get("hla_deg"),
+    )
+    spin = choose_input_value(
+        physics_row.get("total_spin_rpm"),
+        flightscope_row.get("total_spin_rpm"),
+    )
+    spin_axis = choose_input_value(
+        physics_row.get("spin_axis_deg"),
+        flightscope_row.get("spin_axis_deg"),
+    )
+
+    p_carry = parse_metric(physics_row.get("carry_yd"))
+    f_carry = parse_metric(flightscope_row.get("carry_yd"))
+    p_total = parse_metric(physics_row.get("total_yd"))
+    f_total = parse_metric(flightscope_row.get("total_yd"))
+    p_apex = parse_metric(physics_row.get("apex_ft"))
+    f_apex = parse_metric(flightscope_row.get("apex_ft"))
+
+    return {
+        "shot_name": shot_name,
+        "speed_mph": fmt_decimal(speed, 1),
+        "vla_deg": fmt_decimal(vla, 1),
+        "hla_deg": fmt_decimal(hla, 1),
+        "total_spin_rpm": fmt_decimal(spin, 0),
+        "spin_axis_deg": fmt_decimal(spin_axis, 1),
+        "physics_carry_yd": fmt_decimal(p_carry, 1),
+        "flightscope_carry_yd": fmt_decimal(f_carry, 1),
+        "diff_carry_yd": fmt_decimal(p_carry - f_carry if p_carry is not None and f_carry is not None else None, 1),
+        "physics_total_yd": fmt_decimal(p_total, 1),
+        "flightscope_total_yd": fmt_decimal(f_total, 1),
+        "diff_total_yd": fmt_decimal(p_total - f_total if p_total is not None and f_total is not None else None, 1),
+        "physics_apex_ft": fmt_decimal(p_apex, 1),
+        "flightscope_apex_ft": fmt_decimal(f_apex, 1),
+        "diff_apex_ft": fmt_decimal(p_apex - f_apex if p_apex is not None and f_apex is not None else None, 1),
+    }
+
+
+def write_output_csv(path, rows):
+    """Write shot diff output rows to CSV."""
+    output_dir = os.path.dirname(path)
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
+
+    with open(path, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=OUTPUT_FIELDS)
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Compare physics CSV against FlightScope CSV")
+    parser.add_argument("physics_csv", help="Path to physics CSV input")
+    parser.add_argument("flightscope_csv", help="Path to FlightScope CSV input")
+    parser.add_argument(
+        "--output",
+        default=DEFAULT_OUTPUT_PATH,
+        help="Output path for generated comparison CSV (default: assets/data/calibration/shot_diff_analysis.csv)",
+    )
+    return parser.parse_args()
 
 
 def main():
-    if len(sys.argv) != 3:
-        print(f"Usage: python {sys.argv[0]} <physics.csv> <flightscope.csv>")
-        sys.exit(1)
+    args = parse_args()
+    physics = load_csv(args.physics_csv)
+    flightscope = load_csv(args.flightscope_csv)
 
-    physics = load_csv(sys.argv[1])
-    flightscope = load_csv(sys.argv[2])
+    all_shots = sorted(set(physics.keys()) | set(flightscope.keys()))
+    rows = [build_row(shot, physics.get(shot, {}), flightscope.get(shot, {})) for shot in all_shots]
 
-    all_shots = sorted(set(list(physics.keys()) + list(flightscope.keys())))
-
-    # Header
-    header = (
-        f"{'shot_name':<25} | "
-        f"{'spd':>5} | "
-        f"{'vla':>5} | "
-        f"{'spin':>6} | "
-        f"{'p_carry':>8} | {'fs_carry':>8} | {'d_carry':>8} | "
-        f"{'p_total':>8} | {'fs_total':>8} | {'d_total':>8} | "
-        f"{'p_apex':>8} | {'fs_apex':>8} | {'d_apex':>8}"
-    )
-    print(header)
-    print("-" * len(header))
-
-    for shot in all_shots:
-        p = physics.get(shot, {})
-        f = flightscope.get(shot, {})
-
-        speed = p.get("speed_mph", f.get("speed_mph", ""))
-        vla = p.get("vla_deg", f.get("vla_deg", ""))
-        spin = p.get("total_spin_rpm", f.get("total_spin_rpm", ""))
-
-        p_carry = p.get("carry_yd", "0")
-        f_carry = f.get("carry_yd", "0")
-        p_total = p.get("total_yd", "0")
-        f_total = f.get("total_yd", "0")
-        p_apex = p.get("apex_ft", "0")
-        f_apex = f.get("apex_ft", "0")
-
-        try:
-            spd_str = f"{float(speed):>5.1f}" if speed else "    -"
-        except ValueError:
-            spd_str = "    -"
-        try:
-            vla_str = f"{float(vla):>5.1f}" if vla else "    -"
-        except ValueError:
-            vla_str = "    -"
-        try:
-            spin_str = f"{float(spin):>6.0f}" if spin else "     -"
-        except ValueError:
-            spin_str = "     -"
-
-        print(
-            f"{shot:<25} | "
-            f"{spd_str} | "
-            f"{vla_str} | "
-            f"{spin_str} | "
-            f"{fmt(p_carry)} | {fmt(f_carry)} | {delta(p_carry, f_carry)} | "
-            f"{fmt(p_total)} | {fmt(f_total)} | {delta(p_total, f_total)} | "
-            f"{fmt(p_apex)} | {fmt(f_apex)} | {delta(p_apex, f_apex)}"
-        )
+    output_path = os.path.normpath(args.output)
+    write_output_csv(output_path, rows)
+    print(f"Wrote comparison CSV to {output_path} ({len(rows)} shots)", file=sys.stderr)
 
 
 if __name__ == "__main__":

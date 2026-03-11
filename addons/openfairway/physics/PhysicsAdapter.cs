@@ -208,11 +208,25 @@ public partial class PhysicsAdapter : RefCounted
     }
 
     /// <summary>
+    /// Carry-only simulation for rapid calibration from GDScript or C#.
+    /// Runs flight loop only and stops at first ground impact (no bounce or rollout).
+    /// </summary>
+    public Dictionary SimulateCarryOnlyFromJson(Dictionary shot)
+    {
+        return SimulateCarryOnlyInternal(shot, null);
+    }
+
+    /// <summary>
     /// Carry-only simulation for rapid calibration.
-    /// Runs flight loop only, stops at first ground impact (no bounce/rollout).
-    /// Accepts optional FlightProfile override for A/B testing.
+    /// Runs flight loop only and stops at first ground impact (no bounce or rollout).
+    /// Accepts an optional <see cref="FlightProfile"/> override for C# A/B testing.
     /// </summary>
     public Dictionary SimulateCarryOnly(Dictionary shot, FlightProfile flightProfile = null)
+    {
+        return SimulateCarryOnlyInternal(shot, flightProfile);
+    }
+
+    private Dictionary SimulateCarryOnlyInternal(Dictionary shot, FlightProfile flightProfile)
     {
         var ballDict = shot.ContainsKey("BallData") ? (Dictionary)shot["BallData"] : shot;
         if (ballDict == null || ballDict.Count == 0)

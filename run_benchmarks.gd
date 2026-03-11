@@ -19,7 +19,6 @@ var shots := {
 	"Checked":    "res://assets/data/checked_test_shot.json",
 	"Flop":       "res://assets/data/flop_test_shot.json",
 	"Chip":       "res://assets/data/chip_test_shot.json",
-	"Putt 10ft":  "res://assets/data/putt_ten_feet.json",
 	"Free Shot":  "res://assets/data/free_shot.json",
 	"Bug1 Short": "res://assets/data/bug1_wedge_short.json",
 	"Bug2 Long":  "res://assets/data/bug2_wedge_long.json",

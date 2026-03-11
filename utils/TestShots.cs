@@ -27,8 +27,6 @@ public static class TestShots
         { "Checked", "res://assets/data/checked_test_shot.json" },
         { "Flop", "res://assets/data/flop_test_shot.json" },
         { "Chip", "res://assets/data/chip_test_shot.json" },
-        { "Putt 5ft", "res://assets/data/putt_five_feet.json" },
-        { "Putt 10ft", "res://assets/data/putt_ten_feet.json" },
         { "5iron", "res://assets/data/5iron.json" },
     };
 

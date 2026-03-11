@@ -1,16 +1,12 @@
 {
-  "driver1": {
-    "filename": "driver1.json",
-    "speed_mph": 124.0,
-    "vla_deg": 9.4,
-    "hla_deg": -9.5,
-    "total_spin_rpm": 2322.0,
-    "spin_axis_deg": -24.8,
-    "carry_yd": 158.0,
-    "roll_yd": 26.2,
-    "total_yd": 184.1,
-    "lateral_yd": 42.2,
-    "time_s": 3.8,
-    "apex_ft": 30.2
+  "bump_and_run": {
+    "filename": "bump_and_run.json",
+    "speed_mph": 58.27245326499938,
+    "vla_deg": 15.5726221,
+    "hla_deg": -0.8502867,
+    "total_spin_rpm": 1850.0674,
+    "spin_axis_deg": 2.314628,
+    "_status": "failed",
+    "_reason": "blocked_no_result_update"
   }
 }

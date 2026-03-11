@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://caxa6egfq0ofj"
+
+[deps]
+
+files=["res://assets/data/calibration/shot_diff_analysis.speed.translation", "res://assets/data/calibration/shot_diff_analysis.vla.translation", "res://assets/data/calibration/shot_diff_analysis.total.translation", "res://assets/data/calibration/shot_diff_analysis.physics.translation", "res://assets/data/calibration/shot_diff_analysis.flightscope.translation", "res://assets/data/calibration/shot_diff_analysis.diff.translation", "res://assets/data/calibration/shot_diff_analysis.physics.translation", "res://assets/data/calibration/shot_diff_analysis.flightscope.translation", "res://assets/data/calibration/shot_diff_analysis.diff.translation", "res://assets/data/calibration/shot_diff_analysis.physics.translation", "res://assets/data/calibration/shot_diff_analysis.flightscope.translation", "res://assets/data/calibration/shot_diff_analysis.diff.translation"]
+
+source_file="res://assets/data/calibration/shot_diff_analysis.csv"
+dest_files=["res://assets/data/calibration/shot_diff_analysis.speed.translation", "res://assets/data/calibration/shot_diff_analysis.vla.translation", "res://assets/data/calibration/shot_diff_analysis.total.translation", "res://assets/data/calibration/shot_diff_analysis.physics.translation", "res://assets/data/calibration/shot_diff_analysis.flightscope.translation", "res://assets/data/calibration/shot_diff_analysis.diff.translation", "res://assets/data/calibration/shot_diff_analysis.physics.translation", "res://assets/data/calibration/shot_diff_analysis.flightscope.translation", "res://assets/data/calibration/shot_diff_analysis.diff.translation", "res://assets/data/calibration/shot_diff_analysis.physics.translation", "res://assets/data/calibration/shot_diff_analysis.flightscope.translation", "res://assets/data/calibration/shot_diff_analysis.diff.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

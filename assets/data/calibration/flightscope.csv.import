@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://dgqcnjcpfvkii"
+
+[deps]
+
+files=["res://assets/data/calibration/flightscope.filename.translation", "res://assets/data/calibration/flightscope.speed.translation", "res://assets/data/calibration/flightscope.vla.translation", "res://assets/data/calibration/flightscope.hla.translation", "res://assets/data/calibration/flightscope.total.translation", "res://assets/data/calibration/flightscope.spin.translation", "res://assets/data/calibration/flightscope.backspin.translation", "res://assets/data/calibration/flightscope.sidespin.translation", "res://assets/data/calibration/flightscope.carry.translation", "res://assets/data/calibration/flightscope.total.translation", "res://assets/data/calibration/flightscope.rollout.translation", "res://assets/data/calibration/flightscope.apex.translation"]
+
+source_file="res://assets/data/calibration/flightscope.csv"
+dest_files=["res://assets/data/calibration/flightscope.filename.translation", "res://assets/data/calibration/flightscope.speed.translation", "res://assets/data/calibration/flightscope.vla.translation", "res://assets/data/calibration/flightscope.hla.translation", "res://assets/data/calibration/flightscope.total.translation", "res://assets/data/calibration/flightscope.spin.translation", "res://assets/data/calibration/flightscope.backspin.translation", "res://assets/data/calibration/flightscope.sidespin.translation", "res://assets/data/calibration/flightscope.carry.translation", "res://assets/data/calibration/flightscope.total.translation", "res://assets/data/calibration/flightscope.rollout.translation", "res://assets/data/calibration/flightscope.apex.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true
