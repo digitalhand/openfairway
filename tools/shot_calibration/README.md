@@ -9,6 +9,7 @@ Tools for comparing OpenFairway physics output against FlightScope reference dat
 - [Shot Data Source](#shot-data-source)
 - [FlightScope Reference](#flightscope-reference)
 - [Tools](#tools)
+  - [physics_export_data.gd](#physics_export_datagd)
   - [export_physics_json.gd](#export_physics_jsongd)
   - [export_physics_csv.gd](#export_physics_csvgd)
   - [export_flightscope_csv.py](#export_flightscope_csvpy)
@@ -112,6 +113,10 @@ Shot input files live in `assets/data/*.json` using the BallData format from lau
 Populate this file manually from [FlightScope Trajectory Optimizer](https://trajectory.flightscope.com/) or use the scraper tool.
 
 ## Tools
+
+### `physics_export_data.gd`
+
+Shared helper module (`PhysicsExportData`) preloaded by both `export_physics_json.gd` and `export_physics_csv.gd`. Handles shot file discovery, `PhysicsAdapter` invocation, and row collection. Not run directly.
 
 ### `export_physics_json.gd`
 
