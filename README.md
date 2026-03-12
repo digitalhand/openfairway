@@ -12,7 +12,7 @@ YouTube Video [Demo of OpenFairway v1.0.2](https://youtu.be/IYSF5w6ROzo) (update
 
 [![CI/CD Pipeline](https://github.com/digitalhand/openfairway/workflows/CI%2FCD%20Pipeline/badge.svg)](https://github.com/digitalhand/openfairway/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![.NET 8.0](https://img.shields.io/badge/.NET-8.0-512BD4)](https://dotnet.microsoft.com/)
+[![.NET 9.0](https://img.shields.io/badge/.NET-9.0-512BD4)](https://dotnet.microsoft.com/)
 [![Godot 4.5+](https://img.shields.io/badge/Godot-4.5+-478CBF)](https://godotengine.org/)
 
 ## Table of Contents
@@ -50,7 +50,7 @@ YouTube Video [Demo of OpenFairway v1.0.2](https://youtu.be/IYSF5w6ROzo) (update
 ## Requirements
 
 - **Godot 4.5+** with **.NET support**
-- **.NET 8.0 SDK** (or later)
+- **.NET 9.0 SDK** (or later)
 
 GDScript projects can use this addon — Godot's cross-language scripting handles the interop automatically, but the .NET editor build is required.
 

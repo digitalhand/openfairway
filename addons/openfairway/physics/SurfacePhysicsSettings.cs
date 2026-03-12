@@ -3,45 +3,30 @@ using Godot.Collections;
 /// <summary>
 /// Typed surface tuning values used to build physics parameters.
 /// </summary>
-public sealed class SurfacePhysicsSettings
+public sealed class SurfacePhysicsSettings(
+    PhysicsEnums.SurfaceType surfaceType,
+    float kineticFriction,
+    float rollingFriction,
+    float grassViscosity,
+    float criticalAngle,
+    float spinbackResponseScale,
+    float spinbackThetaBoostMax,
+    float spinbackSpinStartRpm,
+    float spinbackSpinEndRpm,
+    float spinbackSpeedStartMps,
+    float spinbackSpeedEndMps)
 {
-    public PhysicsEnums.SurfaceType SurfaceType { get; }
-    public float KineticFriction { get; }
-    public float RollingFriction { get; }
-    public float GrassViscosity { get; }
-    public float CriticalAngle { get; }
-    public float SpinbackResponseScale { get; }
-    public float SpinbackThetaBoostMax { get; }
-    public float SpinbackSpinStartRpm { get; }
-    public float SpinbackSpinEndRpm { get; }
-    public float SpinbackSpeedStartMps { get; }
-    public float SpinbackSpeedEndMps { get; }
-
-    public SurfacePhysicsSettings(
-        PhysicsEnums.SurfaceType surfaceType,
-        float kineticFriction,
-        float rollingFriction,
-        float grassViscosity,
-        float criticalAngle,
-        float spinbackResponseScale,
-        float spinbackThetaBoostMax,
-        float spinbackSpinStartRpm,
-        float spinbackSpinEndRpm,
-        float spinbackSpeedStartMps,
-        float spinbackSpeedEndMps)
-    {
-        SurfaceType = surfaceType;
-        KineticFriction = kineticFriction;
-        RollingFriction = rollingFriction;
-        GrassViscosity = grassViscosity;
-        CriticalAngle = criticalAngle;
-        SpinbackResponseScale = spinbackResponseScale;
-        SpinbackThetaBoostMax = spinbackThetaBoostMax;
-        SpinbackSpinStartRpm = spinbackSpinStartRpm;
-        SpinbackSpinEndRpm = spinbackSpinEndRpm;
-        SpinbackSpeedStartMps = spinbackSpeedStartMps;
-        SpinbackSpeedEndMps = spinbackSpeedEndMps;
-    }
+    public PhysicsEnums.SurfaceType SurfaceType { get; } = surfaceType;
+    public float KineticFriction { get; } = kineticFriction;
+    public float RollingFriction { get; } = rollingFriction;
+    public float GrassViscosity { get; } = grassViscosity;
+    public float CriticalAngle { get; } = criticalAngle;
+    public float SpinbackResponseScale { get; } = spinbackResponseScale;
+    public float SpinbackThetaBoostMax { get; } = spinbackThetaBoostMax;
+    public float SpinbackSpinStartRpm { get; } = spinbackSpinStartRpm;
+    public float SpinbackSpinEndRpm { get; } = spinbackSpinEndRpm;
+    public float SpinbackSpeedStartMps { get; } = spinbackSpeedStartMps;
+    public float SpinbackSpeedEndMps { get; } = spinbackSpeedEndMps;
 
     public Dictionary ToDictionary()
     {
