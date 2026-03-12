@@ -31,26 +31,26 @@ Realistic golf ball physics engine for Godot 4.5+ C# projects. Usable from both 
 ## Requirements
 
 - **Godot 4.5+** with **.NET support**
-- **.NET 8.0 SDK** (or later)
+- **.NET 9.0 SDK** (or later)
 - The addon is written in C#, but GDScript projects can consume it through Godot interop
 
-### Installing .NET 8.0 SDK
+### Installing .NET 9.0 SDK
 
 **Windows**
-1. Download the .NET 8.0 SDK from https://dotnet.microsoft.com/download/dotnet/8.0
+1. Download the .NET 9.0 SDK from https://dotnet.microsoft.com/download/dotnet/9.0
 2. Run the installer
 3. Verify with `dotnet --version`
 
 **Linux (Ubuntu/Debian)**
 ```bash
 sudo apt update
-sudo apt install dotnet-sdk-8.0
+sudo apt install dotnet-sdk-9.0
 dotnet --version
 ```
 
 **Linux (Fedora)**
 ```bash
-sudo dnf install dotnet-sdk-8.0
+sudo dnf install dotnet-sdk-9.0
 dotnet --version
 ```
 

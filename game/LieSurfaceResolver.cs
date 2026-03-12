@@ -68,7 +68,7 @@ public sealed class LieSurfaceResolver
         if (_zoneStack.Count > 0)
         {
             LastResolutionSource = "zone";
-            return _zoneStack[_zoneStack.Count - 1];
+            return _zoneStack[^1];
         }
 
         if (TryResolveFromRegisteredGridMaps(worldPoint, out var registeredSurface, out GridMap registeredGridMap, out Vector3I registeredCell))
