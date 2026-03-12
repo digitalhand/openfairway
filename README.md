@@ -1,6 +1,12 @@
-# OpenFairway Physics
+# OpenFairway Golf Physics
 
-Realistic golf ball physics engine for Godot 4.5+ (.NET/C#). Provides force, torque, bounce, and surface interaction calculations usable from both C# and GDScript. YouTube Video [Demo of OpenFairway v1.0.2](https://youtu.be/IYSF5w6ROzo)
+The worlds first open source golf physics library. Realistic golf ball physics engine for Godot 4. Provides force, torque, bounce, and surface interaction calculations usable from both C# and GDScript. 
+
+- Latest release **v1.0.5** data compared to FlightScope and GSPro. See data results here: [Shot Data]
+- Fast iteration tooling using godot console to calculate physics tuning against source of truth. 
+- (https://github.com/digitalhand/openfairway/tree/main/assets/data/calibration/history) 
+
+YouTube Video [Demo of OpenFairway v1.0.2](https://youtu.be/IYSF5w6ROzo) (updated video coming soon)
 
  <img src="assets/images/logo.png" width="50%">
 
