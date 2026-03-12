@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Text.Json;
 
 /// <summary>
@@ -22,16 +23,28 @@ public sealed class BallPhysicsProfile
     public BounceProfile ResolvedBounce => Bounce ?? BounceProfile.Default;
     public RolloutProfile ResolvedRollout => Rollout ?? RolloutProfile.Default;
 
+    private static readonly HashSet<string> RootKnownKeys = new()
+    {
+        "DragScaleMultiplier", "LiftScaleMultiplier",
+        "KineticFrictionMultiplier", "RollingFrictionMultiplier",
+        "GrassViscosityMultiplier", "CriticalAngleOffsetRadians",
+        "SpinbackThetaBoostMultiplier",
+        "Flight", "Bounce", "Rollout",
+    };
+
     /// <summary>
     /// Creates a BallPhysicsProfile from a JSON string. Only keys present in
     /// the JSON override defaults; unspecified keys keep their default values.
     /// Sub-profiles ("Flight", "Bounce", "Rollout") are partial-merged the same way.
+    /// Logs warnings for unknown keys that may indicate typos.
     /// </summary>
     public static BallPhysicsProfile FromJson(string json)
     {
         using var doc = JsonDocument.Parse(json);
         var root = doc.RootElement;
         var profile = new BallPhysicsProfile();
+
+        WarnUnknownKeys(root, RootKnownKeys, "BallPhysicsProfile");
 
         if (root.TryGetProperty("DragScaleMultiplier", out var v))
             profile.DragScaleMultiplier = v.GetSingle();
@@ -49,13 +62,30 @@ public sealed class BallPhysicsProfile
             profile.SpinbackThetaBoostMultiplier = v.GetSingle();
 
         if (root.TryGetProperty("Flight", out var flightEl))
+        {
+            WarnUnknownKeys(flightEl, FlightProfile.KnownKeys, "FlightProfile");
             profile.Flight = ParseFlightProfile(flightEl);
+            foreach (var warning in profile.Flight.Validate())
+                PhysicsLogger.Error($"[Profile] {warning}");
+        }
         if (root.TryGetProperty("Bounce", out var bounceEl))
             profile.Bounce = ParseBounceProfile(bounceEl);
         if (root.TryGetProperty("Rollout", out var rolloutEl))
             profile.Rollout = ParseRolloutProfile(rolloutEl);
 
         return profile;
+    }
+
+    private static void WarnUnknownKeys(JsonElement element, HashSet<string> knownKeys, string context)
+    {
+        if (element.ValueKind != JsonValueKind.Object)
+            return;
+
+        foreach (var prop in element.EnumerateObject())
+        {
+            if (!knownKeys.Contains(prop.Name))
+                PhysicsLogger.Error($"[Profile] Unknown key '{prop.Name}' in {context} — possible typo (will use default)");
+        }
     }
 
     private static FlightProfile ParseFlightProfile(JsonElement el)

@@ -1,4 +1,3 @@
-using System;
 using Godot;
 
 internal readonly struct FlightAerodynamicsSample
@@ -143,7 +142,7 @@ internal static class FlightAerodynamicsModel
         if (reynolds <= p.LowReBlendStart)
             return p.LowReCdFloor;
 
-        float t = SmoothStep01((reynolds - p.LowReBlendStart) / (50000.0f - p.LowReBlendStart));
+        float t = SafeSmoothStep01(reynolds, p.LowReBlendStart, 50000.0f);
         return Mathf.Lerp(p.LowReCdFloor, p.CdAt50k, t);
     }
 
@@ -185,17 +184,9 @@ internal static class FlightAerodynamicsModel
         }
 
         int reLowIndex = Mathf.Max(reHighIndex - 1, 0);
-        Func<float, float>[] clFunctions =
-        {
-            ClRe50k,
-            ClRe60k,
-            ClRe65k,
-            ClRe70k,
-            (sr) => ClHighRe(sr, p)
-        };
 
-        float clLow = Mathf.Max(0.0f, clFunctions[reLowIndex](spin));
-        float clHigh = Mathf.Max(0.0f, clFunctions[reHighIndex](spin));
+        float clLow = Mathf.Max(0.0f, ClAtReynoldsIndex(reLowIndex, spin, p));
+        float clHigh = Mathf.Max(0.0f, ClAtReynoldsIndex(reHighIndex, spin, p));
         float reLow = reValues[reLowIndex];
         float reHigh = reValues[reHighIndex];
         float weight = reHigh != reLow ? (reynolds - reLow) / (reHigh - reLow) : 0.0f;
@@ -211,18 +202,12 @@ internal static class FlightAerodynamicsModel
         if (spinRatio <= 0.0f)
             return 1.0f;
 
-        float highSpinWeight = SmoothStep01(
-            (spinRatio - p.HighSpinDragSrStart) / (p.HighSpinDragSrEnd - p.HighSpinDragSrStart)
-        );
-        float reReliefWeight = 1.0f - SmoothStep01(
-            (reynolds - p.HighSpinDragReliefReFullMax) / (p.HighSpinDragReliefReZero - p.HighSpinDragReliefReFullMax)
-        );
+        float highSpinWeight = SafeSmoothStep01(spinRatio, p.HighSpinDragSrStart, p.HighSpinDragSrEnd);
+        float reReliefWeight = 1.0f - SafeSmoothStep01(reynolds, p.HighSpinDragReliefReFullMax, p.HighSpinDragReliefReZero);
         float reliefWeight = highSpinWeight * reReliefWeight;
         float effectiveCap = Mathf.Lerp(p.SpinDragMultiplierMax, p.SpinDragMultiplierHighSpinMax, reliefWeight);
 
-        float ultraHighSpinWeight = SmoothStep01(
-            (spinRatio - p.UltraHighSpinDragSrStart) / (p.UltraHighSpinDragSrEnd - p.UltraHighSpinDragSrStart)
-        );
+        float ultraHighSpinWeight = SafeSmoothStep01(spinRatio, p.UltraHighSpinDragSrStart, p.UltraHighSpinDragSrEnd);
         effectiveCap = Mathf.Lerp(effectiveCap, p.SpinDragMultiplierUltraHighSpinMax, ultraHighSpinWeight);
 
         float spinDragMultiplier = 1.0f + p.SpinDragMultiplierCoeff * spinRatio * spinRatio;
@@ -231,19 +216,15 @@ internal static class FlightAerodynamicsModel
 
     internal static float GetLowLaunchLiftScale(float initialLaunchAngleDeg, float spinRatio, float reynolds, FlightProfile p)
     {
-        float launchFactor = SmoothStep01(
-            (p.LowLaunchVlaZeroDeg - initialLaunchAngleDeg) / (p.LowLaunchVlaZeroDeg - p.LowLaunchVlaFullDeg)
-        );
+        float launchFactor = SafeSmoothStep01(p.LowLaunchVlaZeroDeg - initialLaunchAngleDeg, 0.0f, p.LowLaunchVlaZeroDeg - p.LowLaunchVlaFullDeg);
         if (launchFactor <= 0.0f)
             return 1.0f;
 
-        float reFactor = SmoothStep01((reynolds - p.LowLaunchReStart) / (p.LowLaunchReEnd - p.LowLaunchReStart));
+        float reFactor = SafeSmoothStep01(reynolds, p.LowLaunchReStart, p.LowLaunchReEnd);
         if (reFactor <= 0.0f)
             return 1.0f;
 
-        float spinFactor = 1.0f - SmoothStep01(
-            (spinRatio - p.LowLaunchSpinRatioFull) / (p.LowLaunchSpinRatioMax - p.LowLaunchSpinRatioFull)
-        );
+        float spinFactor = 1.0f - SafeSmoothStep01(spinRatio, p.LowLaunchSpinRatioFull, p.LowLaunchSpinRatioMax);
         if (spinFactor <= 0.0f)
             return 1.0f;
 
@@ -253,16 +234,11 @@ internal static class FlightAerodynamicsModel
 
     internal static float GetHighLaunchDragScale(float initialLaunchAngleDeg, float spinRatio, FlightProfile p)
     {
-        float launchFactor = SmoothStep01(
-            (initialLaunchAngleDeg - p.HighLaunchDragVlaStartDeg) /
-            (p.HighLaunchDragVlaFullDeg - p.HighLaunchDragVlaStartDeg)
-        );
+        float launchFactor = SafeSmoothStep01(initialLaunchAngleDeg, p.HighLaunchDragVlaStartDeg, p.HighLaunchDragVlaFullDeg);
         if (launchFactor <= 0.0f)
             return 1.0f;
 
-        float spinFactor = SmoothStep01(
-            (spinRatio - p.HighLaunchDragSrStart) / (p.HighLaunchDragSrEnd - p.HighLaunchDragSrStart)
-        );
+        float spinFactor = SafeSmoothStep01(spinRatio, p.HighLaunchDragSrStart, p.HighLaunchDragSrEnd);
         if (spinFactor <= 0.0f)
             return 1.0f;
 
@@ -282,12 +258,19 @@ internal static class FlightAerodynamicsModel
         }
         else
         {
-            float t = (spinRatio - p.ClMaxSrTransitionStart) /
-                      (p.ClMaxSrTransitionEnd - p.ClMaxSrTransitionStart);
-            t = SmoothStep01(t);
+            float t = SafeSmoothStep01(spinRatio, p.ClMaxSrTransitionStart, p.ClMaxSrTransitionEnd);
             return Mathf.Lerp(p.ClMaxBase, p.ClMaxHighSpin, t);
         }
     }
+
+    private static float ClAtReynoldsIndex(int index, float spinRatio, FlightProfile p) => index switch
+    {
+        0 => ClRe50k(spinRatio),
+        1 => ClRe60k(spinRatio),
+        2 => ClRe65k(spinRatio),
+        3 => ClRe70k(spinRatio),
+        _ => ClHighRe(spinRatio, p),
+    };
 
     // Cl polynomial curves — these stay hardcoded (not extracted to profile)
     private static float ClRe50k(float spinRatio)
@@ -320,15 +303,10 @@ internal static class FlightAerodynamicsModel
 
     private static float ApplyHighSpinLiftAttenuation(float spinRatio, float cl, FlightProfile p)
     {
-        float attenuationT = SmoothStep01(
-            (spinRatio - p.HighSpinClAttenuationStart) / (p.HighSpinClAttenuationEnd - p.HighSpinClAttenuationStart)
-        );
+        float attenuationT = SafeSmoothStep01(spinRatio, p.HighSpinClAttenuationStart, p.HighSpinClAttenuationEnd);
         float attenuation = 1.0f - p.HighSpinClAttenuationMax * attenuationT;
 
-        float ultraHighSpinAttenuationT = SmoothStep01(
-            (spinRatio - p.UltraHighSpinClAttenuationStart) /
-            (p.UltraHighSpinClAttenuationEnd - p.UltraHighSpinClAttenuationStart)
-        );
+        float ultraHighSpinAttenuationT = SafeSmoothStep01(spinRatio, p.UltraHighSpinClAttenuationStart, p.UltraHighSpinClAttenuationEnd);
         float ultraHighSpinAttenuation = 1.0f - p.UltraHighSpinClAttenuationMax * ultraHighSpinAttenuationT;
 
         return cl * attenuation * ultraHighSpinAttenuation;
@@ -336,15 +314,10 @@ internal static class FlightAerodynamicsModel
 
     private static float ApplyLowReHighSpinLiftAttenuation(float spinRatio, float cl, FlightProfile p)
     {
-        float attenuationT = SmoothStep01(
-            (spinRatio - p.HighSpinClAttenuationStart) / (p.HighSpinClAttenuationEnd - p.HighSpinClAttenuationStart)
-        );
+        float attenuationT = SafeSmoothStep01(spinRatio, p.HighSpinClAttenuationStart, p.HighSpinClAttenuationEnd);
         float attenuation = 1.0f - p.LowReHighSpinClAttenuationMax * attenuationT;
 
-        float ultraHighSpinAttenuationT = SmoothStep01(
-            (spinRatio - p.UltraHighSpinClAttenuationStart) /
-            (p.UltraHighSpinClAttenuationEnd - p.UltraHighSpinClAttenuationStart)
-        );
+        float ultraHighSpinAttenuationT = SafeSmoothStep01(spinRatio, p.UltraHighSpinClAttenuationStart, p.UltraHighSpinClAttenuationEnd);
         float ultraHighSpinAttenuation = 1.0f - p.LowReUltraHighSpinClAttenuationMax * ultraHighSpinAttenuationT;
 
         return cl * attenuation * ultraHighSpinAttenuation;
@@ -357,9 +330,7 @@ internal static class FlightAerodynamicsModel
 
         if (spinRatio < p.HighReGainReductionEnd)
         {
-            float reductionT = SmoothStep01(
-                (spinRatio - p.HighReGainReductionStart) / (p.HighReGainReductionEnd - p.HighReGainReductionStart)
-            );
+            float reductionT = SafeSmoothStep01(spinRatio, p.HighReGainReductionStart, p.HighReGainReductionEnd);
             return Mathf.Lerp(p.HighReSpinGain, p.HighReMidSpinGain, reductionT);
         }
 
@@ -368,9 +339,7 @@ internal static class FlightAerodynamicsModel
 
         if (spinRatio < p.HighReGainRecoveryEnd)
         {
-            float recoveryT = SmoothStep01(
-                (spinRatio - p.HighReGainRecoveryStart) / (p.HighReGainRecoveryEnd - p.HighReGainRecoveryStart)
-            );
+            float recoveryT = SafeSmoothStep01(spinRatio, p.HighReGainRecoveryStart, p.HighReGainRecoveryEnd);
             return Mathf.Lerp(p.HighReMidSpinGain, p.HighReSpinGain, recoveryT);
         }
 
@@ -381,5 +350,18 @@ internal static class FlightAerodynamicsModel
     {
         float clampedT = Mathf.Clamp(t, 0.0f, 1.0f);
         return clampedT * clampedT * (3.0f - 2.0f * clampedT);
+    }
+
+    /// <summary>
+    /// SmoothStep with safe division: when (end - start) is near zero,
+    /// returns 1 if value >= end, else 0. Prevents NaN propagation from
+    /// degenerate FlightProfile ranges where start == end.
+    /// </summary>
+    private static float SafeSmoothStep01(float value, float start, float end)
+    {
+        float range = end - start;
+        if (Mathf.Abs(range) < 1e-6f)
+            return value >= end ? 1.0f : 0.0f;
+        return SmoothStep01((value - start) / range);
     }
 }
