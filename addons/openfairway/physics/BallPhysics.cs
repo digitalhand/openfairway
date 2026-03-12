@@ -259,7 +259,8 @@ public partial class BallPhysics : RefCounted
             parameters.AirViscosity,
             parameters.DragScale,
             parameters.LiftScale,
-            parameters.InitialLaunchAngleDeg
+            parameters.InitialLaunchAngleDeg,
+            parameters.FlightProfile
         );
         if (!airSample.HasAerodynamics)
             return Vector3.Zero;

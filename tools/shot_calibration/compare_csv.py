@@ -17,6 +17,11 @@ DEFAULT_OUTPUT_PATH = os.path.normpath(
     os.path.join(SCRIPT_DIR, "..", "..", "assets", "data", "calibration", "shot_diff_analysis.csv")
 )
 
+CARRY_PASS = 3.0
+CARRY_MODERATE = 7.0
+TOTAL_PASS = 5.0
+TOTAL_MODERATE = 10.0
+
 OUTPUT_FIELDS = [
     "shot_name",
     "speed_mph",
@@ -30,9 +35,13 @@ OUTPUT_FIELDS = [
     "physics_total_yd",
     "flightscope_total_yd",
     "diff_total_yd",
+    "rollout_physics_yd",
+    "rollout_flightscope_yd",
+    "diff_rollout_yd",
     "physics_apex_ft",
     "flightscope_apex_ft",
     "diff_apex_ft",
+    "status",
 ]
 
 
@@ -84,6 +93,24 @@ def choose_input_value(primary, fallback):
     return parse_float(fallback)
 
 
+def classify_status(diff_carry, diff_total):
+    """Classify shot status based on carry and total diffs."""
+    carry_abs = abs(diff_carry) if diff_carry is not None else None
+    total_abs = abs(diff_total) if diff_total is not None else None
+
+    if total_abs is not None and total_abs > TOTAL_MODERATE:
+        return "severe"
+    if carry_abs is not None and carry_abs > CARRY_MODERATE:
+        return "severe"
+    if total_abs is not None and total_abs > TOTAL_PASS:
+        return "moderate"
+    if carry_abs is not None and carry_abs > CARRY_PASS:
+        return "moderate"
+    if total_abs is None and carry_abs is None:
+        return ""
+    return "pass"
+
+
 def build_row(shot_name, physics_row, flightscope_row):
     speed = choose_input_value(
         physics_row.get("speed_mph"),
@@ -113,6 +140,15 @@ def build_row(shot_name, physics_row, flightscope_row):
     p_apex = parse_metric(physics_row.get("apex_ft"))
     f_apex = parse_metric(flightscope_row.get("apex_ft"))
 
+    diff_carry = p_carry - f_carry if p_carry is not None and f_carry is not None else None
+    diff_total = p_total - f_total if p_total is not None and f_total is not None else None
+
+    p_rollout = p_total - p_carry if p_total is not None and p_carry is not None else None
+    f_rollout = f_total - f_carry if f_total is not None and f_carry is not None else None
+    diff_rollout = p_rollout - f_rollout if p_rollout is not None and f_rollout is not None else None
+
+    status = classify_status(diff_carry, diff_total)
+
     return {
         "shot_name": shot_name,
         "speed_mph": fmt_decimal(speed, 1),
@@ -122,13 +158,17 @@ def build_row(shot_name, physics_row, flightscope_row):
         "spin_axis_deg": fmt_decimal(spin_axis, 1),
         "physics_carry_yd": fmt_decimal(p_carry, 1),
         "flightscope_carry_yd": fmt_decimal(f_carry, 1),
-        "diff_carry_yd": fmt_decimal(p_carry - f_carry if p_carry is not None and f_carry is not None else None, 1),
+        "diff_carry_yd": fmt_decimal(diff_carry, 1),
         "physics_total_yd": fmt_decimal(p_total, 1),
         "flightscope_total_yd": fmt_decimal(f_total, 1),
-        "diff_total_yd": fmt_decimal(p_total - f_total if p_total is not None and f_total is not None else None, 1),
+        "diff_total_yd": fmt_decimal(diff_total, 1),
+        "rollout_physics_yd": fmt_decimal(p_rollout, 1),
+        "rollout_flightscope_yd": fmt_decimal(f_rollout, 1),
+        "diff_rollout_yd": fmt_decimal(diff_rollout, 1),
         "physics_apex_ft": fmt_decimal(p_apex, 1),
         "flightscope_apex_ft": fmt_decimal(f_apex, 1),
         "diff_apex_ft": fmt_decimal(p_apex - f_apex if p_apex is not None and f_apex is not None else None, 1),
+        "status": status,
     }
 
 

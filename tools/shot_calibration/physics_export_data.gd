@@ -8,7 +8,7 @@ const DEFAULT_CSV_OUTPUT_PATH := "res://assets/data/calibration/physics.csv"
 const DEFAULT_JSON_OUTPUT_PATH := "res://assets/data/calibration/physics.json"
 
 func collect_rows() -> Array[Dictionary]:
-	var adapter := PhysicsAdapter.new()
+	var adapter := _create_adapter()
 	var dir := DirAccess.open(DATA_DIR_PATH)
 	if dir == null:
 		push_error("ERROR: cannot open %s" % DATA_DIR_PATH)
@@ -124,6 +124,29 @@ func _collect_row(adapter: PhysicsAdapter, fname_iter: String) -> Dictionary:
 		"peak_cl": result.get("peak_cl", 0.0),
 		"carry_only_yd": carry_result.get("carry_yd", 0.0),
 	}
+
+func resolve_profile_path() -> String:
+	var args := OS.get_cmdline_user_args()
+	for i in range(args.size()):
+		var arg: String = args[i]
+		if arg.begins_with("--profile="):
+			return _normalize_output_path(arg.trim_prefix("--profile="))
+		if arg == "--profile" and i + 1 < args.size():
+			return _normalize_output_path(args[i + 1])
+	return ""
+
+func _create_adapter() -> PhysicsAdapter:
+	var adapter := PhysicsAdapter.new()
+	var profile_path := resolve_profile_path()
+	if profile_path != "":
+		var file := FileAccess.open(profile_path, FileAccess.READ)
+		if file == null:
+			push_error("ERROR: cannot open profile file %s" % profile_path)
+		else:
+			var json_text := file.get_as_text()
+			adapter.LoadProfileFromJson(json_text)
+			printerr("Loaded profile override from %s" % profile_path)
+	return adapter
 
 func _normalize_output_path(path: String) -> String:
 	if path.begins_with("res://") or path.begins_with("user://") or path.is_absolute_path():

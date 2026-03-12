@@ -20,8 +20,6 @@ var shots := {
 	"Flop":       "res://assets/data/flop_test_shot.json",
 	"Chip":       "res://assets/data/chip_test_shot.json",
 	"Free Shot":  "res://assets/data/free_shot.json",
-	"Bug1 Short": "res://assets/data/bug1_wedge_short.json",
-	"Bug2 Long":  "res://assets/data/bug2_wedge_long.json",
 }
 
 func _init() -> void:

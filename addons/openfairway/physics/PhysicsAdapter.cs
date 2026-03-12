@@ -19,7 +19,16 @@ public partial class PhysicsAdapter : RefCounted
     private readonly Aerodynamics _aero = new();
     private readonly PhysicsParamsFactory _physicsParamsFactory = new();
     private readonly ShotSetup _shotSetup = new();
-    private readonly BallPhysicsProfile _ballProfile = new();
+    private BallPhysicsProfile _ballProfile = new();
+
+    /// <summary>
+    /// Load a BallPhysicsProfile from a JSON string. Only keys present in
+    /// the JSON override defaults. Subsequent simulations use this profile.
+    /// </summary>
+    public void LoadProfileFromJson(string json)
+    {
+        _ballProfile = BallPhysicsProfile.FromJson(json);
+    }
 
     /// <summary>
     /// Simulate a shot from JSON data and return carry/total distances
@@ -27,6 +36,18 @@ public partial class PhysicsAdapter : RefCounted
     public Dictionary SimulateShotFromJson(Dictionary shot)
     {
         return SimulateShotFromJson(shot, PhysicsEnums.SurfaceType.Fairway, Vector3.Up);
+    }
+
+    /// <summary>
+    /// Simulate a shot using a specific BallPhysicsProfile override.
+    /// </summary>
+    public Dictionary SimulateShotWithProfile(Dictionary shot, BallPhysicsProfile profile)
+    {
+        var saved = _ballProfile;
+        _ballProfile = profile ?? new BallPhysicsProfile();
+        var result = SimulateShotFromJson(shot, PhysicsEnums.SurfaceType.Fairway, Vector3.Up);
+        _ballProfile = saved;
+        return result;
     }
 
     /// <summary>
@@ -79,7 +100,8 @@ public partial class PhysicsAdapter : RefCounted
             parameters.AirViscosity,
             parameters.DragScale,
             parameters.LiftScale,
-            parameters.InitialLaunchAngleDeg
+            parameters.InitialLaunchAngleDeg,
+            parameters.FlightProfile
         );
         float peakCl = 0.0f;
 
@@ -95,7 +117,8 @@ public partial class PhysicsAdapter : RefCounted
                     parameters.AirViscosity,
                     parameters.DragScale,
                     parameters.LiftScale,
-                    parameters.InitialLaunchAngleDeg
+                    parameters.InitialLaunchAngleDeg,
+                    parameters.FlightProfile
                 );
                 if (airSample.HasAerodynamics)
                 {

@@ -1,0 +1,7 @@
+{
+  "Flight": {
+    "HighLaunchDragVlaStartDeg": 26.0,
+    "HighLaunchDragVlaFullDeg": 33.0,
+    "HighLaunchDragBoostMax": 1.20
+  }
+}

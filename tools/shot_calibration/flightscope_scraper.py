@@ -30,6 +30,7 @@ from pathlib import Path
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
@@ -73,8 +74,6 @@ DEFAULT_SHOTS = {
     "wood_low": "wood_low_test_shot.json",
     "approach_mid": "approach_mid_iron_test_shot.json",
     "approach_test_shot": "approach_test_shot.json",
-    "bug1_wedge_short": "bug1_wedge_short.json",
-    "bug2_wedge_long": "bug2_wedge_long.json",
     "bump_and_run": "bump_and_run.json",
     "bump_and_run_slow": "bump_and_run_slow.json",
     "bump_test_shot": "bump_test_shot.json",
@@ -161,9 +160,29 @@ def _create_driver(visible: bool):
     if not visible:
         chrome_options.add_argument("--headless=new")
     chrome_options.add_argument("--window-size=1920,1080")
+
+    # Anti-detection: hide automation signals to improve reCAPTCHA v3 score
+    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+    chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    chrome_options.add_experimental_option("useAutomationExtension", False)
+    chrome_options.add_argument(
+        "--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+    )
+
+    # Enable performance logging for network diagnostics
+    chrome_options.set_capability("goog:loggingPrefs", {"performance": "ALL"})
+
     chrome_options.binary_location = browser_path
     _log(f"Launching browser command: {browser_cmd} ({browser_path})")
-    return webdriver.Chrome(options=chrome_options)
+    driver = webdriver.Chrome(options=chrome_options)
+
+    # Remove navigator.webdriver flag via CDP
+    driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
+        "source": "Object.defineProperty(navigator, 'webdriver', {get: () => undefined});"
+    })
+
+    return driver
 
 
 def _resolve_browser_binary():
@@ -256,8 +275,19 @@ def _fill_field_by_label(driver, label_fragment, value):
                 for inp in inputs:
                     if inp.is_displayed():
                         inp.click()
-                        inp.send_keys(Keys.CONTROL + "a")
-                        inp.send_keys(str(value))
+                        # Use native setter + dispatch events to trigger Vue/Vuetify reactivity
+                        try:
+                            driver.execute_script("""
+                                const nativeSetter = Object.getOwnPropertyDescriptor(
+                                    window.HTMLInputElement.prototype, 'value').set;
+                                nativeSetter.call(arguments[0], arguments[1]);
+                                arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
+                                arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
+                            """, inp, str(value))
+                        except Exception:
+                            # Fallback to send_keys if JS setter fails
+                            inp.send_keys(Keys.CONTROL + "a")
+                            inp.send_keys(str(value))
                         return True
             except Exception:
                 continue
@@ -497,11 +527,25 @@ def _click_display_shot(driver, wait):
 
         _log(f"Waiting {PRE_DISPLAY_CLICK_DELAY_SEC:.1f}s before pressing DISPLAY SHOT")
         time.sleep(PRE_DISPLAY_CLICK_DELAY_SEC)
+
+        # Simulate mouse movement through form inputs to improve reCAPTCHA v3 score
         try:
-            btn.click()
+            actions = ActionChains(driver)
+            for inp in driver.find_elements(By.TAG_NAME, "input")[:3]:
+                if inp.is_displayed():
+                    actions.move_to_element(inp).pause(0.3)
+            actions.move_to_element(btn).pause(0.5).click().perform()
         except Exception:
-            _log("Native click failed, trying JS click fallback")
-            driver.execute_script("arguments[0].click();", btn)
+            _log("ActionChains click failed, trying native click")
+            try:
+                btn.click()
+            except Exception:
+                _log("Native click failed, trying JS requestSubmit fallback")
+                driver.execute_script("""
+                    const form = arguments[0].closest('form');
+                    if (form && form.requestSubmit) form.requestSubmit(arguments[0]);
+                    else arguments[0].click();
+                """, btn)
         return {"ok": True, "reason": None, "detail": None}
     except TimeoutException:
         _log("ERROR: DISPLAY SHOT button was not ready in time")
@@ -592,6 +636,43 @@ def _read_results_row(driver, row_index=0):
     return result
 
 
+def _extract_api_requests(driver):
+    """Extract API requests to FlightScope from performance logs."""
+    api_entries = []
+    try:
+        logs = driver.get_log("performance")
+        for entry in logs:
+            try:
+                msg = json.loads(entry["message"])["message"]
+                method = msg.get("method", "")
+                params = msg.get("params", {})
+                # Capture request/response events for trajectory API
+                if method == "Network.requestWillBeSent":
+                    url = params.get("request", {}).get("url", "")
+                    if "flightscope" in url or "trajectory" in url:
+                        api_entries.append({
+                            "type": "request",
+                            "url": url,
+                            "method": params.get("request", {}).get("method"),
+                            "postData": params.get("request", {}).get("postData"),
+                            "timestamp": entry.get("timestamp"),
+                        })
+                elif method == "Network.responseReceived":
+                    url = params.get("response", {}).get("url", "")
+                    if "flightscope" in url or "trajectory" in url:
+                        api_entries.append({
+                            "type": "response",
+                            "url": url,
+                            "status": params.get("response", {}).get("status"),
+                            "timestamp": entry.get("timestamp"),
+                        })
+            except (json.JSONDecodeError, KeyError):
+                continue
+    except Exception:
+        pass
+    return api_entries
+
+
 def _capture_debug_artifacts(driver, shot_name: str, attempt: int, reason: str):
     """Capture debugging artifacts when submit did not produce results."""
     DEBUG_ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
@@ -600,11 +681,14 @@ def _capture_debug_artifacts(driver, shot_name: str, attempt: int, reason: str):
     base = f"{shot_name}_attempt{attempt}_{timestamp}_{safe_reason}"
     html_path = DEBUG_ARTIFACT_DIR / f"{base}.html"
     screenshot_path = DEBUG_ARTIFACT_DIR / f"{base}.png"
+    network_path = DEBUG_ARTIFACT_DIR / f"{base}_network.json"
 
     try:
         html_path.write_text(driver.page_source, encoding="utf-8")
         driver.save_screenshot(str(screenshot_path))
-        _log(f"Saved debug artifacts: {html_path.name}, {screenshot_path.name}")
+        api_requests = _extract_api_requests(driver)
+        network_path.write_text(json.dumps(api_requests, indent=2), encoding="utf-8")
+        _log(f"Saved debug artifacts: {html_path.name}, {screenshot_path.name}, {network_path.name}")
     except Exception as e:
         _log(f"WARNING: Failed to save debug artifacts: {e}")
 
@@ -756,6 +840,12 @@ def scrape_flightscope(
                 except SubmitBlockedError as e:
                     failure_reason = e.reason
                     _log(f"ERROR: submit blocked for {shot_name}: {failure_reason}")
+                    if failure_reason == "blocked_no_result_update":
+                        _log(
+                            "HINT: reCAPTCHA v3 may be silently rejecting headless requests. "
+                            "Try --visible mode, or on Linux headless use: "
+                            "xvfb-run python tools/shot_calibration/flightscope_scraper.py --visible"
+                        )
                     _capture_debug_artifacts(driver, shot_name, attempt, failure_reason)
                     break
                 except SubmitAttemptError as e:
