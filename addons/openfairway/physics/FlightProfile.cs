@@ -1,6 +1,5 @@
 /// <summary>
 /// Centralizes all flight aerodynamics constants into a single swappable profile.
-/// Default values match the prior hardcoded constants for behavioral parity.
 /// Use init properties for calibration: new FlightProfile { ClMaxBase = 0.28f }
 /// </summary>
 public sealed class FlightProfile
