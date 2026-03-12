@@ -211,7 +211,7 @@ namespace OpenFairway.Tests
             FlightAerodynamicsSample sample = BuildFlightSample(24.45f, 0.45f, 26.8f);
 
             Assert.That(sample.Reynolds, Is.InRange(70000.0f, 71000.0f));
-            Assert.That(sample.SpinDragMultiplier, Is.InRange(1.07f, 1.08f));
+            Assert.That(sample.SpinDragMultiplier, Is.InRange(1.04f, 1.05f));
             Assert.That(sample.LowLaunchLiftScale, Is.EqualTo(1.0f).Within(0.0001f));
             Assert.That(sample.LiftCoefficient, Is.GreaterThan(0.20f));
         }
@@ -235,7 +235,7 @@ namespace OpenFairway.Tests
             FlightAerodynamicsSample checkedSample = BuildFlightSample(33.57f, 0.70f, 38.5f);
 
             Assert.That(checkedSample.Reynolds, Is.InRange(96000.0f, 98000.0f));
-            Assert.That(checkedSample.SpinDragMultiplier, Is.InRange(1.16f, 1.17f));
+            Assert.That(checkedSample.SpinDragMultiplier, Is.InRange(1.18f, 1.19f));
             Assert.That(checkedSample.LowLaunchLiftScale, Is.EqualTo(1.0f).Within(0.0001f));
             Assert.That(checkedSample.SpinDragMultiplier, Is.GreaterThan(wedgeSample.SpinDragMultiplier));
         }
@@ -256,7 +256,7 @@ namespace OpenFairway.Tests
         {
             float multiplier = BallPhysics.GetSpinDragMultiplier(0.45f, 75000.0f);
 
-            Assert.That(multiplier, Is.InRange(1.07f, 1.08f),
+            Assert.That(multiplier, Is.InRange(1.04f, 1.05f),
                 "Wedge spin ratios in the transitional-Re band should enter the reduced-drag relief band.");
         }
 
@@ -279,7 +279,7 @@ namespace OpenFairway.Tests
 
             Assert.That(checkedBandMultiplier, Is.GreaterThan(wedgeBandMultiplier),
                 "Checked spin ratios should rebound above the wedge drag cap.");
-            Assert.That(checkedBandMultiplier, Is.InRange(1.15f, 1.16f));
+            Assert.That(checkedBandMultiplier, Is.InRange(1.17f, 1.18f));
         }
 
         [Test]
@@ -326,7 +326,8 @@ namespace OpenFairway.Tests
         [Category("RolloutPhysics")]
         public void LowLaunchLiftScale_LowReShots_GetNoRecovery()
         {
-            float scale = BallPhysics.GetLowLaunchLiftScale(6.7f, 0.18f, 120000.0f);
+            // Test with Re below new threshold (85k) to ensure no recovery
+            float scale = BallPhysics.GetLowLaunchLiftScale(6.7f, 0.18f, 80000.0f);
 
             Assert.That(scale, Is.EqualTo(1.0f).Within(0.0001f));
         }

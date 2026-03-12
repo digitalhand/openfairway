@@ -9,6 +9,8 @@ namespace OpenFairway.Tests
     public class GarminCarryWindowRegressionTests
     {
         private const float WindowToleranceYd = 2.0f;
+        private const float TightWedgeToleranceYd = 1.0f;
+        private const float NonWedgeDriftToleranceYd = 2.0f;
 
         private PhysicsAdapter _adapter;
 
@@ -33,6 +35,9 @@ namespace OpenFairway.Tests
             yield return CreateCase("Approach Mid", "approach_mid_iron_test_shot.json", 125.8f, 125.8f);
             yield return CreateCase("Checked", "checked_test_shot.json", 77.9f, 77.9f);
             yield return CreateCase("Flop", "flop_test_shot.json", 61.8f, 61.8f);
+            yield return CreateCase("P Wedge 1", "p_wedge_shot_1.json", 104.6f, 105.1f);
+            yield return CreateCase("Wedge Shot 1", "wedge_shot_1.json", 42.7f, 42.9f);
+            yield return CreateCase("Wedge Shot 2", "wedge_shot_2.json", 49.0f, 49.7f);
         }
 
         [TestCaseSource(nameof(CarryWindowCases))]
@@ -79,10 +84,77 @@ namespace OpenFairway.Tests
             Assert.That(carry, Is.InRange(windowMin, windowMax));
         }
 
+        public static IEnumerable<TestCaseData> TightWedgeCarryCases()
+        {
+            yield return new TestCaseData("P Wedge 1", "p_wedge_shot_1.json", 104.6f)
+                .SetName("PWedge1_CarryMatchesFlightScopeWithinOneYard");
+            yield return new TestCaseData("Wedge Shot 1", "wedge_shot_1.json", 42.7f)
+                .SetName("WedgeShot1_CarryMatchesFlightScopeWithinOneYard");
+            yield return new TestCaseData("Wedge Shot 2", "wedge_shot_2.json", 49.0f)
+                .SetName("WedgeShot2_CarryMatchesFlightScopeWithinOneYard");
+        }
+
+        [TestCaseSource(nameof(TightWedgeCarryCases))]
+        [Category("PhysicsRuntime")]
+        [Category("WedgeTightening")]
+        public void TightWedgeCarryMatchesFlightScope(
+            string shotName,
+            string filename,
+            float targetCarryYd)
+        {
+            Dictionary shot = TestShotLoader.LoadTestShot(filename);
+            Dictionary result = _adapter.SimulateShotFromJson(shot);
+
+            Assert.That(result.ContainsKey("carry_yd"), Is.True, "Result missing carry_yd");
+            float carry = (float)result["carry_yd"];
+
+            TestContext.WriteLine($"{shotName} strict wedge diagnostics:");
+            TestContext.WriteLine($"  Carry: {carry:F1} yd (target {targetCarryYd:F1} ±{TightWedgeToleranceYd:F1})");
+
+            Assert.That(carry, Is.EqualTo(targetCarryYd).Within(TightWedgeToleranceYd));
+        }
+
+        public static IEnumerable<TestCaseData> NonWedgeGuardrailCases()
+        {
+            yield return CreateGuardrailCase("Drive", "drive_test_shot.json", 244.1f);
+            yield return CreateGuardrailCase("Wood Low", "wood_low_test_shot.json", 122.2f);
+            yield return CreateGuardrailCase("Approach", "approach_test_shot.json", 92.3f);
+            yield return CreateGuardrailCase("Approach Mid", "approach_mid_iron_test_shot.json", 125.8f);
+            yield return CreateGuardrailCase("Checked", "checked_test_shot.json", 77.9f);
+            yield return CreateGuardrailCase("Flop", "flop_test_shot.json", 61.8f);
+        }
+
+        [TestCaseSource(nameof(NonWedgeGuardrailCases))]
+        [Category("PhysicsRuntime")]
+        [Category("CarryStability")]
+        public void NonWedgeCarryRemainsInsideDriftBudget(
+            string shotName,
+            string filename,
+            float baselineCarryYd)
+        {
+            Dictionary shot = TestShotLoader.LoadTestShot(filename);
+            Dictionary result = _adapter.SimulateShotFromJson(shot);
+
+            Assert.That(result.ContainsKey("carry_yd"), Is.True, "Result missing carry_yd");
+            float carry = (float)result["carry_yd"];
+            float diff = carry - baselineCarryYd;
+
+            TestContext.WriteLine($"{shotName} guardrail diagnostics:");
+            TestContext.WriteLine($"  Carry: {carry:F1} yd (baseline {baselineCarryYd:F1}, diff {diff:+0.0;-0.0} yd)");
+
+            Assert.That(carry, Is.EqualTo(baselineCarryYd).Within(NonWedgeDriftToleranceYd));
+        }
+
         private static TestCaseData CreateCase(string shotName, string filename, float comparisonCarryA, float comparisonCarryB)
         {
             return new TestCaseData(shotName, filename, comparisonCarryA, comparisonCarryB)
                 .SetName($"{shotName.Replace(" ", string.Empty)}_CarryWithinComparisonWindow");
+        }
+
+        private static TestCaseData CreateGuardrailCase(string shotName, string filename, float baselineCarryYd)
+        {
+            return new TestCaseData(shotName, filename, baselineCarryYd)
+                .SetName($"{shotName.Replace(" ", string.Empty)}_CarryWithinTwoYardDriftBudget");
         }
     }
 }

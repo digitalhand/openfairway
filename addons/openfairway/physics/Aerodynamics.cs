@@ -22,11 +22,13 @@ public partial class Aerodynamics : RefCounted
 	// Physically realistic coefficient bounds for dimpled golf balls in-play.
 	// Sources in project docs (Bearman/Harvey, R&A studies) place Cd and Cl
 	// in a narrower range than the prior ad-hoc high-Re fit.
-	public const float CL_MAX = FlightAerodynamicsModel.ClMax;
-	public const float CD_MIN = FlightAerodynamicsModel.CdMin;
+	public const float CL_MAX_BASE = 0.268f;
+	public const float CL_MAX_HIGH_SPIN = 0.32f;
+	public static float CD_MIN => FlightAerodynamicsModel.CdMin;
 
-	// Read-only property for GDScript access to constant (private set satisfies [Export] requirement)
-	[Export] public float ClMax { get => CL_MAX; private set { } }
+	// Read-only property for GDScript access to constants (private set satisfies [Export] requirement)
+	[Export] public float ClMax { get => CL_MAX_BASE; private set { } }
+	[Export] public float ClMaxHighSpin { get => CL_MAX_HIGH_SPIN; private set { } }
 	[Export] public float CdMin { get => CD_MIN; private set { } }
 
 	/// <summary>

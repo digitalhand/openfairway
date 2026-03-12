@@ -32,6 +32,8 @@ public partial class PhysicsParams : Resource
     [Export] public float SpinbackSpeedEndMps { get; set; }
     [Export] public float InitialLaunchAngleDeg { get; set; }
 
+    public FlightProfile FlightProfile { get; set; } = FlightProfile.Default;
+
     public PhysicsParams() { }
 
     public PhysicsParams(
@@ -52,7 +54,8 @@ public partial class PhysicsParams : Resource
         float spinbackSpinEndRpm = 0.0f,
         float spinbackSpeedStartMps = 0.0f,
         float spinbackSpeedEndMps = 0.0f,
-        float initialLaunchAngleDeg = 0.0f)
+        float initialLaunchAngleDeg = 0.0f,
+        FlightProfile flightProfile = null)
     {
         AirDensity = airDensity;
         AirViscosity = airViscosity;
@@ -72,5 +75,6 @@ public partial class PhysicsParams : Resource
         SpinbackSpeedStartMps = spinbackSpeedStartMps;
         SpinbackSpeedEndMps = spinbackSpeedEndMps;
         InitialLaunchAngleDeg = initialLaunchAngleDeg;
+        FlightProfile = flightProfile ?? FlightProfile.Default;
     }
 }

@@ -104,9 +104,9 @@ public class AerodynamicsTests
     [Test]
     public void GetCl_ClampedToMax()
     {
-        // Very high spin ratio should be clamped to CL_MAX
+        // Very high spin ratio should be clamped to CL_MAX_HIGH_SPIN (dynamic max)
         float cl = _aero.GetCl(100000.0f, 1.0f);
-        Assert.That(cl, Is.LessThanOrEqualTo(Aerodynamics.CL_MAX));
+        Assert.That(cl, Is.LessThanOrEqualTo(Aerodynamics.CL_MAX_HIGH_SPIN));
     }
 
     [Test]
@@ -116,9 +116,9 @@ public class AerodynamicsTests
         float cl1 = _aero.GetCl(60000.0f, 0.2f);
         float cl2 = _aero.GetCl(70000.0f, 0.2f);
 
-        // Both should be reasonable lift coefficients
-        Assert.That(cl1, Is.InRange(0.0f, Aerodynamics.CL_MAX));
-        Assert.That(cl2, Is.InRange(0.0f, Aerodynamics.CL_MAX));
+        // Both should be reasonable lift coefficients (low spin uses BASE)
+        Assert.That(cl1, Is.InRange(0.0f, Aerodynamics.CL_MAX_BASE));
+        Assert.That(cl2, Is.InRange(0.0f, Aerodynamics.CL_MAX_BASE));
     }
 
     [Test]

@@ -38,7 +38,7 @@ Run the current benchmark shot set through `PhysicsAdapter` headlessly via Godot
 godot --headless --script run_benchmarks.gd
 ```
 
-The script prints whatever benchmark set is currently defined in `run_benchmarks.gd`, including driver, wood, wedge, chip, putt, and specialty-shot fixtures. Capture that output as the local baseline before changing physics.
+The script prints whatever benchmark set is currently defined in `run_benchmarks.gd`, including driver, wood, wedge, chip, and specialty-shot fixtures. Capture that output as the local baseline before changing physics.
 
 ### 3. Garmin Carry-Window Runtime Regression (`Category=GarminCarryWindow`)
 

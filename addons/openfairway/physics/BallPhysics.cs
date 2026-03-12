@@ -16,11 +16,11 @@ public partial class BallPhysics : RefCounted
     public const float SIMULATION_HZ = 120.0f;  // shared integration rate for runtime + headless
     public const float SIMULATION_DT = 1.0f / SIMULATION_HZ;
     public const float SPIN_DECAY_TAU = 5.0f;  // Spin decay time constant (seconds)
-    public const float SPIN_DRAG_MULTIPLIER_COEFF = FlightAerodynamicsModel.SpinDragMultiplierCoeff;
-    public const float SPIN_DRAG_MULTIPLIER_MAX = FlightAerodynamicsModel.SpinDragMultiplierMax;
-    public const float SPIN_DRAG_MULTIPLIER_HIGH_SPIN_MAX = FlightAerodynamicsModel.SpinDragMultiplierHighSpinMax;
-    public const float SPIN_DRAG_MULTIPLIER_ULTRA_HIGH_SPIN_MAX = FlightAerodynamicsModel.SpinDragMultiplierUltraHighSpinMax;
-    public const float LOW_LAUNCH_LIFT_RECOVERY_MAX = FlightAerodynamicsModel.LowLaunchLiftRecoveryMax;
+    public static float SPIN_DRAG_MULTIPLIER_COEFF => FlightAerodynamicsModel.SpinDragMultiplierCoeff;
+    public static float SPIN_DRAG_MULTIPLIER_MAX => FlightAerodynamicsModel.SpinDragMultiplierMax;
+    public static float SPIN_DRAG_MULTIPLIER_HIGH_SPIN_MAX => FlightAerodynamicsModel.SpinDragMultiplierHighSpinMax;
+    public static float SPIN_DRAG_MULTIPLIER_ULTRA_HIGH_SPIN_MAX => FlightAerodynamicsModel.SpinDragMultiplierUltraHighSpinMax;
+    public static float LOW_LAUNCH_LIFT_RECOVERY_MAX => FlightAerodynamicsModel.LowLaunchLiftRecoveryMax;
 
     // Read-only properties for GDScript access to constants (private set satisfies [Export] requirement)
     [Export] public float BallMass { get => MASS; private set { } }
@@ -38,9 +38,9 @@ public partial class BallPhysics : RefCounted
     private const float PITCH_SPEED_THRESHOLD = 35.0f;    // m/s — transition to full spin friction
     private const float CHIP_VELOCITY_SCALE_MIN = 0.60f;  // Minimum velocity scale for chip shots
     private const float CHIP_VELOCITY_SCALE_MAX = 0.87f;  // Maximum velocity scale for chip shots
-    private const float LOW_SPIN_THRESHOLD = 1250.0f;     // RPM — grooves don't "bite" below this
+    private const float LOW_SPIN_THRESHOLD = 1750.0f;     // RPM — grooves don't "bite" below this
     private const float MID_SPIN_THRESHOLD = 1750.0f;     // RPM — bump/pitch transition
-    private const float LOW_SPIN_MULTIPLIER_MAX = 1.30f;  // Friction multiplier at LOW_SPIN_THRESHOLD
+    private const float LOW_SPIN_MULTIPLIER_MAX = 1.15f;  // Friction multiplier at LOW_SPIN_THRESHOLD
     private const float MID_SPIN_MULTIPLIER_MAX = 2.25f;  // Friction multiplier at MID_SPIN_THRESHOLD
     private const float HIGH_SPIN_MULTIPLIER_MAX = 2.50f;  // Maximum friction multiplier (high spin wedges)
 
@@ -259,7 +259,8 @@ public partial class BallPhysics : RefCounted
             parameters.AirViscosity,
             parameters.DragScale,
             parameters.LiftScale,
-            parameters.InitialLaunchAngleDeg
+            parameters.InitialLaunchAngleDeg,
+            parameters.FlightProfile
         );
         if (!airSample.HasAerodynamics)
             return Vector3.Zero;
@@ -322,6 +323,28 @@ public partial class BallPhysics : RefCounted
             dragScale,
             liftScale,
             initialLaunchAngleDeg
+        );
+    }
+
+    internal static FlightAerodynamicsSample SampleFlightAerodynamics(
+        Vector3 velocity,
+        Vector3 omega,
+        float airDensity,
+        float airViscosity,
+        float dragScale,
+        float liftScale,
+        float initialLaunchAngleDeg,
+        FlightProfile flightProfile)
+    {
+        return FlightAerodynamicsModel.Sample(
+            velocity,
+            omega,
+            airDensity,
+            airViscosity,
+            dragScale,
+            liftScale,
+            initialLaunchAngleDeg,
+            flightProfile
         );
     }
 
@@ -691,14 +714,316 @@ public partial class BallPhysics : RefCounted
     /// </summary>
     public float GetCoefficientOfRestitution(float speedNormal)
     {
-        if (speedNormal > 20.0f)
-            return 0.25f;  // High speed impacts
-        else if (speedNormal < 2.0f)
-            return 0.0f;  // Kill very small bounces
+        return GetCoefficientOfRestitution(speedNormal, BounceProfile.Default);
+    }
+
+    public float GetCoefficientOfRestitution(float speedNormal, BounceProfile bp)
+    {
+        if (speedNormal > bp.CorHighSpeedThreshold)
+            return bp.CorHighSpeedCap;
+        else if (speedNormal < bp.CorKillThreshold)
+            return 0.0f;
         else
         {
-            // Typical COR curve for golf ball on turf
-            return 0.45f - 0.0100f * speedNormal + 0.0002f * speedNormal * speedNormal;
+            return bp.CorBaseA + bp.CorBaseB * speedNormal + bp.CorBaseC * speedNormal * speedNormal;
+        }
+    }
+
+    // ── Profile-aware overloads ──
+
+    public BounceResult CalculateBounce(
+        Vector3 vel,
+        Vector3 omega,
+        Vector3 normal,
+        PhysicsEnums.BallState currentState,
+        PhysicsParams parameters,
+        BounceProfile bp)
+    {
+        PhysicsEnums.BallState newState = currentState == PhysicsEnums.BallState.Flight
+            ? PhysicsEnums.BallState.Rollout
+            : currentState;
+
+        Vector3 velNormal = vel.Project(normal);
+        float speedNormal = velNormal.Length();
+        Vector3 velTangent = vel - velNormal;
+        float speedTangent = velTangent.Length();
+
+        Vector3 omegaNormal = omega.Project(normal);
+        Vector3 omegaTangent = omega - omegaNormal;
+
+        float angleToNormal = vel.AngleTo(normal);
+        float impactAngle = Mathf.Abs(angleToNormal - Mathf.Pi / 2.0f);
+
+        float omegaTangentMagnitude = omegaTangent.Length();
+        float currentSpinRpm = omega.Length() / ShotSetup.RAD_PER_RPM;
+
+        float tangentialRetention;
+
+        if (currentState == PhysicsEnums.BallState.Flight)
+        {
+            float spinFactor = Mathf.Clamp(1.0f - (currentSpinRpm / bp.FlightSpinFactorDivisor), bp.FlightSpinFactorMin, 1.0f);
+            tangentialRetention = bp.FlightTangentialRetentionBase * spinFactor;
+        }
+        else
+        {
+            float ballSpeed = vel.Length();
+            float spinRatio = ballSpeed > 0.1f ? (omega.Length() * RADIUS) / ballSpeed : 0.0f;
+
+            if (spinRatio < bp.RolloutSpinRatioThreshold)
+            {
+                tangentialRetention = Mathf.Lerp(bp.RolloutLowSpinRetention, bp.RolloutHighSpinRetention, spinRatio / bp.RolloutSpinRatioThreshold);
+            }
+            else
+            {
+                tangentialRetention = bp.RolloutHighSpinRetention;
+            }
+        }
+
+        if (newState == PhysicsEnums.BallState.Rollout)
+        {
+            PhysicsLogger.Verbose($"  Bounce: spin={currentSpinRpm:F0} rpm, retention={tangentialRetention:F3}");
+        }
+
+        float newTangentSpeed;
+
+        if (currentState == PhysicsEnums.BallState.Flight)
+        {
+            float impactSpeed = vel.Length();
+            bool hasSpinbackSurface = parameters.SpinbackThetaBoostMax > 0.0f || parameters.SpinbackResponseScale > 1.0f;
+            float effectiveCriticalAngle = GetEffectiveCriticalAngle(parameters, currentSpinRpm, impactSpeed, currentState);
+            float impactAngleDeg = Mathf.RadToDeg(impactAngle);
+            float criticalAngleDeg = Mathf.RadToDeg(effectiveCriticalAngle);
+            bool isSteepImpact = impactAngle >= effectiveCriticalAngle;
+
+            bool shouldUsePenner = isSteepImpact && (impactSpeed >= bp.PennerLowEnergyThreshold || hasSpinbackSurface);
+
+            if (!shouldUsePenner)
+            {
+                newTangentSpeed = speedTangent * tangentialRetention;
+                if (!isSteepImpact)
+                    PhysicsLogger.Verbose($"  Bounce: Shallow angle ({impactAngleDeg:F2}° < {criticalAngleDeg:F2}°) - using simple retention");
+                else if (impactSpeed < bp.PennerLowEnergyThreshold && !hasSpinbackSurface)
+                    PhysicsLogger.Verbose($"  Bounce: Low energy ({impactSpeed:F2} m/s < {bp.PennerLowEnergyThreshold:F1} m/s) - using simple retention");
+                else
+                    PhysicsLogger.Verbose($"  Bounce: Using simple retention (surface={parameters.SurfaceType}, speed={impactSpeed:F2} m/s)");
+                PhysicsLogger.Verbose($"    speedTangent={speedTangent:F2} m/s, newTangentSpeed={newTangentSpeed:F2} m/s");
+            }
+            else
+            {
+                float spinbackTerm = 2.0f * RADIUS * omegaTangentMagnitude * Mathf.Max(parameters.SpinbackResponseScale, 0.0f) / 7.0f;
+                newTangentSpeed = tangentialRetention * vel.Length() * Mathf.Sin(impactAngle - effectiveCriticalAngle) -
+                    spinbackTerm;
+                PhysicsLogger.Verbose($"  Bounce: Penner model ({parameters.SurfaceType}) speed={impactSpeed:F2} m/s angle={impactAngleDeg:F2}° crit={criticalAngleDeg:F2}°");
+                PhysicsLogger.Verbose($"    speedTangent={speedTangent:F2} m/s, spinbackScale={parameters.SpinbackResponseScale:F2}, newTangentSpeed={newTangentSpeed:F2} m/s");
+            }
+        }
+        else
+        {
+            newTangentSpeed = speedTangent * tangentialRetention;
+        }
+
+        if (speedTangent < 0.01f && Mathf.Abs(newTangentSpeed) < 0.01f)
+        {
+            velTangent = Vector3.Zero;
+        }
+        else if (newTangentSpeed < 0.0f)
+        {
+            velTangent = -velTangent.Normalized() * Mathf.Abs(newTangentSpeed);
+        }
+        else
+        {
+            velTangent = velTangent.LimitLength(newTangentSpeed);
+        }
+
+        if (currentState == PhysicsEnums.BallState.Flight)
+        {
+            float newOmegaTangent = Mathf.Abs(newTangentSpeed) / RADIUS;
+            if (omegaTangent.Length() < 0.1f || newOmegaTangent < 0.01f)
+            {
+                omegaTangent = Vector3.Zero;
+            }
+            else if (newTangentSpeed < 0.0f)
+            {
+                omegaTangent = -omegaTangent.Normalized() * newOmegaTangent;
+            }
+            else
+            {
+                omegaTangent = omegaTangent.LimitLength(newOmegaTangent);
+            }
+        }
+        else
+        {
+            if (newTangentSpeed > 0.05f)
+            {
+                float existingSpinMag = omegaTangent.Length();
+                Vector3 tangentDir = velTangent.Length() > 0.01f ? velTangent.Normalized() : Vector3.Right;
+                Vector3 rollingAxis = normal.Cross(tangentDir).Normalized();
+
+                if (existingSpinMag > 0.05f)
+                {
+                    omegaTangent = rollingAxis * existingSpinMag;
+                }
+                else
+                {
+                    omegaTangent = Vector3.Zero;
+                }
+            }
+            else
+            {
+                omegaTangent = Vector3.Zero;
+            }
+        }
+
+        float cor;
+        if (currentState == PhysicsEnums.BallState.Flight)
+        {
+            float baseCor = GetCoefficientOfRestitution(speedNormal, bp);
+            float spinRpm = omega.Length() / ShotSetup.RAD_PER_RPM;
+
+            float corVelocityScale;
+            if (speedNormal < bp.CorVelocityLowThreshold)
+            {
+                corVelocityScale = Mathf.Lerp(0.0f, bp.CorVelocityLowScale, speedNormal / bp.CorVelocityLowThreshold);
+            }
+            else if (speedNormal < bp.CorVelocityMidThreshold)
+            {
+                corVelocityScale = Mathf.Lerp(bp.CorVelocityLowScale, 1.0f, (speedNormal - bp.CorVelocityLowThreshold) / (bp.CorVelocityMidThreshold - bp.CorVelocityLowThreshold));
+            }
+            else
+            {
+                corVelocityScale = 1.0f;
+            }
+
+            float spinCORReduction;
+            if (spinRpm < bp.SpinCorLowSpinThreshold)
+            {
+                spinCORReduction = (spinRpm / bp.SpinCorLowSpinThreshold) * bp.SpinCorLowSpinMaxReduction;
+            }
+            else
+            {
+                float excessSpin = spinRpm - bp.SpinCorLowSpinThreshold;
+                float spinFactor = Mathf.Min(excessSpin / bp.SpinCorHighSpinRangeRpm, 1.0f);
+                float maxReduction = bp.SpinCorLowSpinMaxReduction + spinFactor * bp.SpinCorHighSpinAdditionalReduction;
+                spinCORReduction = maxReduction * corVelocityScale;
+            }
+
+            cor = baseCor * (1.0f - spinCORReduction);
+
+            if (newState == PhysicsEnums.BallState.Rollout)
+            {
+                PhysicsLogger.Verbose($"    speedNormal={speedNormal:F2} m/s, spin={spinRpm:F0} rpm");
+                PhysicsLogger.Verbose($"    baseCOR={baseCor:F3}, spinReduction={spinCORReduction:F2}, finalCOR={cor:F3}");
+                PhysicsLogger.Verbose($"    velNormal will be {speedNormal * cor:F2} m/s");
+            }
+        }
+        else
+        {
+            if (speedNormal < bp.RolloutBounceCorKillThreshold)
+            {
+                cor = 0.0f;
+            }
+            else
+            {
+                cor = GetCoefficientOfRestitution(speedNormal, bp) * bp.RolloutBounceCorScale;
+            }
+
+            if (speedNormal > 0.5f)
+            {
+                PhysicsLogger.Verbose($"    speedNormal={speedNormal:F2} m/s, COR={cor:F3}, velNormal will be {speedNormal * cor:F2} m/s");
+            }
+        }
+
+        velNormal = velNormal * -cor;
+
+        Vector3 newOmega = omegaNormal + omegaTangent;
+        Vector3 newVelocity = velNormal + velTangent;
+
+        return new BounceResult(newVelocity, newOmega, newState);
+    }
+
+    private float GetSpinFrictionMultiplier(Vector3 omega, float impactSpinRpm, float ballSpeed, RolloutProfile rp)
+    {
+        float currentSpinRpm = omega.Length() / ShotSetup.RAD_PER_RPM;
+        float effectiveSpinRpm = Mathf.Max(currentSpinRpm, impactSpinRpm);
+
+        float velocityScale;
+        if (ballSpeed < rp.ChipSpeedThreshold)
+        {
+            velocityScale = Mathf.Lerp(rp.ChipVelocityScaleMin, rp.ChipVelocityScaleMax,
+                ballSpeed / rp.ChipSpeedThreshold);
+        }
+        else if (ballSpeed < rp.PitchSpeedThreshold)
+        {
+            velocityScale = Mathf.Lerp(rp.ChipVelocityScaleMax, 1.0f,
+                (ballSpeed - rp.ChipSpeedThreshold) / (rp.PitchSpeedThreshold - rp.ChipSpeedThreshold));
+        }
+        else
+        {
+            velocityScale = 1.0f;
+        }
+
+        float spinMultiplier;
+        if (effectiveSpinRpm < rp.LowSpinThreshold)
+        {
+            spinMultiplier = 1.0f + (effectiveSpinRpm / rp.LowSpinThreshold) * (rp.LowSpinMultiplierMax - 1.0f);
+        }
+        else if (effectiveSpinRpm < rp.MidSpinThreshold)
+        {
+            float excessSpin = effectiveSpinRpm - rp.LowSpinThreshold;
+            float midRange = rp.MidSpinThreshold - rp.LowSpinThreshold;
+            spinMultiplier = rp.LowSpinMultiplierMax +
+                (excessSpin / midRange) * (rp.MidSpinMultiplierMax - rp.LowSpinMultiplierMax);
+        }
+        else
+        {
+            float excessSpin = effectiveSpinRpm - rp.MidSpinThreshold;
+            float spinFactor = Mathf.Min(excessSpin / rp.HighSpinRampRange, 1.0f);
+            spinMultiplier = rp.MidSpinMultiplierMax +
+                spinFactor * (rp.HighSpinMultiplierMax - rp.MidSpinMultiplierMax);
+        }
+
+        float scaledMultiplier = 1.0f + (spinMultiplier - 1.0f) * velocityScale;
+        return scaledMultiplier;
+    }
+
+    private Vector3 CalculateFrictionForce(
+        Vector3 velocity,
+        Vector3 omega,
+        PhysicsParams parameters,
+        RolloutProfile rp)
+    {
+        Vector3 contactVelocity = velocity + omega.Cross(-parameters.FloorNormal * RADIUS);
+        Vector3 tangentVelocity = contactVelocity - parameters.FloorNormal * contactVelocity.Dot(parameters.FloorNormal);
+
+        float spinMultiplier = GetSpinFrictionMultiplier(omega, parameters.RolloutImpactSpin, velocity.Length(), rp);
+        float tangentVelMag = tangentVelocity.Length();
+
+        if (tangentVelMag < 0.05f)
+        {
+            Vector3 flatVelocity = velocity - parameters.FloorNormal * velocity.Dot(parameters.FloorNormal);
+            Vector3 frictionDir = flatVelocity.Length() > 0.01f ? flatVelocity.Normalized() : Vector3.Zero;
+            float effectiveRollingFriction = parameters.RollingFriction * spinMultiplier;
+            return frictionDir * (-effectiveRollingFriction * MASS * 9.81f);
+        }
+        else
+        {
+            float velocityMag = velocity.Length();
+            float baseFriction;
+
+            if (velocityMag < rp.FrictionBlendSpeed)
+            {
+                float blendFactor = Mathf.Clamp(velocityMag / rp.FrictionBlendSpeed, 0.0f, 1.0f);
+                blendFactor = blendFactor * blendFactor;
+                baseFriction = Mathf.Lerp(parameters.RollingFriction, parameters.KineticFriction, blendFactor);
+            }
+            else
+            {
+                baseFriction = parameters.KineticFriction;
+            }
+
+            float effectiveFriction = baseFriction * spinMultiplier;
+            Vector3 slipDir = tangentVelMag > 0.01f ? tangentVelocity.Normalized() : Vector3.Zero;
+            return slipDir * (-effectiveFriction * MASS * 9.81f);
         }
     }
 }

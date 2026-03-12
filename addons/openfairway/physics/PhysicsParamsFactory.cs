@@ -38,7 +38,8 @@ public sealed class PhysicsParamsFactory
             surface.SpinbackSpinEndRpm,
             surface.SpinbackSpeedStartMps,
             surface.SpinbackSpeedEndMps,
-            initialLaunchAngleDeg
+            initialLaunchAngleDeg,
+            profile.ResolvedFlight
         );
     }
 }

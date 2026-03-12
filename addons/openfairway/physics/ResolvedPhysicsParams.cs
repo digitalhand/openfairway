@@ -24,6 +24,7 @@ public sealed class ResolvedPhysicsParams
     public float SpinbackSpeedStartMps { get; }
     public float SpinbackSpeedEndMps { get; }
     public float InitialLaunchAngleDeg { get; }
+    public FlightProfile FlightProfile { get; }
 
     public ResolvedPhysicsParams(
         float airDensity,
@@ -43,7 +44,8 @@ public sealed class ResolvedPhysicsParams
         float spinbackSpinEndRpm,
         float spinbackSpeedStartMps,
         float spinbackSpeedEndMps,
-        float initialLaunchAngleDeg)
+        float initialLaunchAngleDeg,
+        FlightProfile flightProfile = null)
     {
         AirDensity = airDensity;
         AirViscosity = airViscosity;
@@ -63,6 +65,7 @@ public sealed class ResolvedPhysicsParams
         SpinbackSpeedStartMps = spinbackSpeedStartMps;
         SpinbackSpeedEndMps = spinbackSpeedEndMps;
         InitialLaunchAngleDeg = initialLaunchAngleDeg;
+        FlightProfile = flightProfile ?? FlightProfile.Default;
     }
 
     public PhysicsParams ToPhysicsParams()
@@ -85,7 +88,8 @@ public sealed class ResolvedPhysicsParams
             SpinbackSpinEndRpm,
             SpinbackSpeedStartMps,
             SpinbackSpeedEndMps,
-            InitialLaunchAngleDeg
+            InitialLaunchAngleDeg,
+            FlightProfile
         );
     }
 }

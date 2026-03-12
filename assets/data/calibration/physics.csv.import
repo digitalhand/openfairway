@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://dpjgk03gunynv"
+
+[deps]
+
+files=["res://assets/data/calibration/physics.filename.translation", "res://assets/data/calibration/physics.speed.translation", "res://assets/data/calibration/physics.vla.translation", "res://assets/data/calibration/physics.hla.translation", "res://assets/data/calibration/physics.total.translation", "res://assets/data/calibration/physics.spin.translation", "res://assets/data/calibration/physics.backspin.translation", "res://assets/data/calibration/physics.sidespin.translation", "res://assets/data/calibration/physics.carry.translation", "res://assets/data/calibration/physics.total.translation", "res://assets/data/calibration/physics.rollout.translation", "res://assets/data/calibration/physics.apex.translation", "res://assets/data/calibration/physics.hang.translation", "res://assets/data/calibration/physics.landing.translation", "res://assets/data/calibration/physics.landing.translation", "res://assets/data/calibration/physics.initial.translation", "res://assets/data/calibration/physics.initial.translation", "res://assets/data/calibration/physics.initial.translation", "res://assets/data/calibration/physics.initial.translation", "res://assets/data/calibration/physics.peak.translation", "res://assets/data/calibration/physics.carry.translation"]
+
+source_file="res://assets/data/calibration/physics.csv"
+dest_files=["res://assets/data/calibration/physics.filename.translation", "res://assets/data/calibration/physics.speed.translation", "res://assets/data/calibration/physics.vla.translation", "res://assets/data/calibration/physics.hla.translation", "res://assets/data/calibration/physics.total.translation", "res://assets/data/calibration/physics.spin.translation", "res://assets/data/calibration/physics.backspin.translation", "res://assets/data/calibration/physics.sidespin.translation", "res://assets/data/calibration/physics.carry.translation", "res://assets/data/calibration/physics.total.translation", "res://assets/data/calibration/physics.rollout.translation", "res://assets/data/calibration/physics.apex.translation", "res://assets/data/calibration/physics.hang.translation", "res://assets/data/calibration/physics.landing.translation", "res://assets/data/calibration/physics.landing.translation", "res://assets/data/calibration/physics.initial.translation", "res://assets/data/calibration/physics.initial.translation", "res://assets/data/calibration/physics.initial.translation", "res://assets/data/calibration/physics.initial.translation", "res://assets/data/calibration/physics.peak.translation", "res://assets/data/calibration/physics.carry.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true
