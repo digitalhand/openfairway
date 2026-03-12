@@ -35,6 +35,11 @@ public partial class SettingsPanel : CanvasLayer
     private SpinBox _cameraDelayValue;
     private Label _cameraDelayHelper;
     private SpinBox _tcpPortValue;
+    private CheckBox _shotRecordingCheck;
+    private LineEdit _shotRecordingPathInput;
+    private Button _shotRecordingBrowseButton;
+    private Label _shotRecordingHelper;
+    private FileDialog _shotRecordingFileDialog;
     private TabContainer _tabs;
     private GridContainer _panelsGrid;
     private Label _panelsEmptyLabel;
@@ -54,6 +59,9 @@ public partial class SettingsPanel : CanvasLayer
     private Setting _cameraDistanceSetting;
     private Setting _cameraDelaySetting;
     private Setting _tcpPortSetting;
+    private Setting _shotRecordingEnabledSetting;
+    private Setting _shotRecordingPathSetting;
+    private ShotRecordingService _shotRecordingService;
     private bool _isSyncingControls;
     private bool _isSyncingPanelsGrid;
     private GridCanvas _boundGridCanvas;
@@ -73,6 +81,10 @@ public partial class SettingsPanel : CanvasLayer
         _cameraDelayValue = GetNode<SpinBox>("Root/Panel/Margin/Content/Tabs/Game/CameraDelayCard/CameraDelayMargin/CameraDelayContent/CameraDelayRow/CameraDelayValue");
         _cameraDelayHelper = GetNode<Label>("Root/Panel/Margin/Content/Tabs/Game/CameraDelayCard/CameraDelayMargin/CameraDelayContent/CameraDelayHelper");
         _tcpPortValue = GetNode<SpinBox>("Root/Panel/Margin/Content/Tabs/Game/TcpPortCard/TcpPortMargin/TcpPortContent/TcpPortRow/TcpPortValue");
+        _shotRecordingCheck = GetNode<CheckBox>("Root/Panel/Margin/Content/Tabs/Game/ShotRecordingCard/ShotRecordingMargin/ShotRecordingContent/ShotRecordingRow/ShotRecordingCheck");
+        _shotRecordingPathInput = GetNode<LineEdit>("Root/Panel/Margin/Content/Tabs/Game/ShotRecordingCard/ShotRecordingMargin/ShotRecordingContent/ShotRecordingPathRow/ShotRecordingPathInput");
+        _shotRecordingBrowseButton = GetNode<Button>("Root/Panel/Margin/Content/Tabs/Game/ShotRecordingCard/ShotRecordingMargin/ShotRecordingContent/ShotRecordingPathRow/ShotRecordingBrowseButton");
+        _shotRecordingHelper = GetNode<Label>("Root/Panel/Margin/Content/Tabs/Game/ShotRecordingCard/ShotRecordingMargin/ShotRecordingContent/ShotRecordingHelper");
         _tabs = GetNode<TabContainer>("Root/Panel/Margin/Content/Tabs");
         _panelsGrid = GetNode<GridContainer>("Root/Panel/Margin/Content/Tabs/Panels/PanelsGridScroll/PanelsGrid");
         _panelsEmptyLabel = GetNode<Label>("Root/Panel/Margin/Content/Tabs/Panels/PanelsEmptyLabel");
@@ -83,11 +95,21 @@ public partial class SettingsPanel : CanvasLayer
 
         _globalSettings = GetNodeOrNull<GlobalSettings>("/root/GlobalSettings");
         _appSettings = _globalSettings?.AppSettings;
+        _shotRecordingService = GetNodeOrNull<ShotRecordingService>("/root/ShotRecordingService");
+
+        _shotRecordingFileDialog = new FileDialog
+        {
+            FileMode = FileDialog.FileModeEnum.OpenDir,
+            Access = FileDialog.AccessEnum.Filesystem,
+            Title = "Select Shot Recording Directory"
+        };
+        AddChild(_shotRecordingFileDialog);
 
         ConfigureDistanceControls();
         CreatePanelToggleIcons();
         ApplyPanelToggleIcons(_testShotsCheck);
         ApplyPanelToggleIcons(_fullscreenCheck);
+        ApplyPanelToggleIcons(_shotRecordingCheck);
         RebuildPanelsGrid();
         PopulateResolutionOptions();
         ConnectControlSignals();
@@ -198,6 +220,9 @@ public partial class SettingsPanel : CanvasLayer
         _cameraDelaySlider.ValueChanged += OnCameraDelaySliderChanged;
         _cameraDelayValue.ValueChanged += OnCameraDelayValueChanged;
         _tcpPortValue.ValueChanged += OnTcpPortValueChanged;
+        _shotRecordingCheck.Toggled += OnShotRecordingToggled;
+        _shotRecordingBrowseButton.Pressed += OnShotRecordingBrowsePressed;
+        _shotRecordingFileDialog.DirSelected += OnShotRecordingDirSelected;
     }
 
     private void DisconnectControlSignals()
@@ -229,6 +254,12 @@ public partial class SettingsPanel : CanvasLayer
             _cameraDelayValue.ValueChanged -= OnCameraDelayValueChanged;
         if (_tcpPortValue != null)
             _tcpPortValue.ValueChanged -= OnTcpPortValueChanged;
+        if (_shotRecordingCheck != null)
+            _shotRecordingCheck.Toggled -= OnShotRecordingToggled;
+        if (_shotRecordingBrowseButton != null)
+            _shotRecordingBrowseButton.Pressed -= OnShotRecordingBrowsePressed;
+        if (_shotRecordingFileDialog != null)
+            _shotRecordingFileDialog.DirSelected -= OnShotRecordingDirSelected;
     }
 
     private void ConnectSettingSignals()
@@ -243,6 +274,8 @@ public partial class SettingsPanel : CanvasLayer
         _cameraDistanceSetting = _appSettings.CameraOrbitDistance;
         _cameraDelaySetting = _appSettings.CameraFollowDelaySeconds;
         _tcpPortSetting = _appSettings.TcpPort;
+        _shotRecordingEnabledSetting = _appSettings.ShotRecordingEnabled;
+        _shotRecordingPathSetting = _appSettings.ShotRecordingPath;
 
         _playerNameSetting.SettingChanged += OnAnySettingChanged;
         _testShotsSetting.SettingChanged += OnAnySettingChanged;
@@ -251,6 +284,8 @@ public partial class SettingsPanel : CanvasLayer
         _cameraDistanceSetting.SettingChanged += OnAnySettingChanged;
         _cameraDelaySetting.SettingChanged += OnAnySettingChanged;
         _tcpPortSetting.SettingChanged += OnAnySettingChanged;
+        _shotRecordingEnabledSetting.SettingChanged += OnAnySettingChanged;
+        _shotRecordingPathSetting.SettingChanged += OnAnySettingChanged;
     }
 
     private void DisconnectSettingSignals()
@@ -269,6 +304,10 @@ public partial class SettingsPanel : CanvasLayer
             _cameraDelaySetting.SettingChanged -= OnAnySettingChanged;
         if (_tcpPortSetting != null)
             _tcpPortSetting.SettingChanged -= OnAnySettingChanged;
+        if (_shotRecordingEnabledSetting != null)
+            _shotRecordingEnabledSetting.SettingChanged -= OnAnySettingChanged;
+        if (_shotRecordingPathSetting != null)
+            _shotRecordingPathSetting.SettingChanged -= OnAnySettingChanged;
     }
 
     private void OnAnySettingChanged(Variant _value)
@@ -307,6 +346,10 @@ public partial class SettingsPanel : CanvasLayer
 
         int tcpPort = (int)_appSettings.TcpPort.Value;
         _tcpPortValue.Value = tcpPort;
+
+        _shotRecordingCheck.ButtonPressed = (bool)_appSettings.ShotRecordingEnabled.Value;
+        _shotRecordingPathInput.Text = _appSettings.ShotRecordingPath.Value.ToString();
+        UpdateShotRecordingHelper();
 
         SyncPanelsGridFromPanelState();
 
@@ -436,6 +479,38 @@ public partial class SettingsPanel : CanvasLayer
             return;
 
         _appSettings.TcpPort.SetValue(Mathf.RoundToInt((float)value));
+    }
+
+    private void OnShotRecordingToggled(bool enabled)
+    {
+        if (_isSyncingControls || _appSettings == null)
+            return;
+
+        _appSettings.ShotRecordingEnabled.SetValue(enabled);
+    }
+
+    private void OnShotRecordingBrowsePressed()
+    {
+        _shotRecordingFileDialog?.Popup();
+    }
+
+    private void OnShotRecordingDirSelected(string dir)
+    {
+        if (_isSyncingControls || _appSettings == null)
+            return;
+
+        _appSettings.ShotRecordingPath.SetValue(dir);
+    }
+
+    private void UpdateShotRecordingHelper()
+    {
+        if (_shotRecordingHelper == null)
+            return;
+
+        if (_shotRecordingService != null && _shotRecordingService.IsRecording)
+            _shotRecordingHelper.Text = $"{_shotRecordingService.CurrentSessionName}: {_shotRecordingService.ShotCount} shots recorded";
+        else
+            _shotRecordingHelper.Text = "Not recording";
     }
 
     private void SetActiveTab(SettingsTab tab)

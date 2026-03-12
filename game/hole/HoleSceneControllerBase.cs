@@ -56,6 +56,7 @@ public abstract partial class HoleSceneControllerBase : Node3D
     private AudioStreamPlayer3D _audioBackgroundBirds;
     private AudioStreamPlayer3D _audioGolfBallLanding;
     private TcpServer _tcpServer;
+    private ShotRecordingService _shotRecordingService;
     private GameSettings _gameSettings;
     private AppSettings _appSettings;
     private Setting _cameraOrbitDistanceSetting;
@@ -210,6 +211,8 @@ public abstract partial class HoleSceneControllerBase : Node3D
         _tcpServer = GetNodeOrNull<TcpServer>(TcpServerPath);
         if (_tcpServer != null)
             _tcpServer.HitBall += OnTcpClientHitBall;
+
+        _shotRecordingService = GetNodeOrNull<ShotRecordingService>("/root/ShotRecordingService");
 
         var globalSettings = GetNodeOrNull<GlobalSettings>("/root/GlobalSettings");
         if (globalSettings == null)
@@ -518,6 +521,7 @@ public abstract partial class HoleSceneControllerBase : Node3D
         UpdateBallDisplay();
         PlayDriverHitAudio();
         IncrementStrokeCount();
+        _shotRecordingService?.RecordShot(data);
 
         if (useTcpTracker)
             _shotTracker.OnTcpClientHitBall(data);

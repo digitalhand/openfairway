@@ -5,13 +5,13 @@ using Godot;
 /// </summary>
 public partial class CourseGoalZone : Area3D
 {
-    public override void _Ready()
-    {
-        AddToGroup("course_goal_zone");
-    }
+	public override void _Ready()
+	{
+		AddToGroup("course_goal_zone");
+	}
 
-    public bool IsBallOnZone(GolfBall ball)
-    {
-        return ball != null && OverlapsBody(ball);
-    }
+	public bool IsBallOnZone(GolfBall ball)
+	{
+		return ball != null && OverlapsBody(ball);
+	}
 }
