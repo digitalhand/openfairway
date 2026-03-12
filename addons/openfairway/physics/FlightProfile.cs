@@ -1,9 +1,35 @@
+using System.Collections.Generic;
+
 /// <summary>
 /// Centralizes all flight aerodynamics constants into a single swappable profile.
 /// Use init properties for calibration: new FlightProfile { ClMaxBase = 0.28f }
 /// </summary>
 public sealed class FlightProfile
 {
+    internal static readonly HashSet<string> KnownKeys = new()
+    {
+        "CdPolyA", "CdPolyB", "CdPolyC", "CdPolyD",
+        "HighReCdCap", "LowReCdFloor", "LowReBlendStart", "CdAt50k", "CdMin",
+        "ClMaxBase", "ClMaxHighSpin", "ClMaxSrTransitionStart", "ClMaxSrTransitionEnd",
+        "SpinDragMultiplierCoeff", "SpinDragMultiplierMax",
+        "SpinDragMultiplierHighSpinMax", "SpinDragMultiplierUltraHighSpinMax",
+        "HighSpinDragSrStart", "HighSpinDragSrEnd",
+        "HighSpinDragReliefReFullMax", "HighSpinDragReliefReZero",
+        "UltraHighSpinDragSrStart", "UltraHighSpinDragSrEnd",
+        "HighReStart", "HighReMidSpinGain", "HighReSpinGain",
+        "HighReGainReductionStart", "HighReGainReductionEnd",
+        "HighReGainRecoveryStart", "HighReGainRecoveryEnd",
+        "HighSpinClAttenuationStart", "HighSpinClAttenuationEnd", "HighSpinClAttenuationMax",
+        "UltraHighSpinClAttenuationStart", "UltraHighSpinClAttenuationEnd", "UltraHighSpinClAttenuationMax",
+        "LowReHighSpinClAttenuationMax", "LowReUltraHighSpinClAttenuationMax",
+        "LowLaunchLiftRecoveryMax", "LowLaunchVlaFullDeg", "LowLaunchVlaZeroDeg",
+        "LowLaunchReStart", "LowLaunchReEnd",
+        "LowLaunchSpinRatioFull", "LowLaunchSpinRatioMax",
+        "HighLaunchDragBoostMax", "HighLaunchDragVlaStartDeg", "HighLaunchDragVlaFullDeg",
+        "HighLaunchDragSrStart", "HighLaunchDragSrEnd",
+        "Name", "Version",
+    };
+
     // --- Drag curve (Cd polynomial) ---
     public float CdPolyA { get; init; } = 1.1948f;
     public float CdPolyB { get; init; } = -0.0000209661f;
@@ -75,6 +101,37 @@ public sealed class FlightProfile
     // --- Metadata ---
     public string Name { get; init; } = "Default";
     public string Version { get; init; } = "1.0";
+
+    /// <summary>
+    /// Validates range parameters (start &lt; end) and logs warnings for any
+    /// inconsistencies that would cause division-by-zero in SafeSmoothStep01.
+    /// </summary>
+    public List<string> Validate()
+    {
+        var warnings = new List<string>();
+
+        ValidateRange(warnings, nameof(HighSpinDragSrStart), HighSpinDragSrStart, nameof(HighSpinDragSrEnd), HighSpinDragSrEnd);
+        ValidateRange(warnings, nameof(UltraHighSpinDragSrStart), UltraHighSpinDragSrStart, nameof(UltraHighSpinDragSrEnd), UltraHighSpinDragSrEnd);
+        ValidateRange(warnings, nameof(HighSpinDragReliefReFullMax), HighSpinDragReliefReFullMax, nameof(HighSpinDragReliefReZero), HighSpinDragReliefReZero);
+        ValidateRange(warnings, nameof(LowLaunchVlaFullDeg), LowLaunchVlaFullDeg, nameof(LowLaunchVlaZeroDeg), LowLaunchVlaZeroDeg);
+        ValidateRange(warnings, nameof(LowLaunchReStart), LowLaunchReStart, nameof(LowLaunchReEnd), LowLaunchReEnd);
+        ValidateRange(warnings, nameof(LowLaunchSpinRatioFull), LowLaunchSpinRatioFull, nameof(LowLaunchSpinRatioMax), LowLaunchSpinRatioMax);
+        ValidateRange(warnings, nameof(HighLaunchDragVlaStartDeg), HighLaunchDragVlaStartDeg, nameof(HighLaunchDragVlaFullDeg), HighLaunchDragVlaFullDeg);
+        ValidateRange(warnings, nameof(HighLaunchDragSrStart), HighLaunchDragSrStart, nameof(HighLaunchDragSrEnd), HighLaunchDragSrEnd);
+        ValidateRange(warnings, nameof(ClMaxSrTransitionStart), ClMaxSrTransitionStart, nameof(ClMaxSrTransitionEnd), ClMaxSrTransitionEnd);
+        ValidateRange(warnings, nameof(HighSpinClAttenuationStart), HighSpinClAttenuationStart, nameof(HighSpinClAttenuationEnd), HighSpinClAttenuationEnd);
+        ValidateRange(warnings, nameof(UltraHighSpinClAttenuationStart), UltraHighSpinClAttenuationStart, nameof(UltraHighSpinClAttenuationEnd), UltraHighSpinClAttenuationEnd);
+        ValidateRange(warnings, nameof(HighReGainReductionStart), HighReGainReductionStart, nameof(HighReGainReductionEnd), HighReGainReductionEnd);
+        ValidateRange(warnings, nameof(HighReGainRecoveryStart), HighReGainRecoveryStart, nameof(HighReGainRecoveryEnd), HighReGainRecoveryEnd);
+
+        return warnings;
+    }
+
+    private static void ValidateRange(List<string> warnings, string startName, float startVal, string endName, float endVal)
+    {
+        if (startVal >= endVal)
+            warnings.Add($"FlightProfile range invalid: {startName} ({startVal}) >= {endName} ({endVal})");
+    }
 
     public static FlightProfile Default { get; } = new();
 }

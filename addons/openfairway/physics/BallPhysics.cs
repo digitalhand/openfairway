@@ -43,9 +43,14 @@ public partial class BallPhysics : RefCounted
     private const float LOW_SPIN_MULTIPLIER_MAX = 1.15f;  // Friction multiplier at LOW_SPIN_THRESHOLD
     private const float MID_SPIN_MULTIPLIER_MAX = 2.25f;  // Friction multiplier at MID_SPIN_THRESHOLD
     private const float HIGH_SPIN_MULTIPLIER_MAX = 2.50f;  // Maximum friction multiplier (high spin wedges)
+    private const float HIGH_SPIN_RAMP_RANGE = 1000.0f;   // RPM range for high-spin multiplier ramp
 
     // Friction blending
     private const float FRICTION_BLEND_SPEED = 15.0f;     // m/s — blending threshold for rolling/kinetic friction
+    private const float TANGENT_VELOCITY_THRESHOLD = 0.05f; // m/s — below this, pure rolling (no slip)
+
+    // Gravity force (pre-computed to avoid per-frame allocation), yea--I came up with this :D
+    private static readonly Vector3 GravityForce = new(0.0f, -9.81f * MASS, 0.0f);
 
     /// <summary>
     /// Calculate total forces acting on the ball
@@ -56,7 +61,7 @@ public partial class BallPhysics : RefCounted
         bool onGround,
         PhysicsParams parameters)
     {
-        Vector3 gravity = new Vector3(0.0f, -9.81f * MASS, 0.0f);
+        Vector3 gravity = GravityForce;
 
         if (onGround)
         {
@@ -138,7 +143,7 @@ public partial class BallPhysics : RefCounted
         {
             // High spin (wedges): Gradual increase to maximum
             float excessSpin = effectiveSpinRpm - MID_SPIN_THRESHOLD;
-            float spinFactor = Mathf.Min(excessSpin / 1000.0f, 1.0f);
+            float spinFactor = Mathf.Min(excessSpin / HIGH_SPIN_RAMP_RANGE, 1.0f);
             spinMultiplier = MID_SPIN_MULTIPLIER_MAX +
                 spinFactor * (HIGH_SPIN_MULTIPLIER_MAX - MID_SPIN_MULTIPLIER_MAX);
         }
@@ -171,7 +176,7 @@ public partial class BallPhysics : RefCounted
             Vector3 tangentVelocity = contactVelocity - parameters.FloorNormal * contactVelocity.Dot(parameters.FloorNormal);
             float tangentVelMag = tangentVelocity.Length();
 
-            if (tangentVelMag < 0.05f)
+            if (tangentVelMag < TANGENT_VELOCITY_THRESHOLD)
             {
                 float effectiveRollingFriction = parameters.RollingFriction * spinMultiplier;
                 PhysicsLogger.Verbose($"  ROLLING: vel={velocity.Length():F2} m/s, spin={omega.Length() / ShotSetup.RAD_PER_RPM:F0} rpm, c_rr={effectiveRollingFriction:F3} (×{spinMultiplier:F2})");
@@ -213,7 +218,7 @@ public partial class BallPhysics : RefCounted
         float spinMultiplier = GetSpinFrictionMultiplier(omega, parameters.RolloutImpactSpin, velocity.Length());
         float tangentVelMag = tangentVelocity.Length();
 
-        if (tangentVelMag < 0.05f)
+        if (tangentVelMag < TANGENT_VELOCITY_THRESHOLD)
         {
             // Pure rolling
             Vector3 flatVelocity = velocity - parameters.FloorNormal * velocity.Dot(parameters.FloorNormal);
@@ -524,8 +529,15 @@ public partial class BallPhysics : RefCounted
 
             // Surfaces without spinback keep the low-energy guard to prevent unrealistic
             // chip spin-back. Spinback surfaces allow steep-impact Penner behavior even
-            // below 20 m/s so high-spin flop/wedge shots can naturally check/spin back.
-            bool shouldUsePenner = isSteepImpact && (impactSpeed >= 20.0f || hasSpinbackSurface);
+            // below the threshold so high-spin flop/wedge shots can naturally check/spin back.
+            // High backspin (>4000 RPM) indicates a wedge/flop, not a chip — lower the guard.
+            float pennerSpeedThreshold = 20.0f;
+            if (currentSpinRpm > 4000.0f)
+            {
+                float spinT = Mathf.Clamp((currentSpinRpm - 4000.0f) / 4000.0f, 0.0f, 1.0f);
+                pennerSpeedThreshold = Mathf.Lerp(20.0f, 12.0f, spinT);
+            }
+            bool shouldUsePenner = isSteepImpact && (impactSpeed >= pennerSpeedThreshold || hasSpinbackSurface);
 
             if (!shouldUsePenner)
             {
@@ -536,9 +548,9 @@ public partial class BallPhysics : RefCounted
                 {
                     PhysicsLogger.Verbose($"  Bounce: Shallow angle ({impactAngleDeg:F2}° < {criticalAngleDeg:F2}°) - using simple retention");
                 }
-                else if (impactSpeed < 20.0f && !hasSpinbackSurface)
+                else if (impactSpeed < pennerSpeedThreshold && !hasSpinbackSurface)
                 {
-                    PhysicsLogger.Verbose($"  Bounce: Low energy ({impactSpeed:F2} m/s < 20 m/s) - using simple retention");
+                    PhysicsLogger.Verbose($"  Bounce: Low energy ({impactSpeed:F2} m/s < {pennerSpeedThreshold:F2} m/s) - using simple retention");
                 }
                 else
                 {
@@ -998,7 +1010,7 @@ public partial class BallPhysics : RefCounted
         float spinMultiplier = GetSpinFrictionMultiplier(omega, parameters.RolloutImpactSpin, velocity.Length(), rp);
         float tangentVelMag = tangentVelocity.Length();
 
-        if (tangentVelMag < 0.05f)
+        if (tangentVelMag < TANGENT_VELOCITY_THRESHOLD)
         {
             Vector3 flatVelocity = velocity - parameters.FloorNormal * velocity.Dot(parameters.FloorNormal);
             Vector3 frictionDir = flatVelocity.Length() > 0.01f ? flatVelocity.Normalized() : Vector3.Zero;

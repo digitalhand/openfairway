@@ -48,6 +48,9 @@ public partial class GolfBall : CharacterBody3D // Player
     // Terrain3D data reference for height queries (cached on _Ready)
     private GodotObject _terrainData;
 
+    // Cached raycast exclude array (avoids per-frame allocation)
+    private Array<Rid> _raycastExclude;
+
     public PhysicsEnums.SurfaceType SurfaceType { get; private set; } = PhysicsEnums.SurfaceType.Fairway;
     public BallPhysicsProfile BallProfile { get; set; } = new();
     public Func<Node, Vector3, PhysicsEnums.SurfaceType> ResolveLieSurface { get; set; }
@@ -72,6 +75,12 @@ public partial class GolfBall : CharacterBody3D // Player
         CacheTerrainData();
         ConnectSettings();
         UpdateEnvironment();
+    }
+
+    private Array<Rid> GetRaycastExclude()
+    {
+        _raycastExclude ??= new Array<Rid> { GetRid() };
+        return _raycastExclude;
     }
 
     private void CacheTerrainData()
@@ -321,7 +330,7 @@ public partial class GolfBall : CharacterBody3D // Player
         var query = PhysicsRayQueryParameters3D.Create(rayStart, rayEnd);
         query.CollideWithAreas = false;
         query.CollideWithBodies = true;
-        query.Exclude = new Array<Rid> { GetRid() };
+        query.Exclude = GetRaycastExclude();
 
         var hit = world.DirectSpaceState.IntersectRay(query);
         if (hit.Count == 0)
@@ -367,7 +376,7 @@ public partial class GolfBall : CharacterBody3D // Player
         var query = PhysicsRayQueryParameters3D.Create(rayStart, rayEnd);
         query.CollideWithAreas = false;
         query.CollideWithBodies = true;
-        query.Exclude = new Array<Rid> { GetRid() };
+        query.Exclude = GetRaycastExclude();
 
         var hit = world.DirectSpaceState.IntersectRay(query);
         if (hit.Count == 0)
@@ -537,7 +546,7 @@ public partial class GolfBall : CharacterBody3D // Player
         var query = PhysicsRayQueryParameters3D.Create(rayStart, rayEnd);
         query.CollideWithAreas = false;
         query.CollideWithBodies = true;
-        query.Exclude = new Array<Rid> { GetRid() };
+        query.Exclude = GetRaycastExclude();
 
         var hit = world.DirectSpaceState.IntersectRay(query);
         if (hit.Count == 0)
