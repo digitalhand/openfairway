@@ -57,6 +57,7 @@ public abstract partial class HoleSceneControllerBase : Node3D
     private AudioStreamPlayer3D _audioDriverHit;
     private AudioStreamPlayer3D _audioBackgroundBirds;
     private AudioStreamPlayer3D _audioGolfBallLanding;
+    private HoleAudioManager _audioManager;
     private TcpServer _tcpServer;
     private ShotRecordingService _shotRecordingService;
     private GameSettings _gameSettings;
@@ -289,7 +290,8 @@ public abstract partial class HoleSceneControllerBase : Node3D
         _audioDriverHit = GetNodeOrNull<AudioStreamPlayer3D>(DriverHitAudioPath);
         _audioBackgroundBirds = GetNodeOrNull<AudioStreamPlayer3D>(AmbientAudioPath);
         _audioGolfBallLanding = GetNodeOrNull<AudioStreamPlayer3D>(BallLandingAudioPath);
-        ConfigureConsistentAudioLevels(startAmbientAudio: false);
+        _audioManager = new HoleAudioManager(_audioDriverHit, _audioBackgroundBirds, _audioGolfBallLanding);
+        _audioManager.ConfigureAll(startAmbient: false);
         _progressStore = GetNodeOrNull<GameProgressStore>("/root/GameProgressStore");
         _sceneId = GetSceneId();
         ResolveCourseCard();
@@ -378,7 +380,7 @@ public abstract partial class HoleSceneControllerBase : Node3D
 
         _startupStage = StartupStage.Background;
         bool shouldPlayAmbientAudio = ShouldPlayAmbientAudioOnStartup();
-        ConfigureNonAttenuated3DAudio(_audioBackgroundBirds, ensurePlaying: shouldPlayAmbientAudio);
+        _audioManager.ConfigureAll(startAmbient: shouldPlayAmbientAudio);
         if (!shouldPlayAmbientAudio && _audioBackgroundBirds != null && _audioBackgroundBirds.Playing)
             _audioBackgroundBirds.Stop();
 
@@ -590,7 +592,7 @@ public abstract partial class HoleSceneControllerBase : Node3D
 
     private void OnGolfBallLanded()
     {
-        PlayGolfBallLandingAudio();
+        _audioManager.PlayBallLanding(_ball.GlobalPosition);
     }
 
     private void OnGameplayUiHitShot(Dictionary data)
@@ -617,16 +619,7 @@ public abstract partial class HoleSceneControllerBase : Node3D
         LaunchShot(data, useTcpTracker: false, logPayload: false);
     }
 
-    private void PlayDriverHitAudio()
-    {
-        if (_audioDriverHit == null)
-            return;
 
-        if (_audioDriverHit.Playing)
-            _audioDriverHit.Stop();
-
-        _audioDriverHit.Play();
-    }
 
     private void LaunchShot(Dictionary data, bool useTcpTracker, bool logPayload)
     {
@@ -644,7 +637,7 @@ public abstract partial class HoleSceneControllerBase : Node3D
 
         _displaySession.SetRawPayload(data);
         UpdateBallDisplay();
-        PlayDriverHitAudio();
+        _audioManager.PlayDriverHit();
         IncrementStrokeCount();
         _shotRecordingService?.RecordShot(data, ResolveShotRecordingClubTag());
 
@@ -657,36 +650,6 @@ public abstract partial class HoleSceneControllerBase : Node3D
         _ = _shotCameraController.EnableFollowDeferredAsync();
     }
 
-    private void ConfigureConsistentAudioLevels(bool startAmbientAudio)
-    {
-        ConfigureNonAttenuated3DAudio(_audioBackgroundBirds, ensurePlaying: startAmbientAudio);
-        ConfigureNonAttenuated3DAudio(_audioDriverHit, ensurePlaying: false);
-        ConfigureNonAttenuated3DAudio(_audioGolfBallLanding, ensurePlaying: false);
-    }
-
-    private void ConfigureNonAttenuated3DAudio(AudioStreamPlayer3D player, bool ensurePlaying)
-    {
-        if (player == null)
-            return;
-
-        player.AttenuationModel = AudioStreamPlayer3D.AttenuationModelEnum.Disabled;
-        player.DopplerTracking = AudioStreamPlayer3D.DopplerTrackingEnum.Disabled;
-
-        if (ensurePlaying && !player.Playing)
-            player.Play();
-    }
-
-    private void PlayGolfBallLandingAudio()
-    {
-        if (_audioGolfBallLanding == null)
-            return;
-
-        _audioGolfBallLanding.GlobalPosition = _ball.GlobalPosition;
-        if (_audioGolfBallLanding.Playing)
-            _audioGolfBallLanding.Stop();
-
-        _audioGolfBallLanding.Play();
-    }
 
     private void OnCameraFollowChanged(Variant value)
     {

@@ -320,35 +320,15 @@ public partial class GolfBall : CharacterBody3D // Player
 
     private bool TryRecoverToGround()
     {
-        var world = GetWorld3D();
-        if (world == null)
+        var probe = TerrainProbe.Raycast(GetWorld3D(), GlobalPosition, GROUND_RAYCAST_UP, GROUND_RAYCAST_DOWN, GetRaycastExclude());
+        if (probe is not { } hit)
             return false;
 
-        Vector3 rayStart = GlobalPosition + Vector3.Up * GROUND_RAYCAST_UP;
-        Vector3 rayEnd = GlobalPosition + Vector3.Down * GROUND_RAYCAST_DOWN;
-
-        var query = PhysicsRayQueryParameters3D.Create(rayStart, rayEnd);
-        query.CollideWithAreas = false;
-        query.CollideWithBodies = true;
-        query.Exclude = GetRaycastExclude();
-
-        var hit = world.DirectSpaceState.IntersectRay(query);
-        if (hit.Count == 0)
-            return false;
-
-        Vector3 hitPosition = (Vector3)hit["position"];
-        Vector3 hitNormal = ((Vector3)hit["normal"]).Normalized();
-        Node hitCollider = hit.ContainsKey("collider") && hit["collider"].Obj is Node collider
-            ? collider
-            : null;
-        if (hitNormal.LengthSquared() < 0.000001f)
-            hitNormal = Vector3.Up;
-
-        GlobalPosition = hitPosition + hitNormal * (BallPhysics.RADIUS + GROUND_SNAP_OFFSET);
-        FloorNormal = hitNormal;
-        Velocity = RemoveVelocityAlongNormal(Velocity, hitNormal, removeBothDirections: false);
+        GlobalPosition = hit.Position + hit.Normal * (BallPhysics.RADIUS + GROUND_SNAP_OFFSET);
+        FloorNormal = hit.Normal;
+        Velocity = RemoveVelocityAlongNormal(Velocity, hit.Normal, removeBothDirections: false);
         OnGround = true;
-        UpdateLieSurfaceFromContact(hitCollider, hitPosition);
+        UpdateLieSurfaceFromContact(hit.Collider, hit.Position);
 
         if (State == PhysicsEnums.BallState.Flight)
         {
@@ -356,7 +336,7 @@ public partial class GolfBall : CharacterBody3D // Player
             EmitSignal(SignalName.BallLanded);
         }
 
-        PhysicsLogger.Verbose($"Recovered ball-to-ground at {GlobalPosition} (normal: {hitNormal})");
+        PhysicsLogger.Verbose($"Recovered ball-to-ground at {GlobalPosition} (normal: {hit.Normal})");
         return true;
     }
 
@@ -366,30 +346,13 @@ public partial class GolfBall : CharacterBody3D // Player
         groundCollider = null;
         groundPoint = GlobalPosition;
 
-        var world = GetWorld3D();
-        if (world == null)
+        var probe = TerrainProbe.Raycast(GetWorld3D(), GlobalPosition, 0.05f, BallPhysics.RADIUS + GROUND_PROBE_DISTANCE, GetRaycastExclude());
+        if (probe is not { } hit)
             return false;
 
-        Vector3 rayStart = GlobalPosition + Vector3.Up * 0.05f;
-        Vector3 rayEnd = GlobalPosition + Vector3.Down * (BallPhysics.RADIUS + GROUND_PROBE_DISTANCE);
-
-        var query = PhysicsRayQueryParameters3D.Create(rayStart, rayEnd);
-        query.CollideWithAreas = false;
-        query.CollideWithBodies = true;
-        query.Exclude = GetRaycastExclude();
-
-        var hit = world.DirectSpaceState.IntersectRay(query);
-        if (hit.Count == 0)
-            return false;
-
-        groundPoint = (Vector3)hit["position"];
-        groundNormal = ((Vector3)hit["normal"]).Normalized();
-        groundCollider = hit.ContainsKey("collider") && hit["collider"].Obj is Node collider
-            ? collider
-            : null;
-        if (groundNormal.LengthSquared() < 0.000001f)
-            groundNormal = Vector3.Up;
-
+        groundPoint = hit.Position;
+        groundNormal = hit.Normal;
+        groundCollider = hit.Collider;
         return true;
     }
 
@@ -536,24 +499,11 @@ public partial class GolfBall : CharacterBody3D // Player
         }
 
         // Fallback: physics raycast (requires collision shapes to be ready).
-        var world = GetWorld3D();
-        if (world == null)
+        var probe = TerrainProbe.Raycast(GetWorld3D(), GlobalPosition, 50.0f, 50.0f, GetRaycastExclude());
+        if (probe is not { } hit)
             return;
 
-        Vector3 rayStart = GlobalPosition + Vector3.Up * 50.0f;
-        Vector3 rayEnd = GlobalPosition + Vector3.Down * 50.0f;
-
-        var query = PhysicsRayQueryParameters3D.Create(rayStart, rayEnd);
-        query.CollideWithAreas = false;
-        query.CollideWithBodies = true;
-        query.Exclude = GetRaycastExclude();
-
-        var hit = world.DirectSpaceState.IntersectRay(query);
-        if (hit.Count == 0)
-            return;
-
-        Vector3 hitPosition = (Vector3)hit["position"];
-        GlobalPosition = new Vector3(GlobalPosition.X, hitPosition.Y + TEE_HEIGHT, GlobalPosition.Z);
+        GlobalPosition = new Vector3(GlobalPosition.X, hit.Position.Y + TEE_HEIGHT, GlobalPosition.Z);
     }
 
     /// <summary>
