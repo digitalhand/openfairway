@@ -27,6 +27,8 @@ public sealed class FlightProfile
         "LowLaunchSpinRatioFull", "LowLaunchSpinRatioMax",
         "HighLaunchDragBoostMax", "HighLaunchDragVlaStartDeg", "HighLaunchDragVlaFullDeg",
         "HighLaunchDragSrStart", "HighLaunchDragSrEnd",
+        "SpinDragProgressiveCapSrStart", "SpinDragProgressiveCapSrEnd", "SpinDragProgressiveCapBoostMax",
+        "MidSpinClBoostSrStart", "MidSpinClBoostSrEnd", "MidSpinClBoostMax",
         "Name", "Version",
     };
 
@@ -91,6 +93,16 @@ public sealed class FlightProfile
     public float LowLaunchSpinRatioFull { get; init; } = 0.18f;
     public float LowLaunchSpinRatioMax { get; init; } = 0.22f;
 
+    // --- Progressive spin drag cap boost (increased form drag at high SR) ---
+    public float SpinDragProgressiveCapSrStart { get; init; } = 0.33f;
+    public float SpinDragProgressiveCapSrEnd { get; init; } = 0.50f;
+    public float SpinDragProgressiveCapBoostMax { get; init; } = 0.0f;
+
+    // --- Mid-spin Cl boost (bell-shaped lift recovery for mid-iron SR regime) ---
+    public float MidSpinClBoostSrStart { get; init; } = 0.10f;
+    public float MidSpinClBoostSrEnd { get; init; } = 0.35f;
+    public float MidSpinClBoostMax { get; init; } = 0.0f;
+
     // --- High-launch drag boost ---
     public float HighLaunchDragBoostMax { get; init; } = 1.18f;
     public float HighLaunchDragVlaStartDeg { get; init; } = 33.0f;
@@ -118,11 +130,13 @@ public sealed class FlightProfile
         ValidateRange(warnings, nameof(LowLaunchSpinRatioFull), LowLaunchSpinRatioFull, nameof(LowLaunchSpinRatioMax), LowLaunchSpinRatioMax);
         ValidateRange(warnings, nameof(HighLaunchDragVlaStartDeg), HighLaunchDragVlaStartDeg, nameof(HighLaunchDragVlaFullDeg), HighLaunchDragVlaFullDeg);
         ValidateRange(warnings, nameof(HighLaunchDragSrStart), HighLaunchDragSrStart, nameof(HighLaunchDragSrEnd), HighLaunchDragSrEnd);
+        ValidateRange(warnings, nameof(SpinDragProgressiveCapSrStart), SpinDragProgressiveCapSrStart, nameof(SpinDragProgressiveCapSrEnd), SpinDragProgressiveCapSrEnd);
         ValidateRange(warnings, nameof(ClMaxSrTransitionStart), ClMaxSrTransitionStart, nameof(ClMaxSrTransitionEnd), ClMaxSrTransitionEnd);
         ValidateRange(warnings, nameof(HighSpinClAttenuationStart), HighSpinClAttenuationStart, nameof(HighSpinClAttenuationEnd), HighSpinClAttenuationEnd);
         ValidateRange(warnings, nameof(UltraHighSpinClAttenuationStart), UltraHighSpinClAttenuationStart, nameof(UltraHighSpinClAttenuationEnd), UltraHighSpinClAttenuationEnd);
         ValidateRange(warnings, nameof(HighReGainReductionStart), HighReGainReductionStart, nameof(HighReGainReductionEnd), HighReGainReductionEnd);
         ValidateRange(warnings, nameof(HighReGainRecoveryStart), HighReGainRecoveryStart, nameof(HighReGainRecoveryEnd), HighReGainRecoveryEnd);
+        ValidateRange(warnings, nameof(MidSpinClBoostSrStart), MidSpinClBoostSrStart, nameof(MidSpinClBoostSrEnd), MidSpinClBoostSrEnd);
 
         return warnings;
     }

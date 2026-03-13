@@ -214,6 +214,15 @@ text = "RANGE"
 horizontal_alignment = 1
 vertical_alignment = 2
 
+[node name="RangeButton" type="Button" parent="TilesRow/RangeTile" unique_id=1641059611]
+layout_mode = 2
+mouse_default_cursor_shape = 2
+theme_override_styles/normal = SubResource("StyleBoxEmpty_click")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_click")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_click")
+theme_override_styles/disabled = SubResource("StyleBoxEmpty_click")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_click")
+
 [node name="CoursesTile" type="PanelContainer" parent="TilesRow" unique_id=526476943]
 custom_minimum_size = Vector2(221, 221)
 layout_mode = 2

@@ -2,6 +2,13 @@
   "Flight": {
     "HighLaunchDragVlaStartDeg": 26.0,
     "HighLaunchDragVlaFullDeg": 33.0,
-    "HighLaunchDragBoostMax": 1.20
+    "HighLaunchDragBoostMax": 1.20,
+    "SpinDragProgressiveCapSrStart": 0.33,
+    "SpinDragProgressiveCapSrEnd": 0.50,
+    "SpinDragProgressiveCapBoostMax": 0.25,
+    "HighReMidSpinGain": 16.0,
+    "MidSpinClBoostSrStart": 0.17,
+    "MidSpinClBoostSrEnd": 0.31,
+    "MidSpinClBoostMax": 0.50
   }
 }

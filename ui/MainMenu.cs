@@ -4,12 +4,14 @@ public partial class MainMenu : Control
 {
     private const string LoadingScenePath = "res://ui/loading_screen.tscn";
     private const string CoursesScenePath = "res://courses/airways_fresno/hole_1/hole_1.tscn";
+    private const string RangeScenePath = "res://courses/range.tscn";
     private const string TcpServerServicePath = "/root/TcpServerService";
     private const string VersionSettingPath = "application/config/version";
     private const string VersionFallback = "dev";
 
     private Button _settingsButton;
     private Button _exitButton;
+    private Button _rangeButton;
     private Button _coursesButton;
     private SettingsPanel _settingsPanel;
     private TcpServer _tcpServer;
@@ -21,6 +23,7 @@ public partial class MainMenu : Control
     {
         _settingsButton = GetNode<Button>("TopBanner/LeftButtons/SettingsButton");
         _exitButton = GetNode<Button>("TopBanner/LeftButtons/ExitButton");
+        _rangeButton = GetNode<Button>("TilesRow/RangeTile/RangeButton");
         _coursesButton = GetNode<Button>("TilesRow/CoursesTile/CoursesButton");
         _settingsPanel = GetNodeOrNull<SettingsPanel>("SettingsPanel");
         _launchMonitorStatus = GetNode<Control>("TopBanner/LaunchMonitorStatus");
@@ -31,6 +34,7 @@ public partial class MainMenu : Control
 
         _settingsButton.Pressed += OnSettingsPressed;
         _exitButton.Pressed += OnExitPressed;
+        _rangeButton.Pressed += OnRangePressed;
         _coursesButton.Pressed += OnCoursesPressed;
         if (_tcpServer != null)
             _tcpServer.ConnectionStatusChanged += OnTcpConnectionStatusChanged;
@@ -48,6 +52,8 @@ public partial class MainMenu : Control
             _settingsButton.Pressed -= OnSettingsPressed;
         if (_exitButton != null)
             _exitButton.Pressed -= OnExitPressed;
+        if (_rangeButton != null)
+            _rangeButton.Pressed -= OnRangePressed;
         if (_coursesButton != null)
             _coursesButton.Pressed -= OnCoursesPressed;
         if (_tcpServer != null)
@@ -64,23 +70,36 @@ public partial class MainMenu : Control
         GetTree().Quit();
     }
 
+    private void OnRangePressed()
+    {
+        StartSceneLoad(_rangeButton, RangeScenePath);
+    }
+
     private void OnCoursesPressed()
     {
-        _coursesButton.Disabled = true;
+        StartSceneLoad(_coursesButton, CoursesScenePath);
+    }
+
+    private void StartSceneLoad(Button sourceButton, string scenePath)
+    {
+        if (sourceButton == null)
+            return;
+
+        sourceButton.Disabled = true;
 
         CourseLoadService courseLoadService = GetNodeOrNull<CourseLoadService>("/root/CourseLoadService");
         if (courseLoadService == null)
         {
-            _coursesButton.Disabled = false;
+            sourceButton.Disabled = false;
             GD.PushError("Course load service autoload is missing.");
             return;
         }
 
-        Error requestError = courseLoadService.StartLoad(CoursesScenePath);
+        Error requestError = courseLoadService.StartLoad(scenePath);
         if (requestError != Error.Ok)
         {
-            _coursesButton.Disabled = false;
-            GD.PushError($"Failed to start loading courses scene '{CoursesScenePath}'. Error: {requestError}");
+            sourceButton.Disabled = false;
+            GD.PushError($"Failed to start loading scene '{scenePath}'. Error: {requestError}");
             return;
         }
 
@@ -88,7 +107,7 @@ public partial class MainMenu : Control
         if (transitionError != Error.Ok)
         {
             courseLoadService.CancelLoad("Failed to open loading screen.");
-            _coursesButton.Disabled = false;
+            sourceButton.Disabled = false;
             GD.PushError($"Failed to open loading scene '{LoadingScenePath}'. Error: {transitionError}");
         }
     }

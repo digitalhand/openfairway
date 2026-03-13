@@ -9,6 +9,8 @@ public static class CourseCatalog
 
     private static readonly Dictionary<string, CourseCardInfo> CourseCardByKey = new(StringComparer.OrdinalIgnoreCase)
     {
+        { "res://courses/range.tscn", new CourseCardInfo("Range", 1, 3, 400) },
+        { "range", new CourseCardInfo("Range", 1, 3, 400) },
         { "res://courses/airways_fresno/hole_1/hole_1.tscn", new CourseCardInfo("Airways", 1, 3, 203) },
         { "hole_1", new CourseCardInfo("Airways", 1, 3, 203) }
     };

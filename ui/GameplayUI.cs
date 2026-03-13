@@ -106,6 +106,16 @@ public partial class GameplayUI : MarginContainer
         _courseHud?.SetCourseHeaderYardage(yardage);
     }
 
+    public void SetCourseMetaVisible(bool visible)
+    {
+        _courseHud?.SetCourseMetaVisible(visible);
+    }
+
+    public void SetTracerHistorySettingVisible(bool visible)
+    {
+        _courseHud?.SetTracerHistorySettingVisible(visible);
+    }
+
     public void SetMarkerCamera(Camera3D camera)
     {
         _markerHud?.SetCamera(camera);

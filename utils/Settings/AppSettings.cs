@@ -8,8 +8,9 @@ public partial class AppSettings : SettingCollector
     public const string DefaultPlayerName = "JesseInCode";
     public const bool DefaultTestShotsEnabled = true;
     public const string DefaultResolutionPreset = "1728x972";
-    public const float DefaultCameraOrbitDistance = 2.5f;
-    public const float DefaultCameraFollowDelaySeconds = 0.0f;
+    private const float FeetPerCameraDistanceUnit = 3.28084f;
+    public const float DefaultCameraOrbitDistance = 7.0f / FeetPerCameraDistanceUnit;
+    public const float DefaultCameraFollowDelaySeconds = 3.0f;
     public const int DefaultTcpPort = 55000;
     public const bool DefaultShotRecordingEnabled = false;
     public const string DefaultShotRecordingPath = "";
@@ -31,7 +32,7 @@ public partial class AppSettings : SettingCollector
         DisplayResolutionPreset = new Setting(DefaultResolutionPreset);
         DisplayFullscreen = new Setting(false);
         CameraOrbitDistance = new Setting(DefaultCameraOrbitDistance, 1.0f, 8.0f);
-        CameraFollowDelaySeconds = new Setting(DefaultCameraFollowDelaySeconds, 0.0f, 2.0f);
+        CameraFollowDelaySeconds = new Setting(DefaultCameraFollowDelaySeconds, 0.0f, 5.0f);
         TcpPort = new Setting(DefaultTcpPort, 1, 65535);
         ShotRecordingEnabled = new Setting(DefaultShotRecordingEnabled);
         ShotRecordingPath = new Setting(DefaultShotRecordingPath);

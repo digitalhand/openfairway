@@ -123,6 +123,72 @@ public abstract partial class HoleSceneControllerBase : Node3D
         return _primaryTarget.GlobalPosition;
     }
 
+    protected virtual bool ShouldAutoResetAfterRest()
+    {
+        if (_gameSettings == null)
+            return false;
+
+        return (bool)_gameSettings.AutoBallReset.Value;
+    }
+
+    protected virtual float GetBallResetDelaySeconds()
+    {
+        if (_gameSettings == null)
+            return 0.0f;
+
+        return Mathf.Max(0.0f, (float)_gameSettings.BallResetTimer.Value);
+    }
+
+    protected virtual bool ShouldResetBallBeforeCameraTween()
+    {
+        return false;
+    }
+
+    protected virtual bool ShouldClearDisplaySessionOnAutoReset()
+    {
+        return true;
+    }
+
+    protected virtual bool ShouldPlayAmbientAudioOnStartup()
+    {
+        return true;
+    }
+
+    protected virtual bool ShouldShowCourseMeta()
+    {
+        return true;
+    }
+
+    protected virtual bool ShouldShowTracerHistorySetting()
+    {
+        return false;
+    }
+
+    protected virtual bool ShouldUseTracerCountSetting()
+    {
+        return false;
+    }
+
+    protected virtual int GetFixedTracerCount()
+    {
+        return 1;
+    }
+
+    protected virtual bool ShouldClearTracersOnBallRest()
+    {
+        return true;
+    }
+
+    protected virtual bool ShouldClearTracersOnShotStart()
+    {
+        return false;
+    }
+
+    protected virtual bool ShouldClearTracersOnBallReset()
+    {
+        return true;
+    }
+
     private bool ValidateRequiredNodes()
     {
         bool valid = true;
@@ -194,6 +260,7 @@ public abstract partial class HoleSceneControllerBase : Node3D
         _progressStore = GetNodeOrNull<GameProgressStore>("/root/GameProgressStore");
         _sceneId = GetSceneId();
         ResolveCourseCard();
+        _gameplayUi?.SetCourseMetaVisible(ShouldShowCourseMeta());
         CacheTerrainData();
         InitializeTargetResolver();
         ResetBallToStart();
@@ -225,6 +292,7 @@ public abstract partial class HoleSceneControllerBase : Node3D
         _appSettings = globalSettings.AppSettings;
         _gameSettings.CameraFollowMode.SettingChanged += OnCameraFollowChanged;
         _gameSettings.SurfaceType.SettingChanged += OnSurfaceChanged;
+        ConfigureTracerBehavior();
         _ball.ResolveLieSurface = ResolveLieSurfaceAtContact;
         _ball.DescribeLieSurfaceResolution = () => _lieSurfaceResolver.DescribeLastResolution();
         _cameraOrbitDistanceSetting = _appSettings?.CameraOrbitDistance;
@@ -275,7 +343,10 @@ public abstract partial class HoleSceneControllerBase : Node3D
             return;
 
         _startupStage = StartupStage.Background;
-        ConfigureNonAttenuated3DAudio(_audioBackgroundBirds, ensurePlaying: true);
+        bool shouldPlayAmbientAudio = ShouldPlayAmbientAudioOnStartup();
+        ConfigureNonAttenuated3DAudio(_audioBackgroundBirds, ensurePlaying: shouldPlayAmbientAudio);
+        if (!shouldPlayAmbientAudio && _audioBackgroundBirds != null && _audioBackgroundBirds.Playing)
+            _audioBackgroundBirds.Stop();
 
         if (!CanContinueLifecycleWork(lifecycleToken))
             return;
@@ -433,27 +504,46 @@ public abstract partial class HoleSceneControllerBase : Node3D
             _resetCts = new CancellationTokenSource();
             var token = _resetCts.Token;
 
-            // Reset camera after delay
-            float delay = (float)_gameSettings.BallResetTimer.Value;
-            SceneTree tree = GetTree();
-            if (tree == null)
-                return;
+            // Reset camera after configurable delay.
+            float delay = GetBallResetDelaySeconds();
+            if (delay > 0.0f)
+            {
+                SceneTree tree = GetTree();
+                if (tree == null)
+                    return;
 
-            await ToSignal(tree.CreateTimer(delay), SceneTreeTimer.SignalName.Timeout);
+                await ToSignal(tree.CreateTimer(delay), SceneTreeTimer.SignalName.Timeout);
 
-            if (token.IsCancellationRequested || !CanContinueLifecycleWork())
-                return;
+                if (token.IsCancellationRequested || !CanContinueLifecycleWork())
+                    return;
+            }
+
+            bool shouldAutoResetAfterRest = ShouldAutoResetAfterRest();
+            bool resetBallBeforeCameraTween = shouldAutoResetAfterRest && ShouldResetBallBeforeCameraTween();
+            bool clearDisplaySessionOnAutoReset = ShouldClearDisplaySessionOnAutoReset();
+            if (resetBallBeforeCameraTween)
+            {
+                if (clearDisplaySessionOnAutoReset)
+                {
+                    _displaySession.Reset();
+                    _gameplayUi?.SetData(_displaySession.Current.ToDictionary());
+                }
+                ResetBallAtStart(resetMarkers: false, setCameraImmediate: false);
+            }
 
             await ResetCameraToStart();
 
             if (token.IsCancellationRequested || !CanContinueLifecycleWork())
                 return;
 
-            // Auto-reset ball if enabled
-            if ((bool)_gameSettings.AutoBallReset.Value)
+            // Auto-reset ball if enabled by current scene policy.
+            if (shouldAutoResetAfterRest && !resetBallBeforeCameraTween)
             {
-                _displaySession.Reset();
-                _gameplayUi?.SetData(_displaySession.Current.ToDictionary());
+                if (clearDisplaySessionOnAutoReset)
+                {
+                    _displaySession.Reset();
+                    _gameplayUi?.SetData(_displaySession.Current.ToDictionary());
+                }
                 ResetBallAtStart(resetMarkers: false);
             }
         }
@@ -627,6 +717,22 @@ public abstract partial class HoleSceneControllerBase : Node3D
             GetCameraOrbitDistanceSetting(),
             GetCameraFollowDelaySecondsSetting()
         );
+    }
+
+    private void ConfigureTracerBehavior()
+    {
+        if (_shotTracker != null)
+        {
+            _shotTracker.ConfigureTracerPolicy(
+                useGlobalTracerCountSetting: ShouldUseTracerCountSetting(),
+                fixedTracerCount: GetFixedTracerCount(),
+                clearTracersOnBallReset: ShouldClearTracersOnBallReset(),
+                clearTracersOnShotStart: ShouldClearTracersOnShotStart(),
+                clearTracersOnBallRest: ShouldClearTracersOnBallRest()
+            );
+        }
+
+        _gameplayUi?.SetTracerHistorySettingVisible(ShouldShowTracerHistorySetting());
     }
 
     private float GetCameraOrbitDistanceSetting()
@@ -871,11 +977,12 @@ public abstract partial class HoleSceneControllerBase : Node3D
         _gameplayUi?.SetData(_displaySession.Current.ToDictionary());
     }
 
-    private void ResetBallAtStart(bool resetMarkers)
+    private void ResetBallAtStart(bool resetMarkers, bool setCameraImmediate = true)
     {
         _shotTracker?.ResetBall();
         ResetLieSurfaceAfterTeleport();
-        CallDeferred(nameof(SetCameraToStartImmediate));
+        if (setCameraImmediate)
+            CallDeferred(nameof(SetCameraToStartImmediate));
 
         if (resetMarkers)
             QueueFlagMarkerResetToTarget();

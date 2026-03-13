@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://cuewmr5y6svci"
+
+[deps]
+
+files=["res://assets/data/shot_session_2/physics.filename.translation", "res://assets/data/shot_session_2/physics.speed.translation", "res://assets/data/shot_session_2/physics.vla.translation", "res://assets/data/shot_session_2/physics.hla.translation", "res://assets/data/shot_session_2/physics.total.translation", "res://assets/data/shot_session_2/physics.spin.translation", "res://assets/data/shot_session_2/physics.backspin.translation", "res://assets/data/shot_session_2/physics.sidespin.translation", "res://assets/data/shot_session_2/physics.carry.translation", "res://assets/data/shot_session_2/physics.total.translation", "res://assets/data/shot_session_2/physics.rollout.translation", "res://assets/data/shot_session_2/physics.apex.translation", "res://assets/data/shot_session_2/physics.hang.translation", "res://assets/data/shot_session_2/physics.landing.translation", "res://assets/data/shot_session_2/physics.landing.translation", "res://assets/data/shot_session_2/physics.initial.translation", "res://assets/data/shot_session_2/physics.initial.translation", "res://assets/data/shot_session_2/physics.initial.translation", "res://assets/data/shot_session_2/physics.initial.translation", "res://assets/data/shot_session_2/physics.peak.translation", "res://assets/data/shot_session_2/physics.carry.translation"]
+
+source_file="res://assets/data/shot_session_2/physics.csv"
+dest_files=["res://assets/data/shot_session_2/physics.filename.translation", "res://assets/data/shot_session_2/physics.speed.translation", "res://assets/data/shot_session_2/physics.vla.translation", "res://assets/data/shot_session_2/physics.hla.translation", "res://assets/data/shot_session_2/physics.total.translation", "res://assets/data/shot_session_2/physics.spin.translation", "res://assets/data/shot_session_2/physics.backspin.translation", "res://assets/data/shot_session_2/physics.sidespin.translation", "res://assets/data/shot_session_2/physics.carry.translation", "res://assets/data/shot_session_2/physics.total.translation", "res://assets/data/shot_session_2/physics.rollout.translation", "res://assets/data/shot_session_2/physics.apex.translation", "res://assets/data/shot_session_2/physics.hang.translation", "res://assets/data/shot_session_2/physics.landing.translation", "res://assets/data/shot_session_2/physics.landing.translation", "res://assets/data/shot_session_2/physics.initial.translation", "res://assets/data/shot_session_2/physics.initial.translation", "res://assets/data/shot_session_2/physics.initial.translation", "res://assets/data/shot_session_2/physics.initial.translation", "res://assets/data/shot_session_2/physics.peak.translation", "res://assets/data/shot_session_2/physics.carry.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

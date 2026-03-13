@@ -21,7 +21,13 @@ public partial class ShotTracker : Node3D
 
     // Tracer settings
     [Export] public int MaxTracers { get; set; } = 4;
+    [Export] public bool UseGlobalTracerCountSetting { get; set; } = true;
+    [Export(PropertyHint.Range, "0,5,1")] public int FixedTracerCount { get; set; } = 1;
     [Export] public float TrailResolution { get; set; } = 0.01f;
+    [Export] public Color TracerColor { get; set; } = new Color(0.153f, 0.408f, 0.663f, 0.6f);
+    [Export] public bool ClearTracersOnBallReset { get; set; } = true;
+    [Export] public bool ClearTracersOnShotStart { get; set; } = false;
+    [Export] public bool ClearTracersOnBallRest { get; set; } = false;
 
     // Shot statistics
     public float Apex { get; set; } = 0.0f;
@@ -43,8 +49,7 @@ public partial class ShotTracker : Node3D
         _ball = GetNode<GolfBall>("Ball");
         _ball.BallAtRest += OnBallRest;
         _shotTracerCountSetting = GetNode<GlobalSettings>("/root/GlobalSettings").GameSettings.ShotTracerCount;
-        MaxTracers = (int)_shotTracerCountSetting.Value;
-        _shotTracerCountSetting.SettingChanged += OnTracerCountChanged;
+        ApplyTracerCountSource();
     }
 
     public override void _ExitTree()
@@ -55,16 +60,25 @@ public partial class ShotTracker : Node3D
             _shotTracerCountSetting.SettingChanged -= OnTracerCountChanged;
     }
 
+    public void ConfigureTracerPolicy(
+        bool useGlobalTracerCountSetting,
+        int fixedTracerCount,
+        bool clearTracersOnBallReset,
+        bool clearTracersOnShotStart,
+        bool clearTracersOnBallRest)
+    {
+        UseGlobalTracerCountSetting = useGlobalTracerCountSetting;
+        FixedTracerCount = Mathf.Max(0, fixedTracerCount);
+        ClearTracersOnBallReset = clearTracersOnBallReset;
+        ClearTracersOnShotStart = clearTracersOnShotStart;
+        ClearTracersOnBallRest = clearTracersOnBallRest;
+        ApplyTracerCountSource();
+    }
+
     private void OnTracerCountChanged(Variant value)
     {
         MaxTracers = (int)value;
-        // Remove excess tracers if limit lowered
-        while (_tracers.Count > MaxTracers)
-        {
-            var oldest = _tracers[0];
-            _tracers.RemoveAt(0);
-            oldest.QueueFree();
-        }
+        TrimExcessTracers();
     }
 
     public override void _Process(double delta)
@@ -108,6 +122,9 @@ public partial class ShotTracker : Node3D
         Apex = 0.0f;
         Carry = 0.0f;
         SideDistance = 0.0f;
+        if (ClearTracersOnShotStart)
+            ClearAllTracers();
+
         CreateNewTracer();
 
         if (_currentTracer != null)
@@ -136,7 +153,10 @@ public partial class ShotTracker : Node3D
         }
 
         // Create new tracer
-        var newTracer = new BallTrail();
+        var newTracer = new BallTrail
+        {
+            Color = TracerColor
+        };
         AddChild(newTracer);
 
         _tracers.Add(newTracer);
@@ -152,7 +172,8 @@ public partial class ShotTracker : Node3D
         _trackPoints = false;
         _trailTimer = 0.0f;
         _ball.Reset();
-        ClearAllTracers();
+        if (ClearTracersOnBallReset)
+            ClearAllTracers();
         Apex = 0.0f;
         Carry = 0.0f;
         SideDistance = 0.0f;
@@ -217,7 +238,44 @@ public partial class ShotTracker : Node3D
         ShotData["CarryDistance"] = (int)Carry;
         ShotData["Apex"] = (int)Apex;
         ShotData["SideDistance"] = (int)SideDistance;
+
+        if (ClearTracersOnBallRest)
+            ClearAllTracers();
+
         EmitSignal(SignalName.ShotComplete, ShotData);
+    }
+
+    private void ApplyTracerCountSource()
+    {
+        if (_shotTracerCountSetting == null)
+        {
+            MaxTracers = Mathf.Max(0, FixedTracerCount);
+            TrimExcessTracers();
+            return;
+        }
+
+        _shotTracerCountSetting.SettingChanged -= OnTracerCountChanged;
+        if (UseGlobalTracerCountSetting)
+        {
+            MaxTracers = Mathf.Max(0, (int)_shotTracerCountSetting.Value);
+            _shotTracerCountSetting.SettingChanged += OnTracerCountChanged;
+        }
+        else
+        {
+            MaxTracers = Mathf.Max(0, FixedTracerCount);
+        }
+
+        TrimExcessTracers();
+    }
+
+    private void TrimExcessTracers()
+    {
+        while (_tracers.Count > MaxTracers)
+        {
+            var oldest = _tracers[0];
+            _tracers.RemoveAt(0);
+            oldest.QueueFree();
+        }
     }
 
     /// <summary>

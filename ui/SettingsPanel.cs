@@ -23,7 +23,14 @@ public partial class SettingsPanel : CanvasLayer
     private const float FeetPerCameraDistanceUnit = 3.28084f;
     private const float CameraDistanceMinFeet = CameraDistanceMinUnits * FeetPerCameraDistanceUnit;
     private const float CameraDistanceMaxFeet = CameraDistanceMaxUnits * FeetPerCameraDistanceUnit;
+    private const float PanelShadowPaddingX = 17.0f;
+    private const float PanelShadowPaddingY = 18.0f;
+    private const int TracerHistoryDefaultMin = 0;
+    private const int TracerHistoryDefaultMax = 5;
 
+    private Control _rootControl;
+    private PanelContainer _panelShadow;
+    private PanelContainer _panel;
     private LineEdit _playerNameInput;
     private CheckBox _testShotsCheck;
     private OptionButton _resolutionOption;
@@ -34,6 +41,10 @@ public partial class SettingsPanel : CanvasLayer
     private HSlider _cameraDelaySlider;
     private SpinBox _cameraDelayValue;
     private Label _cameraDelayHelper;
+    private PanelContainer _tracerHistoryCard;
+    private HSlider _tracerHistorySlider;
+    private SpinBox _tracerHistoryValue;
+    private Label _tracerHistoryHelper;
     private SpinBox _tcpPortValue;
     private CheckBox _shotRecordingCheck;
     private LineEdit _shotRecordingPathInput;
@@ -51,6 +62,7 @@ public partial class SettingsPanel : CanvasLayer
     private Button _closeButton;
 
     private GlobalSettings _globalSettings;
+    private GameSettings _gameSettings;
     private AppSettings _appSettings;
     private Setting _playerNameSetting;
     private Setting _testShotsSetting;
@@ -61,15 +73,20 @@ public partial class SettingsPanel : CanvasLayer
     private Setting _tcpPortSetting;
     private Setting _shotRecordingEnabledSetting;
     private Setting _shotRecordingPathSetting;
+    private Setting _shotTracerCountSetting;
     private ShotRecordingService _shotRecordingService;
     private bool _isSyncingControls;
     private bool _isSyncingPanelsGrid;
     private GridCanvas _boundGridCanvas;
+    private bool _showTracerHistorySetting;
     private readonly List<DataPanel> _boundHudPanels = new();
     private readonly Dictionary<string, CheckBox> _panelVisibilityByName = new();
 
     public override void _Ready()
     {
+        _rootControl = GetNode<Control>("Root");
+        _panelShadow = GetNode<PanelContainer>("Root/PanelShadow");
+        _panel = GetNode<PanelContainer>("Root/Panel");
         _playerNameInput = GetNode<LineEdit>("Root/Panel/Margin/Content/Tabs/Player/PlayerCard/PlayerCardMargin/PlayerCardRow/PlayerNameInput");
         _testShotsCheck = GetNode<CheckBox>("Root/Panel/Margin/Content/Tabs/Player/PlayerTestShotsCard/PlayerTestShotsMargin/PlayerTestShotsRow/TestShotsCheck");
         _resolutionOption = GetNode<OptionButton>("Root/Panel/Margin/Content/Tabs/Display/DisplayResolutionCard/DisplayResolutionMargin/DisplayResolutionRow/ResolutionOption");
@@ -80,6 +97,10 @@ public partial class SettingsPanel : CanvasLayer
         _cameraDelaySlider = GetNode<HSlider>("Root/Panel/Margin/Content/Tabs/Game/CameraDelayCard/CameraDelayMargin/CameraDelayContent/CameraDelayRow/CameraDelaySlider");
         _cameraDelayValue = GetNode<SpinBox>("Root/Panel/Margin/Content/Tabs/Game/CameraDelayCard/CameraDelayMargin/CameraDelayContent/CameraDelayRow/CameraDelayValue");
         _cameraDelayHelper = GetNode<Label>("Root/Panel/Margin/Content/Tabs/Game/CameraDelayCard/CameraDelayMargin/CameraDelayContent/CameraDelayHelper");
+        _tracerHistoryCard = GetNode<PanelContainer>("Root/Panel/Margin/Content/Tabs/Game/TracerHistoryCard");
+        _tracerHistorySlider = GetNode<HSlider>("Root/Panel/Margin/Content/Tabs/Game/TracerHistoryCard/TracerHistoryMargin/TracerHistoryContent/TracerHistoryRow/TracerHistorySlider");
+        _tracerHistoryValue = GetNode<SpinBox>("Root/Panel/Margin/Content/Tabs/Game/TracerHistoryCard/TracerHistoryMargin/TracerHistoryContent/TracerHistoryRow/TracerHistoryValue");
+        _tracerHistoryHelper = GetNode<Label>("Root/Panel/Margin/Content/Tabs/Game/TracerHistoryCard/TracerHistoryMargin/TracerHistoryContent/TracerHistoryHelper");
         _tcpPortValue = GetNode<SpinBox>("Root/Panel/Margin/Content/Tabs/Game/TcpPortCard/TcpPortMargin/TcpPortContent/TcpPortRow/TcpPortValue");
         _shotRecordingCheck = GetNode<CheckBox>("Root/Panel/Margin/Content/Tabs/Game/ShotRecordingCard/ShotRecordingMargin/ShotRecordingContent/ShotRecordingRow/ShotRecordingCheck");
         _shotRecordingPathInput = GetNode<LineEdit>("Root/Panel/Margin/Content/Tabs/Game/ShotRecordingCard/ShotRecordingMargin/ShotRecordingContent/ShotRecordingPathRow/ShotRecordingPathInput");
@@ -95,6 +116,7 @@ public partial class SettingsPanel : CanvasLayer
 
         _globalSettings = GetNodeOrNull<GlobalSettings>("/root/GlobalSettings");
         _appSettings = _globalSettings?.AppSettings;
+        _gameSettings = _globalSettings?.GameSettings;
         _shotRecordingService = GetNodeOrNull<ShotRecordingService>("/root/ShotRecordingService");
 
         _shotRecordingFileDialog = new FileDialog
@@ -106,6 +128,7 @@ public partial class SettingsPanel : CanvasLayer
         AddChild(_shotRecordingFileDialog);
 
         ConfigureDistanceControls();
+        ConfigureTracerHistoryControls();
         CreatePanelToggleIcons();
         ApplyPanelToggleIcons(_testShotsCheck);
         ApplyPanelToggleIcons(_fullscreenCheck);
@@ -115,6 +138,8 @@ public partial class SettingsPanel : CanvasLayer
         ConnectControlSignals();
         ConnectSettingSignals();
         RefreshControlsFromSettings();
+        ApplyTracerHistoryVisibility();
+        CallDeferred(nameof(SyncPanelShadowToPanel));
 
         Visible = false;
     }
@@ -147,6 +172,7 @@ public partial class SettingsPanel : CanvasLayer
         RefreshControlsFromSettings();
         SetActiveTab(tab);
         Visible = true;
+        CallDeferred(nameof(SyncPanelShadowToPanel));
 
         if (tab == SettingsTab.Player)
             _playerNameInput?.GrabFocus();
@@ -187,6 +213,12 @@ public partial class SettingsPanel : CanvasLayer
             _mainMenuButton.Visible = visible;
     }
 
+    public void SetTracerHistorySettingVisible(bool visible)
+    {
+        _showTracerHistorySetting = visible;
+        ApplyTracerHistoryVisibility();
+    }
+
     private void PopulateResolutionOptions()
     {
         _resolutionOption.Clear();
@@ -205,8 +237,43 @@ public partial class SettingsPanel : CanvasLayer
         _cameraDistanceValue.Step = 0.1f;
     }
 
+    private void ConfigureTracerHistoryControls()
+    {
+        int min = TracerHistoryDefaultMin;
+        int max = TracerHistoryDefaultMax;
+        if (_gameSettings?.ShotTracerCount != null)
+        {
+            Setting setting = _gameSettings.ShotTracerCount;
+            if (setting.MinValue.VariantType != Variant.Type.Nil)
+                min = Mathf.RoundToInt((float)setting.MinValue);
+            if (setting.MaxValue.VariantType != Variant.Type.Nil)
+                max = Mathf.RoundToInt((float)setting.MaxValue);
+        }
+
+        _tracerHistorySlider.MinValue = min;
+        _tracerHistorySlider.MaxValue = max;
+        _tracerHistorySlider.Step = 1.0f;
+
+        _tracerHistoryValue.MinValue = min;
+        _tracerHistoryValue.MaxValue = max;
+        _tracerHistoryValue.Step = 1.0f;
+    }
+
+    private void ApplyTracerHistoryVisibility()
+    {
+        if (_tracerHistoryCard != null)
+            _tracerHistoryCard.Visible = _showTracerHistorySetting;
+
+        CallDeferred(nameof(SyncPanelShadowToPanel));
+    }
+
     private void ConnectControlSignals()
     {
+        if (_panel != null)
+            _panel.Resized += OnPanelLayoutChanged;
+        if (_rootControl != null)
+            _rootControl.Resized += OnPanelLayoutChanged;
+
         _mainMenuButton.Pressed += OnMainMenuPressed;
         _saveButton.Pressed += OnSavePressed;
         _closeButton.Pressed += OnClosePressed;
@@ -219,6 +286,8 @@ public partial class SettingsPanel : CanvasLayer
         _cameraDistanceValue.ValueChanged += OnCameraDistanceValueChanged;
         _cameraDelaySlider.ValueChanged += OnCameraDelaySliderChanged;
         _cameraDelayValue.ValueChanged += OnCameraDelayValueChanged;
+        _tracerHistorySlider.ValueChanged += OnTracerHistorySliderChanged;
+        _tracerHistoryValue.ValueChanged += OnTracerHistoryValueChanged;
         _tcpPortValue.ValueChanged += OnTcpPortValueChanged;
         _shotRecordingCheck.Toggled += OnShotRecordingToggled;
         _shotRecordingBrowseButton.Pressed += OnShotRecordingBrowsePressed;
@@ -227,6 +296,11 @@ public partial class SettingsPanel : CanvasLayer
 
     private void DisconnectControlSignals()
     {
+        if (_panel != null)
+            _panel.Resized -= OnPanelLayoutChanged;
+        if (_rootControl != null)
+            _rootControl.Resized -= OnPanelLayoutChanged;
+
         if (_mainMenuButton != null)
             _mainMenuButton.Pressed -= OnMainMenuPressed;
         if (_saveButton != null)
@@ -252,6 +326,10 @@ public partial class SettingsPanel : CanvasLayer
             _cameraDelaySlider.ValueChanged -= OnCameraDelaySliderChanged;
         if (_cameraDelayValue != null)
             _cameraDelayValue.ValueChanged -= OnCameraDelayValueChanged;
+        if (_tracerHistorySlider != null)
+            _tracerHistorySlider.ValueChanged -= OnTracerHistorySliderChanged;
+        if (_tracerHistoryValue != null)
+            _tracerHistoryValue.ValueChanged -= OnTracerHistoryValueChanged;
         if (_tcpPortValue != null)
             _tcpPortValue.ValueChanged -= OnTcpPortValueChanged;
         if (_shotRecordingCheck != null)
@@ -264,28 +342,32 @@ public partial class SettingsPanel : CanvasLayer
 
     private void ConnectSettingSignals()
     {
-        if (_appSettings == null)
-            return;
+        if (_appSettings != null)
+        {
+            _playerNameSetting = _appSettings.PlayerName;
+            _testShotsSetting = _appSettings.TestShotsEnabled;
+            _resolutionSetting = _appSettings.DisplayResolutionPreset;
+            _fullscreenSetting = _appSettings.DisplayFullscreen;
+            _cameraDistanceSetting = _appSettings.CameraOrbitDistance;
+            _cameraDelaySetting = _appSettings.CameraFollowDelaySeconds;
+            _tcpPortSetting = _appSettings.TcpPort;
+            _shotRecordingEnabledSetting = _appSettings.ShotRecordingEnabled;
+            _shotRecordingPathSetting = _appSettings.ShotRecordingPath;
 
-        _playerNameSetting = _appSettings.PlayerName;
-        _testShotsSetting = _appSettings.TestShotsEnabled;
-        _resolutionSetting = _appSettings.DisplayResolutionPreset;
-        _fullscreenSetting = _appSettings.DisplayFullscreen;
-        _cameraDistanceSetting = _appSettings.CameraOrbitDistance;
-        _cameraDelaySetting = _appSettings.CameraFollowDelaySeconds;
-        _tcpPortSetting = _appSettings.TcpPort;
-        _shotRecordingEnabledSetting = _appSettings.ShotRecordingEnabled;
-        _shotRecordingPathSetting = _appSettings.ShotRecordingPath;
+            _playerNameSetting.SettingChanged += OnAnySettingChanged;
+            _testShotsSetting.SettingChanged += OnAnySettingChanged;
+            _resolutionSetting.SettingChanged += OnAnySettingChanged;
+            _fullscreenSetting.SettingChanged += OnAnySettingChanged;
+            _cameraDistanceSetting.SettingChanged += OnAnySettingChanged;
+            _cameraDelaySetting.SettingChanged += OnAnySettingChanged;
+            _tcpPortSetting.SettingChanged += OnAnySettingChanged;
+            _shotRecordingEnabledSetting.SettingChanged += OnAnySettingChanged;
+            _shotRecordingPathSetting.SettingChanged += OnAnySettingChanged;
+        }
 
-        _playerNameSetting.SettingChanged += OnAnySettingChanged;
-        _testShotsSetting.SettingChanged += OnAnySettingChanged;
-        _resolutionSetting.SettingChanged += OnAnySettingChanged;
-        _fullscreenSetting.SettingChanged += OnAnySettingChanged;
-        _cameraDistanceSetting.SettingChanged += OnAnySettingChanged;
-        _cameraDelaySetting.SettingChanged += OnAnySettingChanged;
-        _tcpPortSetting.SettingChanged += OnAnySettingChanged;
-        _shotRecordingEnabledSetting.SettingChanged += OnAnySettingChanged;
-        _shotRecordingPathSetting.SettingChanged += OnAnySettingChanged;
+        _shotTracerCountSetting = _gameSettings?.ShotTracerCount;
+        if (_shotTracerCountSetting != null)
+            _shotTracerCountSetting.SettingChanged += OnAnySettingChanged;
     }
 
     private void DisconnectSettingSignals()
@@ -308,6 +390,8 @@ public partial class SettingsPanel : CanvasLayer
             _shotRecordingEnabledSetting.SettingChanged -= OnAnySettingChanged;
         if (_shotRecordingPathSetting != null)
             _shotRecordingPathSetting.SettingChanged -= OnAnySettingChanged;
+        if (_shotTracerCountSetting != null)
+            _shotTracerCountSetting.SettingChanged -= OnAnySettingChanged;
     }
 
     private void OnAnySettingChanged(Variant _value)
@@ -317,41 +401,50 @@ public partial class SettingsPanel : CanvasLayer
 
     private void RefreshControlsFromSettings()
     {
-        if (_appSettings == null)
-            return;
-
         _isSyncingControls = true;
 
-        _playerNameInput.Text = SanitizePlayerName(_appSettings.PlayerName.Value.ToString());
-        _testShotsCheck.ButtonPressed = (bool)_appSettings.TestShotsEnabled.Value;
+        if (_appSettings != null)
+        {
+            _playerNameInput.Text = SanitizePlayerName(_appSettings.PlayerName.Value.ToString());
+            _testShotsCheck.ButtonPressed = (bool)_appSettings.TestShotsEnabled.Value;
 
-        string preset = _appSettings.DisplayResolutionPreset.Value.ToString();
-        if (string.IsNullOrWhiteSpace(preset))
-            preset = FallbackResolutionPreset;
-        SelectOrAddResolutionPreset(preset);
+            string preset = _appSettings.DisplayResolutionPreset.Value.ToString();
+            if (string.IsNullOrWhiteSpace(preset))
+                preset = FallbackResolutionPreset;
+            SelectOrAddResolutionPreset(preset);
 
-        _fullscreenCheck.ButtonPressed = (bool)_appSettings.DisplayFullscreen.Value;
+            _fullscreenCheck.ButtonPressed = (bool)_appSettings.DisplayFullscreen.Value;
 
-        float cameraDistanceUnits = (float)_appSettings.CameraOrbitDistance.Value;
-        float cameraDistanceFeet = UnitsToFeet(cameraDistanceUnits);
-        int cameraDistanceDisplayFeet = Mathf.RoundToInt(cameraDistanceFeet);
-        _cameraDistanceSlider.Value = cameraDistanceFeet;
-        _cameraDistanceValue.Value = cameraDistanceFeet;
-        _cameraDistanceHelper.Text = $"Distance from ball: {cameraDistanceDisplayFeet} ft";
+            float cameraDistanceUnits = (float)_appSettings.CameraOrbitDistance.Value;
+            float cameraDistanceFeet = UnitsToFeet(cameraDistanceUnits);
+            int cameraDistanceDisplayFeet = Mathf.RoundToInt(cameraDistanceFeet);
+            _cameraDistanceSlider.Value = cameraDistanceFeet;
+            _cameraDistanceValue.Value = cameraDistanceFeet;
+            _cameraDistanceHelper.Text = $"Distance from ball: {cameraDistanceDisplayFeet} ft";
 
-        float cameraDelay = (float)_appSettings.CameraFollowDelaySeconds.Value;
-        _cameraDelaySlider.Value = cameraDelay;
-        _cameraDelayValue.Value = cameraDelay;
-        _cameraDelayHelper.Text = $"Follow starts after {cameraDelay:0.00} seconds";
+            float cameraDelay = (float)_appSettings.CameraFollowDelaySeconds.Value;
+            _cameraDelaySlider.Value = cameraDelay;
+            _cameraDelayValue.Value = cameraDelay;
+            _cameraDelayHelper.Text = $"Follow starts after {cameraDelay:0.00} seconds";
 
-        int tcpPort = (int)_appSettings.TcpPort.Value;
-        _tcpPortValue.Value = tcpPort;
+            int tcpPort = (int)_appSettings.TcpPort.Value;
+            _tcpPortValue.Value = tcpPort;
 
-        _shotRecordingCheck.ButtonPressed = (bool)_appSettings.ShotRecordingEnabled.Value;
-        _shotRecordingPathInput.Text = _appSettings.ShotRecordingPath.Value.ToString();
-        UpdateShotRecordingHelper();
+            _shotRecordingCheck.ButtonPressed = (bool)_appSettings.ShotRecordingEnabled.Value;
+            _shotRecordingPathInput.Text = _appSettings.ShotRecordingPath.Value.ToString();
+            UpdateShotRecordingHelper();
+        }
+
+        if (_shotTracerCountSetting != null)
+        {
+            int tracerCount = Mathf.RoundToInt((float)_shotTracerCountSetting.Value);
+            _tracerHistorySlider.Value = tracerCount;
+            _tracerHistoryValue.Value = tracerCount;
+            UpdateTracerHistoryHelper(tracerCount);
+        }
 
         SyncPanelsGridFromPanelState();
+        ApplyTracerHistoryVisibility();
 
         _isSyncingControls = false;
     }
@@ -394,6 +487,11 @@ public partial class SettingsPanel : CanvasLayer
     private void OnClosePressed()
     {
         HidePanel();
+    }
+
+    private void OnPanelLayoutChanged()
+    {
+        SyncPanelShadowToPanel();
     }
 
     private void OnPlayerNameTextSubmitted(string text)
@@ -473,6 +571,22 @@ public partial class SettingsPanel : CanvasLayer
         _appSettings.CameraFollowDelaySeconds.SetValue((float)value);
     }
 
+    private void OnTracerHistorySliderChanged(double value)
+    {
+        if (_isSyncingControls || _shotTracerCountSetting == null)
+            return;
+
+        _shotTracerCountSetting.SetValue(Mathf.RoundToInt((float)value));
+    }
+
+    private void OnTracerHistoryValueChanged(double value)
+    {
+        if (_isSyncingControls || _shotTracerCountSetting == null)
+            return;
+
+        _shotTracerCountSetting.SetValue(Mathf.RoundToInt((float)value));
+    }
+
     private void OnTcpPortValueChanged(double value)
     {
         if (_isSyncingControls || _appSettings == null)
@@ -511,6 +625,19 @@ public partial class SettingsPanel : CanvasLayer
             _shotRecordingHelper.Text = $"{_shotRecordingService.CurrentSessionName}: {_shotRecordingService.ShotCount} shots recorded";
         else
             _shotRecordingHelper.Text = "Not recording";
+    }
+
+    private void UpdateTracerHistoryHelper(int tracerCount)
+    {
+        if (_tracerHistoryHelper == null)
+            return;
+
+        if (tracerCount <= 0)
+            _tracerHistoryHelper.Text = "No tracer history retained.";
+        else if (tracerCount == 1)
+            _tracerHistoryHelper.Text = "Retains the latest tracer in Range.";
+        else
+            _tracerHistoryHelper.Text = $"Retains the latest {tracerCount} tracers in Range.";
     }
 
     private void SetActiveTab(SettingsTab tab)
@@ -624,6 +751,15 @@ public partial class SettingsPanel : CanvasLayer
     private static float FeetToUnits(float feet)
     {
         return feet / FeetPerCameraDistanceUnit;
+    }
+
+    private void SyncPanelShadowToPanel()
+    {
+        if (_panel == null || _panelShadow == null)
+            return;
+
+        _panelShadow.Position = _panel.Position - new Vector2(PanelShadowPaddingX, PanelShadowPaddingY);
+        _panelShadow.Size = _panel.Size + new Vector2(PanelShadowPaddingX * 2.0f, PanelShadowPaddingY * 2.0f);
     }
 
     private void CreatePanelToggleIcons()

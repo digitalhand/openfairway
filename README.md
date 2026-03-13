@@ -22,6 +22,7 @@ YouTube Video [Demo of OpenFairway v1.0.2](https://youtu.be/IYSF5w6ROzo) (update
 - [Installation](#installation)
 - [Quick Start](#quick-start)
 - [Camera Updates (Hole Scene)](#camera-updates-hole-scene)
+- [Range Mode (Driving Range)](#range-mode-driving-range)
 - [Marker Controls](#marker-controls)
 - [Keyboard Shortcuts](#keyboard-shortcuts)
 - [Hole HUD Reusable Components](#hole-hud-reusable-components)
@@ -128,6 +129,16 @@ The primary gameplay scene (`res://courses/airways_fresno/hole_1/hole_1.tscn`) u
 - On ball rest, camera follow is frozen, then camera resets behind the current lie after the configured reset delay.
 
 Keyboard controls are listed in [Keyboard Shortcuts](#keyboard-shortcuts).
+
+## Range Mode (Driving Range)
+
+The main menu `RANGE` tile now loads `res://courses/range.tscn` as a dedicated practice range scene.
+
+- Reuses the same gameplay stack as hole scenes: ball physics, shot tracer, camera rig, data HUD, and settings HUD.
+- Auto-reset is enforced for range shots after the ball comes to rest.
+- Camera behavior matches hole flow: follow on launch/flight, then tween back after the configured reset timer.
+- Range fairway coverage is extended to approximately `400 yds` downrange by `600 yds` wide.
+- A black-and-white checker style is applied to the range fairway mesh for visibility.
 
 ## Marker Controls
 

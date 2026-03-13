@@ -29,7 +29,7 @@ public partial class GameSettings : SettingCollector
         DragScale = new Setting(1.0f, 0.5f, 1.5f);
         LiftScale = new Setting(1.0f, 0.8f, 2.0f);
         SurfaceType = new Setting((int)PhysicsEnums.SurfaceType.Fairway);
-        ShotTracerCount = new Setting(1, 0, 4);
+        ShotTracerCount = new Setting(2, 0, 5);
 
         Settings = new Dictionary<string, Setting>
         {

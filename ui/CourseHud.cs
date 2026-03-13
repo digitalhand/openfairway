@@ -26,6 +26,8 @@ public partial class CourseHud : Control
     private Label _holeNumberLabel;
     private Label _parHeaderLabel;
     private Label _yardageHeaderLabel;
+    private Control _courseMetaBar;
+    private Control _courseMetaSpacer;
     private Label _playerNameLabel;
     private Label _shotLabel;
     private Label _targetYardageLabel;
@@ -79,6 +81,8 @@ public partial class CourseHud : Control
         _holeNumberLabel = GetNode<Label>("OverlayLayer/CourseHeaderCard/HoleBox/HoleNumberLabel");
         _parHeaderLabel = GetNode<Label>("OverlayLayer/CourseHeaderCard/InfoBlock/CourseMetaBar/MetaHBox/ParLabel");
         _yardageHeaderLabel = GetNode<Label>("OverlayLayer/CourseHeaderCard/InfoBlock/CourseMetaBar/MetaHBox/YardageLabel");
+        _courseMetaBar = GetNodeOrNull<Control>("OverlayLayer/CourseHeaderCard/InfoBlock/CourseMetaBar");
+        _courseMetaSpacer = GetNodeOrNull<Control>("OverlayLayer/CourseHeaderCard/InfoBlock/CourseMetaBar/MetaHBox/MetaSpacer");
         _playerNameLabel = GetNode<Label>("OverlayLayer/PlayerShotCard/TopBar/PlayerNameLabel");
         _shotLabel = GetNode<Label>("OverlayLayer/PlayerShotCard/BottomBar/BottomRow/ShotLabel");
         _targetYardageLabel = GetNode<Label>("OverlayLayer/PlayerShotCard/BottomBar/BottomRow/YardageLabel");
@@ -325,6 +329,27 @@ public partial class CourseHud : Control
             return;
 
         _yardageHeaderLabel.Text = $"{Mathf.Max(0, yardage)} YDS";
+    }
+
+    public void SetCourseMetaVisible(bool visible)
+    {
+        if (_courseMetaBar != null)
+            _courseMetaBar.Visible = true;
+
+        if (_parHeaderLabel != null)
+            _parHeaderLabel.Visible = visible;
+        if (_yardageHeaderLabel != null)
+            _yardageHeaderLabel.Visible = visible;
+        if (_courseMetaSpacer != null)
+            _courseMetaSpacer.Visible = visible;
+
+        if (_courseMetaBar != null)
+            _courseMetaBar.MouseFilter = Control.MouseFilterEnum.Ignore;
+    }
+
+    public void SetTracerHistorySettingVisible(bool visible)
+    {
+        _settingsPanel?.SetTracerHistorySettingVisible(visible);
     }
 
     private string FormatAngle(Variant val)

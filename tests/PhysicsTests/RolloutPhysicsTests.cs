@@ -296,6 +296,112 @@ namespace OpenFairway.Tests
 
         [Test]
         [Category("RolloutPhysics")]
+        public void SpinDragProgressiveCap_DefaultProfile_IdenticalToCurrentBehavior()
+        {
+            // Default profile has BoostMax=0, so progressive cap adds nothing.
+            // SR=0.40 at high Re should still get the standard cap of 1.20.
+            float multiplier = FlightAerodynamicsModel.GetSpinDragMultiplier(0.40f, 120000.0f, FlightProfile.Default);
+
+            Assert.That(multiplier, Is.EqualTo(1.20f).Within(0.001f),
+                "Default profile (BoostMax=0) must produce identical results to pre-change behavior.");
+        }
+
+        [Test]
+        [Category("RolloutPhysics")]
+        public void SpinDragProgressiveCap_BelowSrStart_NoBoosted()
+        {
+            // SR=0.30 is below SrStart=0.33, so boost should be zero even with BoostMax=0.15.
+            var profile = new FlightProfile { SpinDragProgressiveCapBoostMax = 0.15f };
+            float multiplier = FlightAerodynamicsModel.GetSpinDragMultiplier(0.30f, 120000.0f, profile);
+
+            Assert.That(multiplier, Is.EqualTo(1.20f).Within(0.001f),
+                "SR below progressive cap start should get no boost (carry-short wedges protected).");
+        }
+
+        [Test]
+        [Category("RolloutPhysics")]
+        public void SpinDragProgressiveCap_AboveSrStart_ExceedsFlatCap()
+        {
+            // SR=0.40 at high Re with BoostMax=0.15 should exceed the flat 1.20 cap.
+            var profile = new FlightProfile { SpinDragProgressiveCapBoostMax = 0.15f };
+            float multiplier = FlightAerodynamicsModel.GetSpinDragMultiplier(0.40f, 120000.0f, profile);
+
+            Assert.That(multiplier, Is.GreaterThan(1.20f),
+                "SR above progressive cap start should exceed the flat cap.");
+        }
+
+        [Test]
+        [Category("RolloutPhysics")]
+        public void SpinDragProgressiveCap_IsMonotonic()
+        {
+            // Progressive boost must be monotonically increasing with spin ratio.
+            var profile = new FlightProfile { SpinDragProgressiveCapBoostMax = 0.15f };
+            float atSr035 = FlightAerodynamicsModel.GetSpinDragMultiplier(0.35f, 120000.0f, profile);
+            float atSr040 = FlightAerodynamicsModel.GetSpinDragMultiplier(0.40f, 120000.0f, profile);
+            float atSr047 = FlightAerodynamicsModel.GetSpinDragMultiplier(0.47f, 120000.0f, profile);
+
+            Assert.That(atSr040, Is.GreaterThan(atSr035),
+                "SR=0.40 should have higher drag multiplier than SR=0.35.");
+            Assert.That(atSr047, Is.GreaterThan(atSr040),
+                "SR=0.47 should have higher drag multiplier than SR=0.40.");
+        }
+
+        [Test]
+        [Category("RolloutPhysics")]
+        public void MidSpinClBoost_DefaultProfile_ReturnsOne()
+        {
+            float boost = FlightAerodynamicsModel.GetMidSpinClBoost(0.22f, FlightProfile.Default);
+
+            Assert.That(boost, Is.EqualTo(1.0f).Within(0.0001f),
+                "Default profile (MidSpinClBoostMax=0) must return 1.0 (no boost).");
+        }
+
+        [Test]
+        [Category("RolloutPhysics")]
+        public void MidSpinClBoost_BellPeaksNearMidpoint()
+        {
+            var profile = new FlightProfile { MidSpinClBoostMax = 0.10f };
+            float boost = FlightAerodynamicsModel.GetMidSpinClBoost(0.225f, profile);
+
+            Assert.That(boost, Is.InRange(1.09f, 1.10f),
+                "Bell should peak near 1.10 at midpoint of [0.10, 0.35].");
+        }
+
+        [Test]
+        [Category("RolloutPhysics")]
+        public void MidSpinClBoost_BelowSrStart_NoBoost()
+        {
+            var profile = new FlightProfile { MidSpinClBoostMax = 0.10f };
+            float boost = FlightAerodynamicsModel.GetMidSpinClBoost(0.05f, profile);
+
+            Assert.That(boost, Is.EqualTo(1.0f).Within(0.0001f),
+                "Drivers (SR below SrStart) should get zero boost.");
+        }
+
+        [Test]
+        [Category("RolloutPhysics")]
+        public void MidSpinClBoost_AboveSrEnd_NoBoost()
+        {
+            var profile = new FlightProfile { MidSpinClBoostMax = 0.10f };
+            float boost = FlightAerodynamicsModel.GetMidSpinClBoost(0.45f, profile);
+
+            Assert.That(boost, Is.EqualTo(1.0f).Within(0.0001f),
+                "Wedges (SR above SrEnd) should get zero boost.");
+        }
+
+        [Test]
+        [Category("RolloutPhysics")]
+        public void MidSpinClBoost_Shot9Regime_GetsNearFullBoost()
+        {
+            var profile = new FlightProfile { MidSpinClBoostMax = 0.10f };
+            float boost = FlightAerodynamicsModel.GetMidSpinClBoost(0.213f, profile);
+
+            Assert.That(boost, Is.GreaterThan(1.09f),
+                "Shot 9 (SR=0.213) should get near-full boost.");
+        }
+
+        [Test]
+        [Category("RolloutPhysics")]
         public void LowLaunchLiftScale_WoodBand_GetsRecovery()
         {
             float scale = BallPhysics.GetLowLaunchLiftScale(6.7f, 0.18f, 145000.0f);

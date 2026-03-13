@@ -88,6 +88,11 @@ internal static class FlightAerodynamicsModel
         return GetHighLaunchDragScale(initialLaunchAngleDeg, spinRatio, FlightProfile.Default);
     }
 
+    internal static float GetMidSpinClBoost(float spinRatio)
+    {
+        return GetMidSpinClBoost(spinRatio, FlightProfile.Default);
+    }
+
     internal static float GetClMax(float spinRatio)
     {
         return GetClMax(spinRatio, FlightProfile.Default);
@@ -120,6 +125,7 @@ internal static class FlightAerodynamicsModel
         float highLaunchDragScale = GetHighLaunchDragScale(initialLaunchAngleDeg, spinRatio, p);
         float dragCoefficient = GetCd(reynolds, p) * spinDragMultiplier * dragScale * highLaunchDragScale;
         float liftCoefficient = GetCl(reynolds, spinRatio, p) * liftScale * lowLaunchLiftScale;
+        liftCoefficient *= GetMidSpinClBoost(spinRatio, p);
 
         return new FlightAerodynamicsSample(
             speed, spinRatio, reynolds, spinDragMultiplier,
@@ -207,6 +213,10 @@ internal static class FlightAerodynamicsModel
         float reliefWeight = highSpinWeight * reReliefWeight;
         float effectiveCap = Mathf.Lerp(p.SpinDragMultiplierMax, p.SpinDragMultiplierHighSpinMax, reliefWeight);
 
+        float progressiveBoost = p.SpinDragProgressiveCapBoostMax
+            * SafeSmoothStep01(spinRatio, p.SpinDragProgressiveCapSrStart, p.SpinDragProgressiveCapSrEnd);
+        effectiveCap += progressiveBoost;
+
         float ultraHighSpinWeight = SafeSmoothStep01(spinRatio, p.UltraHighSpinDragSrStart, p.UltraHighSpinDragSrEnd);
         effectiveCap = Mathf.Lerp(effectiveCap, p.SpinDragMultiplierUltraHighSpinMax, ultraHighSpinWeight);
 
@@ -244,6 +254,15 @@ internal static class FlightAerodynamicsModel
 
         float boostWeight = launchFactor * spinFactor;
         return Mathf.Lerp(1.0f, p.HighLaunchDragBoostMax, boostWeight);
+    }
+
+    internal static float GetMidSpinClBoost(float spinRatio, FlightProfile p)
+    {
+        if (p.MidSpinClBoostMax <= 0.0f)
+            return 1.0f;
+        float t = SafeSmoothStep01(spinRatio, p.MidSpinClBoostSrStart, p.MidSpinClBoostSrEnd);
+        float bell = t * (1.0f - t) * 4.0f;
+        return 1.0f + p.MidSpinClBoostMax * bell;
     }
 
     internal static float GetClMax(float spinRatio, FlightProfile p)

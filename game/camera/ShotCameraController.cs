@@ -317,16 +317,11 @@ public sealed class ShotCameraController
         if (offset.LengthSquared() < 0.000001f)
             offset = ComputeFollowOffset();
 
-        Vector3 ballPosition = _init.BallPositionProvider();
         _init.CameraRig.SetFollowNone();
         _init.CameraRig.SetLookAtNone();
-        _init.CameraRig.GlobalPosition = ballPosition + offset;
-        _init.CameraRig.LookAt(ballPosition + _init.Config.CameraLookOffset, Vector3.Up);
-        SyncMainCamera();
-
-        _init.CameraRig.SetSimpleFollow(_init.BallNode, offset, damping: false);
+        // Start follow from current camera transform to avoid a visible snap/reset.
+        _init.CameraRig.SetSimpleFollow(_init.BallNode, offset, damping: true);
         _init.CameraRig.SetSimpleLookAt(_init.BallNode);
-        _init.CameraRig.TeleportPosition();
         SyncMainCamera();
     }
 
