@@ -146,6 +146,16 @@ public partial class GameplayUI : MarginContainer
         return _courseHud?.GetRangeSelectedClubFileTag() ?? string.Empty;
     }
 
+    public string GetRangeSelectedClubLabel()
+    {
+        return _courseHud?.GetRangeSelectedClubLabel() ?? RangeClubCatalog.DefaultClubLabel;
+    }
+
+    public void RecordRangeDispersionShot(string clubLabel, float distanceYards, float carryYards, float offlineYards)
+    {
+        _courseHud?.RecordRangeDispersionShot(clubLabel, distanceYards, carryYards, offlineYards);
+    }
+
     public void SetMarkerCamera(Camera3D camera)
     {
         _markerHud?.SetCamera(camera);

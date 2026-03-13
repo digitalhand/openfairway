@@ -17,6 +17,7 @@ public abstract partial class HoleSceneControllerBase : Node3D
     private const float ROUND_END_SCORE_DURATION_SECONDS = 4.0f;
     private const double TARGET_HUD_REFRESH_INTERVAL_SECONDS = 0.10;
     private const float TARGET_HUD_MIN_MOVE_METERS = 0.15f;
+    private const float METERS_TO_YARDS = ShotSetup.YARDS_PER_METER;
 
     [ExportGroup("Scene Nodes")]
     [Export] public NodePath ShotTrackerPath { get; set; } = new NodePath("ShotTracker");
@@ -509,6 +510,7 @@ public abstract partial class HoleSceneControllerBase : Node3D
                 return;
 
             UpdateBallDisplay();
+            RecordRangeDispersionIfNeeded();
 
             if (IsGoalCountdownRunning)
             {
@@ -1177,6 +1179,21 @@ public abstract partial class HoleSceneControllerBase : Node3D
         var units = (PhysicsEnums.Units)(int)_gameSettings.GameUnits.Value;
         ShotDisplaySnapshot snapshot = _displaySession.Refresh(_shotTracker, units, showDistance);
         _gameplayUi?.SetData(snapshot.ToDictionary());
+    }
+
+    private void RecordRangeDispersionIfNeeded()
+    {
+        if (!ShouldShowRangeHudControls())
+            return;
+
+        if (_gameplayUi == null || _shotTracker == null)
+            return;
+
+        string clubLabel = _gameplayUi.GetRangeSelectedClubLabel();
+        float distanceYards = _shotTracker.GetDistance() * METERS_TO_YARDS;
+        float carryYards = _shotTracker.Carry * METERS_TO_YARDS;
+        float offlineYards = _shotTracker.SideDistance * METERS_TO_YARDS;
+        _gameplayUi.RecordRangeDispersionShot(clubLabel, distanceYards, carryYards, offlineYards);
     }
 
     private void InitializeShotMarkerController()
