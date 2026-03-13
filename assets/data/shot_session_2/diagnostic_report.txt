@@ -1,0 +1,136 @@
+======================================================================
+CALIBRATION DIAGNOSTIC REPORT
+======================================================================
+
+  Pass:         3
+  Moderate:     6
+  Severe:       9
+  No reference: 9
+
+----------------------------------------------------------------------
+SEVERE SHOTS (|total_diff| > 10 yd or |carry_diff| > 7 yd)
+----------------------------------------------------------------------
+
+  shot_10:
+    Status:  SEVERE
+    Pattern: CARRY_AND_ROLLOUT_LONG — Both carry and rollout overshoot
+    Regimes: high-spin-wedge
+    Diffs:   carry=+7.0, total=+13.8, rollout=+6.8, apex=-5.1ft
+
+  shot_11:
+    Status:  SEVERE
+    Pattern: CARRY_AND_ROLLOUT_LONG — Both carry and rollout overshoot
+    Regimes: high-spin-wedge
+    Diffs:   carry=+8.1, total=+12.4, rollout=+4.3, apex=-0.3ft
+
+  shot_12:
+    Status:  SEVERE
+    Pattern: CARRY_AND_ROLLOUT_LONG — Both carry and rollout overshoot
+    Regimes: high-spin-wedge, mid-iron
+    Diffs:   carry=+13.1, total=+18.4, rollout=+5.3, apex=-2.8ft
+
+  shot_15:
+    Status:  SEVERE
+    Pattern: CARRY_AND_ROLLOUT_SHORT — Both carry and rollout undershoot
+    Regimes: none
+    Diffs:   carry=-5.6, total=-17.5, rollout=-11.9, apex=-4.7ft
+
+  shot_18:
+    Status:  SEVERE
+    Pattern: CARRY_AND_ROLLOUT_LONG — Both carry and rollout overshoot
+    Regimes: high-spin-wedge, mid-iron
+    Diffs:   carry=+3.8, total=+12.8, rollout=+9.0, apex=-8.6ft
+
+  shot_21:
+    Status:  SEVERE
+    Pattern: CARRY_AND_ROLLOUT_LONG — Both carry and rollout overshoot
+    Regimes: low-launch, driver-wood
+    Diffs:   carry=+5.8, total=+28.8, rollout=+23.0, apex=+1.8ft
+
+  shot_23:
+    Status:  SEVERE
+    Pattern: CARRY_TOO_LONG — Physics carry exceeds reference
+    Regimes: low-launch, driver-wood
+    Diffs:   carry=+3.5, total=-19.6, rollout=-23.1, apex=-0.3ft
+    Suggested knobs:
+      -> Flight.ClMaxBase: decrease by 0.005 (range 0.22-0.32)
+      -> Flight.CdMin: increase by 0.005 (range 0.18-0.28)
+      -> DragScaleMultiplier: increase by 0.02 (range 0.85-1.15)
+      -> LiftScaleMultiplier: decrease by 0.02 (range 0.85-1.15)
+
+  shot_26:
+    Status:  SEVERE
+    Pattern: ROLLOUT_TOO_LONG — Carry close, total overshoots — rollout is too long
+    Regimes: high-spin-wedge
+    Diffs:   carry=+2.0, total=+11.1, rollout=+9.1, apex=-9.0ft
+    Suggested knobs:
+      -> Bounce.FlightSpinFactorMin: decrease by 0.03 (range 0.25-0.55)
+      -> Bounce.FlightSpinFactorDivisor: decrease by 500.0 (range 4000.0-12000.0)
+      -> Rollout.HighSpinMultiplierMax: increase by 0.1 (range 1.5-3.5)
+      -> Bounce.RolloutHighSpinRetention: decrease by 0.03 (range 0.55-0.85)
+
+  shot_9:
+    Status:  SEVERE
+    Pattern: CARRY_AND_ROLLOUT_SHORT — Both carry and rollout undershoot
+    Regimes: mid-iron
+    Diffs:   carry=-7.8, total=-6.7, rollout=+1.1, apex=-5.8ft
+----------------------------------------------------------------------
+MODERATE SHOTS (5-10 yd total or 3-7 yd carry)
+----------------------------------------------------------------------
+
+  shot_17:
+    Status:  MODERATE
+    Pattern: CARRY_AND_ROLLOUT_LONG — Both carry and rollout overshoot
+    Regimes: driver-wood
+    Diffs:   carry=+5.3, total=+6.9, rollout=+1.6, apex=-6.5ft
+
+  shot_19:
+    Status:  MODERATE
+    Pattern: CARRY_TOO_LONG — Physics carry exceeds reference
+    Regimes: driver-wood
+    Diffs:   carry=+3.3, total=-4.4, rollout=-7.7, apex=-0.9ft
+    Suggested knobs:
+      -> Flight.ClMaxBase: decrease by 0.005 (range 0.22-0.32)
+      -> Flight.CdMin: increase by 0.005 (range 0.18-0.28)
+      -> DragScaleMultiplier: increase by 0.02 (range 0.85-1.15)
+      -> LiftScaleMultiplier: decrease by 0.02 (range 0.85-1.15)
+
+  shot_20:
+    Status:  MODERATE
+    Pattern: CARRY_AND_ROLLOUT_LONG — Both carry and rollout overshoot
+    Regimes: driver-wood
+    Diffs:   carry=+4.7, total=+6.6, rollout=+1.9, apex=-6.7ft
+
+  shot_22:
+    Status:  MODERATE
+    Pattern: CARRY_TOO_LONG — Physics carry exceeds reference
+    Regimes: driver-wood
+    Diffs:   carry=+5.1, total=+2.6, rollout=-2.5, apex=-2.2ft
+    Suggested knobs:
+      -> Flight.ClMaxBase: decrease by 0.005 (range 0.22-0.32)
+      -> Flight.CdMin: increase by 0.005 (range 0.18-0.28)
+      -> DragScaleMultiplier: increase by 0.02 (range 0.85-1.15)
+      -> LiftScaleMultiplier: decrease by 0.02 (range 0.85-1.15)
+
+  shot_24:
+    Status:  MODERATE
+    Pattern: CARRY_TOO_LONG — Physics carry exceeds reference
+    Regimes: driver-wood
+    Diffs:   carry=+4.8, total=+3.0, rollout=-1.8, apex=-2.6ft
+    Suggested knobs:
+      -> Flight.ClMaxBase: decrease by 0.005 (range 0.22-0.32)
+      -> Flight.CdMin: increase by 0.005 (range 0.18-0.28)
+      -> DragScaleMultiplier: increase by 0.02 (range 0.85-1.15)
+      -> LiftScaleMultiplier: decrease by 0.02 (range 0.85-1.15)
+
+  shot_27:
+    Status:  MODERATE
+    Pattern: ROLLOUT_TOO_LONG — Carry close, total overshoots — rollout is too long
+    Regimes: driver-wood
+    Diffs:   carry=+1.2, total=+5.6, rollout=+4.4, apex=-6.8ft
+    Suggested knobs:
+      -> Bounce.FlightTangentialRetentionBase: decrease by 0.03 (range 0.4-0.75)
+      -> Bounce.CorBaseA: decrease by 0.02 (range 0.3-0.6)
+      -> Rollout.LowSpinMultiplierMax: increase by 0.05 (range 0.8-1.5)
+      -> Rollout.LowSpinThreshold: decrease by 100.0 (range 1000.0-2500.0)
+      -> KineticFrictionMultiplier: increase by 0.05 (range 0.7-1.3)

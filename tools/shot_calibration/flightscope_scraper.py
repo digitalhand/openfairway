@@ -8,7 +8,7 @@ https://trajectory.flightscope.com/, and captures the carry/total/apex results.
 Outputs: assets/data/SOT/flightscope_reference.json
 
 Requirements:
-    pip install selenium
+    pip install selenium undetected-chromedriver
 
 Usage:
     python tools/shot_calibration/flightscope_scraper.py
@@ -21,12 +21,14 @@ import argparse
 import json
 import math
 import os
+import random
 import re
 import shutil
 import sys
 import time
 from pathlib import Path
 
+import undetected_chromedriver as uc
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.chrome.options import Options
@@ -52,8 +54,8 @@ BROWSER_COMMAND_PREFERENCES = [
     "brave-browser",
     "brave",
 ]
-FIELD_ACTION_DELAY_SEC = 2.0
-PRE_DISPLAY_CLICK_DELAY_SEC = 2.0
+FIELD_ACTION_DELAY_SEC = 2.5
+PRE_DISPLAY_CLICK_DELAY_SEC = 3.0
 RESULT_WAIT_TIMEOUT_SEC = 15
 SUBMIT_RETRY_COUNT = 2
 RETRY_COOLDOWN_SEC = 2.0
@@ -88,6 +90,34 @@ DEFAULT_SHOTS = {
 }
 
 
+def _human_delay(base_sec: float, jitter_fraction: float = 0.4):
+    """Sleep for a randomized duration around base_sec (±jitter_fraction)."""
+    jitter = base_sec * jitter_fraction
+    time.sleep(max(0.05, base_sec + random.uniform(-jitter, jitter)))
+
+
+def _is_on_flightscope(driver) -> bool:
+    """Check if the browser is already on the FlightScope page."""
+    try:
+        current = driver.current_url or ""
+        return "trajectory.flightscope.com" in current
+    except Exception:
+        return False
+
+
+def _check_recaptcha_token_status(driver) -> str:
+    """Check if a reCAPTCHA response token is present."""
+    script = """
+    const ta = document.querySelector('textarea[name="g-recaptcha-response"]');
+    if (!ta) return 'no_textarea';
+    return ta.value ? 'token_present:' + ta.value.length : 'empty_token';
+    """
+    try:
+        return driver.execute_script(script)
+    except Exception:
+        return "check_failed"
+
+
 class SubmitBlockedError(RuntimeError):
     """Raised when a submit attempt is blocked and should not be retried."""
 
@@ -104,9 +134,9 @@ class SubmitAttemptError(RuntimeError):
         self.reason = reason
 
 
-def load_shot_data(filename: str) -> dict:
+def load_shot_data(filename: str, data_dir: Path = None) -> dict:
     """Load a shot JSON file and extract ball data fields."""
-    path = DATA_DIR / filename
+    path = (data_dir or DATA_DIR) / filename
     if not path.exists():
         print(f"  WARNING: {path} not found, skipping")
         return None
@@ -131,6 +161,17 @@ def load_shot_data(filename: str) -> dict:
         backspin = total_spin * math.cos(axis_rad)
         sidespin = total_spin * math.sin(axis_rad)
 
+    # Filter out shots outside FlightScope's useful input range
+    if speed <= 45:
+        print(f"  SKIP: {filename} — speed {speed:.1f} mph <= 45 mph")
+        return None
+    if vla <= 5:
+        print(f"  SKIP: {filename} — VLA {vla:.1f}° <= 5°")
+        return None
+    if total_spin < 1000 or total_spin > 12000:
+        print(f"  SKIP: {filename} — total spin {total_spin:.0f} RPM outside 1000–12000 range")
+        return None
+
     return {
         "speed_mph": speed,
         "vla_deg": vla,
@@ -147,8 +188,27 @@ def _log(msg):
     print(f"  [scraper] {msg}")
 
 
-def _create_driver(visible: bool):
-    """Create a Selenium ChromeDriver session (Chrome preferred, Brave fallback)."""
+def _create_driver(visible: bool, debug_port: int = None, browser_profile: str = None):
+    """Create a browser session via undetected-chromedriver.
+
+    When *debug_port* is provided, attaches to an already-running Chrome
+    instance (started with ``--remote-debugging-port=<port>``) using plain
+    Selenium instead (undetected-chromedriver cannot attach to an existing
+    browser).
+
+    When *browser_profile* is provided (non-debug-port mode), uses a persistent
+    Chrome user-data-dir so reCAPTCHA v3 can build engagement history across runs.
+    """
+    # Debug-port mode: attach to existing browser with plain Selenium
+    if debug_port:
+        chrome_options = Options()
+        chrome_options.add_experimental_option(
+            "debuggerAddress", f"localhost:{debug_port}",
+        )
+        _log(f"Attaching to existing browser on localhost:{debug_port}")
+        return webdriver.Chrome(options=chrome_options)
+
+    # Normal mode: use undetected-chromedriver to bypass bot detection
     browser_cmd, browser_path = _resolve_browser_binary()
     if browser_path is None:
         raise FileNotFoundError(
@@ -156,31 +216,21 @@ def _create_driver(visible: bool):
             f"{', '.join(BROWSER_COMMAND_PREFERENCES)}"
         )
 
-    chrome_options = Options()
-    if not visible:
-        chrome_options.add_argument("--headless=new")
-    chrome_options.add_argument("--window-size=1920,1080")
+    options = uc.ChromeOptions()
+    options.add_argument("--window-size=1920,1080")
 
-    # Anti-detection: hide automation signals to improve reCAPTCHA v3 score
-    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
-    chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
-    chrome_options.add_experimental_option("useAutomationExtension", False)
-    chrome_options.add_argument(
-        "--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-        "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+    if browser_profile:
+        profile_path = Path(browser_profile)
+        profile_path.mkdir(parents=True, exist_ok=True)
+        options.add_argument(f"--user-data-dir={profile_path}")
+        _log(f"Using persistent browser profile: {profile_path}")
+
+    _log(f"Launching undetected-chromedriver with: {browser_cmd} ({browser_path})")
+    driver = uc.Chrome(
+        options=options,
+        browser_executable_path=browser_path,
+        headless=not visible,
     )
-
-    # Enable performance logging for network diagnostics
-    chrome_options.set_capability("goog:loggingPrefs", {"performance": "ALL"})
-
-    chrome_options.binary_location = browser_path
-    _log(f"Launching browser command: {browser_cmd} ({browser_path})")
-    driver = webdriver.Chrome(options=chrome_options)
-
-    # Remove navigator.webdriver flag via CDP
-    driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
-        "source": "Object.defineProperty(navigator, 'webdriver', {get: () => undefined});"
-    })
 
     return driver
 
@@ -259,6 +309,94 @@ def _toggle_wind_off(driver):
         _log(f"Error toggling wind: {e}")
 
 
+def _warm_up_page(driver):
+    """Simulate natural browsing behavior before form interaction.
+
+    reCAPTCHA v3 builds a behavioral profile from page load. Scrolling,
+    hovering, and pausing before interacting raises the trust score.
+    """
+    _log("Warming up page with natural browsing behavior...")
+    try:
+        actions = ActionChains(driver)
+
+        # Scroll down slowly
+        driver.execute_script("window.scrollBy({top: 300, behavior: 'smooth'})")
+        _human_delay(1.0, jitter_fraction=0.3)
+
+        # Hover over a few visible elements (labels, headings)
+        hoverable_selectors = ["h1", "h2", "h3", "label", "p", "span"]
+        hoverable = []
+        for sel in hoverable_selectors:
+            hoverable.extend(
+                el for el in driver.find_elements(By.TAG_NAME, sel) if el.is_displayed()
+            )
+        if hoverable:
+            for el in random.sample(hoverable, min(len(hoverable), 3)):
+                try:
+                    actions.move_to_element(el).pause(random.uniform(0.3, 0.7)).perform()
+                    actions = ActionChains(driver)
+                except Exception:
+                    pass
+
+        _human_delay(0.8, jitter_fraction=0.4)
+
+        # Scroll back to top
+        driver.execute_script("window.scrollTo({top: 0, behavior: 'smooth'})")
+        _human_delay(0.8, jitter_fraction=0.3)
+        _log("Page warm-up complete.")
+    except Exception as e:
+        _log(f"WARNING: Page warm-up failed (non-fatal): {e}")
+
+
+def _between_shot_micro_interaction(driver):
+    """Add subtle natural behavior between shots to maintain reCAPTCHA score."""
+    try:
+        # Scroll the results table into view
+        tables = driver.find_elements(By.TAG_NAME, "table")
+        for table in tables:
+            if table.is_displayed():
+                driver.execute_script(
+                    "arguments[0].scrollIntoView({behavior:'smooth', block:'center'});",
+                    table,
+                )
+                break
+
+        # Move mouse to a random non-input element
+        non_inputs = [
+            el for el in driver.find_elements(By.CSS_SELECTOR, "h1, h2, h3, label, th, td, p")
+            if el.is_displayed()
+        ]
+        if non_inputs:
+            target = random.choice(non_inputs)
+            ActionChains(driver).move_to_element(target).pause(
+                random.uniform(0.2, 0.5)
+            ).perform()
+
+        # Small random scroll offset
+        offset = random.randint(-50, 80)
+        driver.execute_script(f"window.scrollBy({{top: {offset}, behavior: 'smooth'}})")
+    except Exception:
+        pass
+
+
+CHAR_INPUT_DELAY_SEC = 0.08
+
+
+def _type_value_char_by_char(driver, element, value: str):
+    """Clear a field and type value one character at a time.
+
+    Typing per-character with short delays ensures Vue/Vuetify reactive
+    input handlers register each keystroke, which bulk JS setter or
+    full-string send_keys can skip.
+    """
+    # Select all + delete to clear existing content
+    element.send_keys(Keys.CONTROL + "a")
+    element.send_keys(Keys.DELETE)
+    for char in str(value):
+        element.send_keys(char)
+        _human_delay(CHAR_INPUT_DELAY_SEC, jitter_fraction=0.6)
+
+
 def _fill_field_by_label(driver, label_fragment, value):
     """Find an input field by nearby label text and fill it with value."""
     label_els = driver.find_elements(By.XPATH,
@@ -274,20 +412,10 @@ def _fill_field_by_label(driver, label_fragment, value):
                 inputs = ancestor.find_elements(By.TAG_NAME, "input")
                 for inp in inputs:
                     if inp.is_displayed():
-                        inp.click()
-                        # Use native setter + dispatch events to trigger Vue/Vuetify reactivity
-                        try:
-                            driver.execute_script("""
-                                const nativeSetter = Object.getOwnPropertyDescriptor(
-                                    window.HTMLInputElement.prototype, 'value').set;
-                                nativeSetter.call(arguments[0], arguments[1]);
-                                arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
-                                arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
-                            """, inp, str(value))
-                        except Exception:
-                            # Fallback to send_keys if JS setter fails
-                            inp.send_keys(Keys.CONTROL + "a")
-                            inp.send_keys(str(value))
+                        ActionChains(driver).move_to_element(inp).pause(
+                            random.uniform(0.1, 0.3)
+                        ).click().perform()
+                        _type_value_char_by_char(driver, inp, value)
                         return True
             except Exception:
                 continue
@@ -330,13 +458,24 @@ def _set_direction_dropdown(driver, label_fragment, direction):
 
 
 def _wait_after_form_action(label):
-    """Apply fixed pacing between form actions."""
-    _log(f"Waiting {FIELD_ACTION_DELAY_SEC:.1f}s after {label}")
-    time.sleep(FIELD_ACTION_DELAY_SEC)
+    """Apply humanized pacing between form actions."""
+    _log(f"Waiting ~{FIELD_ACTION_DELAY_SEC:.1f}s after {label}")
+    _human_delay(FIELD_ACTION_DELAY_SEC)
 
 
 def _fill_shot_form(driver, shot_data):
     """Fill all form fields for a single shot."""
+    try:
+        first_input = driver.find_element(By.TAG_NAME, "input")
+        if first_input.is_displayed():
+            driver.execute_script(
+                "arguments[0].scrollIntoView({behavior:'smooth', block:'center'});",
+                first_input,
+            )
+            _human_delay(0.5, jitter_fraction=0.5)
+    except Exception:
+        pass
+
     # VLA
     if not _fill_field_by_label(driver, "Launch V", str(round(shot_data["vla_deg"], 1))):
         _log("WARNING: Could not fill Launch V field")
@@ -525,16 +664,18 @@ def _click_display_shot(driver, wait):
         if _is_recaptcha_challenge_visible(driver):
             return {"ok": False, "reason": "blocked_captcha", "detail": "captcha_challenge_visible"}
 
-        _log(f"Waiting {PRE_DISPLAY_CLICK_DELAY_SEC:.1f}s before pressing DISPLAY SHOT")
-        time.sleep(PRE_DISPLAY_CLICK_DELAY_SEC)
+        _log(f"Waiting ~{PRE_DISPLAY_CLICK_DELAY_SEC:.1f}s before pressing DISPLAY SHOT")
+        _human_delay(PRE_DISPLAY_CLICK_DELAY_SEC)
 
         # Simulate mouse movement through form inputs to improve reCAPTCHA v3 score
         try:
             actions = ActionChains(driver)
-            for inp in driver.find_elements(By.TAG_NAME, "input")[:3]:
-                if inp.is_displayed():
-                    actions.move_to_element(inp).pause(0.3)
-            actions.move_to_element(btn).pause(0.5).click().perform()
+            visible_inputs = [inp for inp in driver.find_elements(By.TAG_NAME, "input")
+                              if inp.is_displayed()]
+            sample_count = min(len(visible_inputs), random.randint(2, 4))
+            for inp in random.sample(visible_inputs, sample_count):
+                actions.move_to_element(inp).pause(random.uniform(0.15, 0.5))
+            actions.move_to_element(btn).pause(random.uniform(0.3, 0.8)).click().perform()
         except Exception:
             _log("ActionChains click failed, trying native click")
             try:
@@ -675,6 +816,12 @@ def _extract_api_requests(driver):
 
 def _capture_debug_artifacts(driver, shot_name: str, attempt: int, reason: str):
     """Capture debugging artifacts when submit did not produce results."""
+    try:
+        _ = driver.current_url
+    except Exception:
+        _log("WARNING: Browser session is stale, cannot capture debug artifacts")
+        return
+
     DEBUG_ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
     timestamp = int(time.time())
     safe_reason = re.sub(r"[^a-zA-Z0-9_-]", "_", reason)[:40]
@@ -753,40 +900,61 @@ def _build_failed_result_entry(shot_data, reason: str) -> dict:
     }
 
 
+def _save_results(results: dict, output_path: Path):
+    """Incrementally persist results after each shot."""
+    if output_path is None:
+        return
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(output_path, "w") as f:
+        json.dump(results, f, indent=2)
+
+
 def scrape_flightscope(
     shots: dict,
     visible: bool = False,
+    debug_port: int = None,
+    output_path: Path = None,
+    browser_profile: str = None,
 ) -> dict:
     """
     Automate FlightScope trajectory optimizer to get carry/total/apex.
 
-    Uses Selenium ChromeDriver with Brave.
+    When *debug_port* is set, attaches to an existing browser and leaves it
+    running after scraping completes.
     """
-    driver = _create_driver(visible)
+    driver = _create_driver(visible, debug_port=debug_port, browser_profile=browser_profile)
     wait = WebDriverWait(driver, 15)
     results = {}
     shot_statuses = {}
 
     try:
-        # Navigate once and do initial setup
-        _log(f"Navigating to {URL}")
-        driver.get(URL)
+        # Skip navigation when already on FlightScope (preserves reCAPTCHA v3 score)
+        already_on_page = debug_port and _is_on_flightscope(driver)
 
-        try:
-            wait.until(EC.presence_of_element_located((By.TAG_NAME, "input")))
-        except Exception:
-            _log("WARNING: No inputs found after 15s")
+        if already_on_page:
+            _log("Already on FlightScope — skipping navigation to preserve reCAPTCHA score")
+            try:
+                wait.until(EC.presence_of_element_located((By.TAG_NAME, "input")))
+            except Exception:
+                _log("WARNING: No inputs found, falling back to navigation")
+                already_on_page = False
 
-        time.sleep(2)
-
-        # Dismiss weather popup + toggle wind off (one-time setup)
-        _dismiss_weather_popup(driver, wait)
-        time.sleep(1)
-        _toggle_wind_off(driver)
-        time.sleep(1)
+        if not already_on_page:
+            _log(f"Navigating to {URL}")
+            driver.get(URL)
+            try:
+                wait.until(EC.presence_of_element_located((By.TAG_NAME, "input")))
+            except Exception:
+                _log("WARNING: No inputs found after 15s")
+            time.sleep(2)
+            _dismiss_weather_popup(driver, wait)
+            time.sleep(1)
+            _toggle_wind_off(driver)
+            time.sleep(1)
+            _warm_up_page(driver)
 
         # Process each shot on the same page
-        for shot_name, shot_data in shots.items():
+        for shot_index, (shot_name, shot_data) in enumerate(shots.items()):
             if shot_data is None:
                 continue
 
@@ -804,6 +972,8 @@ def scrape_flightscope(
                     _log(f"  table state before submit: {before_state}")
 
                     click_result = _click_display_shot(driver, wait)
+                    token_status = _check_recaptcha_token_status(driver)
+                    _log(f"  reCAPTCHA token: {token_status}")
                     if not click_result["ok"]:
                         failure_reason = click_result["reason"] or failure_reason
                         if failure_reason.startswith("blocked_"):
@@ -866,7 +1036,16 @@ def scrape_flightscope(
             if not table_result:
                 _log(f"ERROR: {shot_name} failed ({failure_reason})")
                 results[shot_name] = _build_failed_result_entry(shot_data, failure_reason)
+                _save_results(results, output_path)
                 shot_statuses[shot_name] = {"status": "failed", "reason": failure_reason}
+                if shot_index < len(shots) - 1:
+                    if failure_reason.startswith("blocked_"):
+                        inter_shot_sec = random.uniform(8.0, 15.0)
+                    else:
+                        inter_shot_sec = random.uniform(1.5, 4.0)
+                    _log(f"Inter-shot pause: {inter_shot_sec:.1f}s")
+                    _between_shot_micro_interaction(driver)
+                    time.sleep(inter_shot_sec)
                 continue
 
             result_entry = {
@@ -880,10 +1059,17 @@ def scrape_flightscope(
             result_entry.update(table_result)
 
             results[shot_name] = result_entry
+            _save_results(results, output_path)
             shot_statuses[shot_name] = {"status": "success"}
             _log(f"  -> carry={table_result.get('carry_yd', '?')} yd, "
                  f"total={table_result.get('total_yd', '?')} yd, "
                  f"apex={table_result.get('apex_ft', '?')} ft")
+
+            if shot_index < len(shots) - 1:
+                inter_shot_sec = random.uniform(1.5, 4.0)
+                _log(f"Inter-shot pause: {inter_shot_sec:.1f}s")
+                _between_shot_micro_interaction(driver)
+                time.sleep(inter_shot_sec)
 
         if shot_statuses:
             _log("Shot status summary:")
@@ -894,8 +1080,11 @@ def scrape_flightscope(
                     _log(f"  {shot_name}: failed({status['reason']})")
 
     finally:
-        driver.quit()
-        _log("Browser closed.")
+        if debug_port:
+            _log("Detaching from browser (leaving it running).")
+        else:
+            driver.quit()
+            _log("Browser closed.")
 
     return results
 
@@ -940,13 +1129,37 @@ def _resolve_shot_arg(shot_arg: str):
     return name, filename
 
 
+def _discover_session_shots(session_dir: Path) -> dict:
+    """Auto-discover all *.json files in a session directory as shot map."""
+    shot_map = {}
+    for path in sorted(session_dir.glob("*.json")):
+        shot_map[path.stem] = path.name
+    return shot_map
+
+
 def main():
     parser = argparse.ArgumentParser(description="Scrape FlightScope trajectory data for calibration")
     parser.add_argument("--shots", nargs="*", help="Specific shot filenames to scrape (default: all)")
+    parser.add_argument("--session", type=str, default=None, help="Session directory path (auto-discovers shots, outputs to session dir)")
     parser.add_argument("--template", action="store_true", help="Generate empty template for manual entry")
     parser.add_argument("--visible", action="store_true", help="Run with visible browser window (default: headless)")
-    parser.add_argument("--output", type=str, default=str(OUTPUT_FILE), help="Output file path")
+    parser.add_argument("--debug-port", type=int, default=None, help="Attach to existing Chrome on this debugging port (e.g. 9222)")
+    parser.add_argument(
+        "--browser-profile", type=str,
+        default=str(Path.home() / ".config/openfairway/scraper-profile"),
+        help="Chrome user-data-dir for persistent profile (default: ~/.config/openfairway/scraper-profile)",
+    )
+    parser.add_argument("--output", type=str, default=None, help="Output file path")
     args = parser.parse_args()
+
+    # Resolve session mode
+    session_dir = Path(args.session) if args.session else None
+    if session_dir and not session_dir.is_absolute():
+        session_dir = REPO_ROOT / session_dir
+    data_dir = session_dir if session_dir else DATA_DIR
+    output_path = Path(args.output) if args.output else (
+        session_dir / "flightscope_reference.json" if session_dir else OUTPUT_FILE
+    )
 
     # Build shot list
     if args.shots:
@@ -954,13 +1167,15 @@ def main():
         for shot_arg in args.shots:
             shot_name, filename = _resolve_shot_arg(shot_arg)
             shot_map[shot_name] = filename
+    elif session_dir:
+        shot_map = _discover_session_shots(session_dir)
     else:
         shot_map = DEFAULT_SHOTS
 
     # Load shot data
     shots = {}
     for name, filename in shot_map.items():
-        data = load_shot_data(filename)
+        data = load_shot_data(filename, data_dir=data_dir)
         if data:
             shots[name] = data
 
@@ -969,10 +1184,12 @@ def main():
     if args.template:
         results = create_manual_reference(shots)
     else:
-        results = scrape_flightscope(shots, visible=args.visible)
+        results = scrape_flightscope(
+            shots, visible=args.visible, debug_port=args.debug_port,
+            output_path=output_path, browser_profile=args.browser_profile,
+        )
 
     # Write output
-    output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w") as f:
         json.dump(results, f, indent=2)

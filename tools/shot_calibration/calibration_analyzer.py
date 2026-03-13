@@ -8,7 +8,10 @@ and conflict detection.
 Usage:
     python tools/shot_calibration/calibration_analyzer.py
     python tools/shot_calibration/calibration_analyzer.py --input path/to/shot_diff_analysis.csv
+    python tools/shot_calibration/calibration_analyzer.py --output /tmp/diagnostic_report.txt
     python tools/shot_calibration/calibration_analyzer.py --json
+
+By default, writes the report file (diagnostic_report.txt or .json) next to the input file.
 """
 
 import argparse
@@ -568,6 +571,11 @@ def parse_args():
         action="store_true",
         help="Output as JSON instead of text report",
     )
+    parser.add_argument(
+        "--output",
+        default=None,
+        help="Path to write report file (default: diagnostic_report.txt/.json next to input)",
+    )
     return parser.parse_args()
 
 
@@ -586,9 +594,24 @@ def main():
     result = analyze(rows)
 
     if args.json:
-        print(json.dumps(result, indent=2))
+        output_text = json.dumps(result, indent=2)
     else:
-        print(format_report(result))
+        output_text = format_report(result)
+
+    # Determine output path: explicit --output, or default next to input file
+    if args.output:
+        output_path = args.output
+    else:
+        input_dir = os.path.dirname(os.path.abspath(args.input))
+        ext = ".json" if args.json else ".txt"
+        output_path = os.path.join(input_dir, f"diagnostic_report{ext}")
+
+    print(output_text)
+    with open(output_path, "w") as f:
+        f.write(output_text)
+        if not output_text.endswith("\n"):
+            f.write("\n")
+    print(f"\nReport written to: {output_path}", file=sys.stderr)
 
 
 if __name__ == "__main__":

@@ -37,3 +37,9 @@ CLAUDE.md
 AGENTS.md
 
 *.tmp
+
+.venv
+*.env
+
+__pycache__/
+debug_runs/

@@ -4,6 +4,7 @@ Tools for comparing OpenFairway physics output against FlightScope reference dat
 
 ## Table of Contents
 
+- [Prerequisites](#prerequisites)
 - [Overview](#overview)
 - [Directory Layout](#directory-layout)
 - [Shot Data Source](#shot-data-source)
@@ -27,6 +28,11 @@ Tools for comparing OpenFairway physics output against FlightScope reference dat
   - [Quick Start (Automated)](#quick-start-automated)
   - [Manual Step-by-Step](#manual-step-by-step)
   - [Iterative Tuning Loop](#iterative-tuning-loop)
+- [Session Calibration](#session-calibration)
+  - [Session Directory Layout](#session-directory-layout)
+  - [Session Quick Start](#session-quick-start)
+  - [Session Tool Usage](#session-tool-usage)
+  - [FlightScope Scraper Workaround](#flightscope-scraper-workaround)
 - [Diagnostic Report](#diagnostic-report)
   - [Status Thresholds](#status-thresholds)
   - [Error Patterns](#error-patterns)
@@ -34,6 +40,27 @@ Tools for comparing OpenFairway physics output against FlightScope reference dat
   - [Conflict Detection](#conflict-detection)
 - [Iteration History](#iteration-history)
 - [Output Columns](#output-columns)
+
+## Prerequisites
+
+The Python calibration tools require a virtual environment with the project dependencies.
+
+```bash
+# Create and activate the venv (one-time setup)
+python -m venv .venv
+source .venv/bin/activate
+
+# Install dependencies
+pip install -r tools/shot_calibration/requirements.txt
+```
+
+Always activate the venv before running any Python calibration tool:
+
+```bash
+source .venv/bin/activate
+```
+
+The GDScript tools (`export_physics_csv.gd`, `export_physics_json.gd`) require Godot 4.5+ runtime and do not need the Python venv.
 
 ## Overview
 
@@ -54,6 +81,15 @@ assets/data/
 ├── *.json                          # Shot input files (BallData from launch monitors)
 ├── SOT/
 │   └── flightscope_reference.json  # Source-of-truth reference data
+├── shot_session_N/                 # Session directories (from ShotRecordingService)
+│   ├── shot_1.json                 # Recorded shot files
+│   ├── shot_2.json
+│   ├── physics.csv                 # Session physics export (via --session)
+│   ├── flightscope_reference.json  # Session FlightScope reference (via --session)
+│   ├── flightscope.csv             # Session FlightScope CSV (via --session)
+│   ├── shot_diff_analysis.csv      # Session diff CSV (via --session)
+│   └── history/                    # Session iteration history (via --session)
+│       └── iteration_001.json
 └── calibration/
     ├── physics.json                # Physics simulation JSON export
     ├── physics.csv                 # Physics simulation CSV export
@@ -131,7 +167,7 @@ Requires Godot runtime. Writes `res://assets/data/calibration/physics.json` by d
 
 ### `export_physics_csv.gd`
 
-Runs every shot file through the physics export path and emits a CSV. Supports profile overrides via `--profile`.
+Runs every shot file through the physics export path and emits a CSV. Supports profile overrides via `--profile` and session directories via `--session`.
 
 ```bash
 # Default export
@@ -142,6 +178,9 @@ godot --headless --script tools/shot_calibration/export_physics_csv.gd -- --outp
 
 # With profile override (no C# rebuild needed)
 godot --headless --script tools/shot_calibration/export_physics_csv.gd -- --profile=assets/data/calibration/calibration_profile.json
+
+# Export from a session directory (reads shots from session dir, writes physics.csv there)
+godot --headless --script tools/shot_calibration/export_physics_csv.gd -- --session=assets/data/shot_session_2
 ```
 
 Requires Godot runtime. Outputs columns: shot_name, filename, speed, VLA, HLA, spin, carry, total, rollout, apex, hang time, landing speed/angle, Re, spin ratio, Cd, Cl, peak Cl, carry-only.
@@ -153,6 +192,9 @@ Exports FlightScope reference values as a matching CSV. Reads shot inputs from `
 ```bash
 python tools/shot_calibration/export_flightscope_csv.py > assets/data/calibration/flightscope.csv
 python tools/shot_calibration/export_flightscope_csv.py --reference assets/data/SOT/flightscope_reference.json
+
+# Export from a session directory (reads shots + reference from session dir, outputs to stdout)
+python tools/shot_calibration/export_flightscope_csv.py --session assets/data/shot_session_2 > assets/data/shot_session_2/flightscope.csv
 ```
 
 No Godot runtime required.
@@ -175,13 +217,16 @@ Output includes `rollout_physics_yd`, `rollout_flightscope_yd`, `diff_rollout_yd
 Diagnostic analyzer that reads `shot_diff_analysis.csv` and produces a structured report with error classification, shot regime tagging, parameter suggestions, and conflict detection.
 
 ```bash
-# Text report (default)
+# Text report (default — writes diagnostic_report.txt next to input file)
 python tools/shot_calibration/calibration_analyzer.py
 
-# Custom input path
+# Custom input path (report written next to input: path/to/diagnostic_report.txt)
 python tools/shot_calibration/calibration_analyzer.py --input path/to/shot_diff_analysis.csv
 
-# JSON output (for programmatic consumption)
+# Explicit output path
+python tools/shot_calibration/calibration_analyzer.py --input path/to/shot_diff_analysis.csv --output /tmp/diagnostic_report.txt
+
+# JSON output (writes diagnostic_report.json next to input)
 python tools/shot_calibration/calibration_analyzer.py --json
 ```
 
@@ -235,6 +280,9 @@ python tools/shot_calibration/calibrate.py run --profile assets/data/calibration
 # Skip Godot export (reuse existing physics.csv)
 python tools/shot_calibration/calibrate.py run --skip-godot
 
+# Run against a session directory (all outputs in session dir)
+python tools/shot_calibration/calibrate.py run --session assets/data/shot_session_2
+
 # Show last iteration summary
 python tools/shot_calibration/calibrate.py status
 
@@ -265,11 +313,17 @@ python tools/shot_calibration/flightscope_scraper.py
 # Scrape specific shots with visible browser
 python tools/shot_calibration/flightscope_scraper.py --shots driver1.json wood1.json --visible
 
+# Scrape all shots from a session directory
+python tools/shot_calibration/flightscope_scraper.py --session assets/data/shot_session_2 --visible
+
+# Attach to an existing Chrome instance (see "FlightScope Scraper Workaround" below)
+python tools/shot_calibration/flightscope_scraper.py --session assets/data/shot_session_2 --debug-port 9222
+
 # Generate empty template for manual entry
 python tools/shot_calibration/flightscope_scraper.py --template
 ```
 
-Requires: `pip install selenium` and `brave` in your `PATH`.
+Requires the project venv (see [Prerequisites](#prerequisites)) and Chrome or Brave in your `PATH`.
 
 ### `flightscope_discover.py`
 
@@ -281,7 +335,7 @@ python tools/shot_calibration/flightscope_discover.py --fill-test-shot
 python tools/shot_calibration/flightscope_discover.py --headless
 ```
 
-Requires: `pip install selenium`
+Requires the project venv (see [Prerequisites](#prerequisites)).
 
 ## Profile Override System
 
@@ -456,6 +510,113 @@ The typical workflow cycles through:
 ```
 
 Each iteration is tracked in `assets/data/calibration/history/`. The orchestrator warns if previously-passing shots regress.
+
+## Session Calibration
+
+Session directories (`assets/data/shot_session_N/`) are created by `ShotRecordingService` during gameplay. The `--session` flag lets you run the full calibration pipeline against a session's shots, with all output kept inside that session directory.
+
+### Session Directory Layout
+
+After running a full session calibration, the session directory contains:
+
+```
+assets/data/shot_session_2/
+├── shot_1.json                 # Recorded shot inputs
+├── shot_2.json
+├── ...
+├── physics.csv                 # Physics simulation output
+├── flightscope_reference.json  # FlightScope scraped reference data
+├── flightscope.csv             # FlightScope reference CSV
+├── shot_diff_analysis.csv      # Physics vs FlightScope diff
+└── history/
+    └── iteration_001.json      # Iteration snapshot
+```
+
+### Session Quick Start
+
+```bash
+# Full pipeline: physics export + FlightScope scrape + compare + diagnose
+python tools/shot_calibration/calibrate.py run --session assets/data/shot_session_2
+
+# Skip Godot if physics.csv already exists in the session dir
+python tools/shot_calibration/calibrate.py run --session assets/data/shot_session_2 --skip-godot
+```
+
+The `run --session` command:
+1. Exports physics CSV from the session's shot files (Godot headless)
+2. Scrapes FlightScope for each session shot (via `flightscope_scraper.py --session`)
+3. Exports FlightScope reference CSV (via `export_flightscope_csv.py --session`)
+4. Compares physics vs FlightScope (via `compare_csv.py`)
+5. Runs diagnostic analysis and saves iteration to `<session>/history/`
+
+### Session Tool Usage
+
+Each tool supports `--session` independently for step-by-step use:
+
+```bash
+# Physics export only
+godot --headless --script tools/shot_calibration/export_physics_csv.gd -- --session=assets/data/shot_session_2
+
+# FlightScope scrape only (visible browser recommended)
+python tools/shot_calibration/flightscope_scraper.py --session assets/data/shot_session_2 --visible
+
+# FlightScope CSV export only (outputs to stdout, redirect to session dir)
+python tools/shot_calibration/export_flightscope_csv.py --session assets/data/shot_session_2 > assets/data/shot_session_2/flightscope.csv
+
+# Compare (default output is assets/data/calibration/; use --output for session dir)
+python tools/shot_calibration/compare_csv.py assets/data/shot_session_2/physics.csv assets/data/shot_session_2/flightscope.csv --output assets/data/shot_session_2/shot_diff_analysis.csv
+
+# Diagnose (works with any diff CSV path)
+python tools/shot_calibration/calibration_analyzer.py --input assets/data/shot_session_2/shot_diff_analysis.csv
+```
+
+Session mode auto-discovers all `*.json` files in the session directory as shots (no hardcoded shot map needed). The existing non-session workflow is unchanged — omitting `--session` uses the default `assets/data/` paths.
+
+### FlightScope Scraper Workaround
+
+The scraper uses `undetected-chromedriver` to avoid reCAPTCHA v3 bot detection. By default it creates a **persistent browser profile** at `~/.config/openfairway/scraper-profile` so reCAPTCHA can build engagement history across runs (fresh profiles score near 0.1, profiles with history score 0.7+).
+
+#### Standard Mode (persistent profile)
+
+```bash
+source .venv/bin/activate
+
+# Uses default persistent profile at ~/.config/openfairway/scraper-profile
+python tools/shot_calibration/flightscope_scraper.py --session assets/data/shot_session_2 --visible
+
+# Use a custom profile directory
+python tools/shot_calibration/flightscope_scraper.py --browser-profile /tmp/my-profile --visible
+```
+
+> **Tip:** On first use, run a few manual shots with `--visible` to warm up the profile's reCAPTCHA score before running batch scrapes.
+
+#### Debug-Port Mode (attach to existing Chrome)
+
+If the standard mode still gets blocked, use `--debug-port` to attach to a real Chrome session with an established browsing profile.
+
+**Terminal 1** — Launch Chrome with remote debugging enabled:
+
+```bash
+google-chrome --remote-debugging-port=9222 --user-data-dir=~/.config/openfairway/scraper-profile
+```
+
+Leave this running. On first use, navigate to https://trajectory.flightscope.com/ manually to establish a reCAPTCHA session.
+
+**Terminal 2** — Activate the venv and run the scraper attached to that browser:
+
+```bash
+source .venv/bin/activate
+
+# Scrape session shots using the running Chrome instance
+python tools/shot_calibration/flightscope_scraper.py --session assets/data/shot_session_2 --debug-port 9222
+
+# Or scrape the default shot set
+python tools/shot_calibration/flightscope_scraper.py --debug-port 9222
+```
+
+The scraper navigates and fills forms in the already-running browser. When it finishes, the browser stays open (it is not quit by the script). You can re-run the scraper against different sessions without restarting Chrome.
+
+> **Tip:** If using Brave instead of Chrome, replace `google-chrome` with `brave-browser` in Terminal 1. The `--user-data-dir` path can be anything — it creates a dedicated profile that won't interfere with your normal browsing.
 
 For parameters flagged as conflicting (e.g., `FlightTangentialRetentionBase` needed higher for `driver1` but lower for `wood_low_test_shot`), manual review is required. These usually indicate the physics model needs a regime-specific fix in the C# code rather than a single-value tweak.
 
