@@ -26,7 +26,7 @@ content_margin_right = 10.0
 content_margin_bottom = 4.0
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_range_controls_button"]
-bg_color = Color(0.223529, 0.223529, 0.223529, 0.8)
+bg_color = Color(0.0627451, 0.0862745, 0.12549, 0.8)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
@@ -109,7 +109,7 @@ visible = false
 custom_minimum_size = Vector2(310, 39)
 layout_mode = 2
 mouse_filter = 2
-color = Color(0.223529, 0.223529, 0.223529, 0.8)
+color = Color(0.0627451, 0.0862745, 0.12549, 0.8)
 
 [node name="RangeControlsRow" type="HBoxContainer" parent="OverlayLayer/PlayerShotCard/RangeControlsBar"]
 layout_mode = 0
@@ -145,26 +145,11 @@ max_value = 350.0
 step = 1.0
 alignment = 1
 
-[node name="ClubOption" type="OptionButton" parent="OverlayLayer/PlayerShotCard/RangeControlsBar/RangeControlsRow"]
-custom_minimum_size = Vector2(82, 0)
-layout_mode = 2
-theme_override_styles/normal = SubResource("StyleBoxFlat_range_controls_button")
-theme_override_styles/hover = SubResource("StyleBoxFlat_range_controls_button")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_range_controls_button")
-theme_override_styles/focus = SubResource("StyleBoxFlat_range_controls_button")
-theme_override_styles/disabled = SubResource("StyleBoxFlat_range_controls_button")
-theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
-theme_override_colors/font_hover_color = Color(0.96, 0.98, 1, 1)
-theme_override_colors/font_pressed_color = Color(0.96, 0.98, 1, 1)
-theme_override_colors/font_focus_color = Color(0.96, 0.98, 1, 1)
-theme_override_colors/font_disabled_color = Color(0.96, 0.98, 1, 0.6)
-theme_override_font_sizes/font_size = 14
-
 [node name="BottomBar" type="ColorRect" parent="OverlayLayer/PlayerShotCard" unique_id=53512468]
 custom_minimum_size = Vector2(310, 26)
 layout_mode = 2
 mouse_filter = 2
-color = Color(0.223529, 0.223529, 0.223529, 0.8)
+color = Color(0.0627451, 0.0862745, 0.12549, 0.8)
 
 [node name="BottomRow" type="HBoxContainer" parent="OverlayLayer/PlayerShotCard/BottomBar" unique_id=35875486]
 layout_mode = 0
@@ -178,6 +163,24 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 10
 
+[node name="TargetToggleButton" type="Button" parent="OverlayLayer/PlayerShotCard/BottomBar/BottomRow"]
+visible = false
+custom_minimum_size = Vector2(24, 0)
+layout_mode = 2
+theme_override_constants/icon_max_width = 18
+theme_override_colors/icon_normal_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_hover_color = Color(1, 1, 1, 1)
+theme_override_styles/normal = SubResource("StyleBoxEmpty_settings_menu")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_settings_menu")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_settings_menu")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_settings_menu")
+theme_override_styles/disabled = SubResource("StyleBoxEmpty_settings_menu")
+text = ""
+icon = ExtResource("10_bullseye_icon")
+icon_alignment = 1
+expand_icon = true
+
 [node name="ShotLabel" type="Label" parent="OverlayLayer/PlayerShotCard/BottomBar/BottomRow" unique_id=779704199]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
@@ -189,13 +192,22 @@ vertical_alignment = 1
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="TargetLabel" type="Label" parent="OverlayLayer/PlayerShotCard/BottomBar/BottomRow"]
+[node name="RangeClubOption" type="OptionButton" parent="OverlayLayer/PlayerShotCard/BottomBar/BottomRow"]
 visible = false
+custom_minimum_size = Vector2(76, 0)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.84, 0.9, 0.96, 0.92)
+theme_override_styles/normal = SubResource("StyleBoxEmpty_settings_menu")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_settings_menu")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_settings_menu")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_settings_menu")
+theme_override_styles/disabled = SubResource("StyleBoxEmpty_settings_menu")
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_focus_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_disabled_color = Color(0.96, 0.98, 1, 0.6)
 theme_override_font_sizes/font_size = 14
-text = "Target"
-vertical_alignment = 1
+alignment = 1
 
 [node name="YardageLabel" type="Label" parent="OverlayLayer/PlayerShotCard/BottomBar/BottomRow" unique_id=791739785]
 layout_mode = 2
@@ -215,12 +227,14 @@ vertical_alignment = 1
 visible = false
 layout_mode = 0
 offset_left = 15.0
-offset_top = 49.0
+offset_top = 79.0
 offset_right = 591.0
-offset_bottom = 111.0
+offset_bottom = 141.0
+mouse_filter = 2
 theme_override_constants/separation = 0
 
 [node name="LeftStrip" type="ColorRect" parent="OverlayLayer/RangeTopHud"]
+visible = false
 custom_minimum_size = Vector2(310, 62)
 layout_mode = 2
 mouse_filter = 2
@@ -238,7 +252,7 @@ theme_override_constants/separation = 0
 custom_minimum_size = Vector2(56, 62)
 layout_mode = 2
 mouse_filter = 2
-color = Color(0.223529, 0.223529, 0.223529, 0.86)
+color = Color(0.0627451, 0.0862745, 0.12549, 0.86)
 
 [node name="TargetToggleButton" type="Button" parent="OverlayLayer/RangeTopHud/LeftStrip/StripRow/TargetToggleTile"]
 layout_mode = 0
@@ -269,7 +283,7 @@ color = Color(0.0431373, 0.180392, 0.309804, 0.86)
 custom_minimum_size = Vector2(90, 62)
 layout_mode = 2
 mouse_filter = 2
-color = Color(0.223529, 0.223529, 0.223529, 0.86)
+color = Color(0.0627451, 0.0862745, 0.12549, 0.86)
 
 [node name="ClubOption" type="OptionButton" parent="OverlayLayer/RangeTopHud/LeftStrip/StripRow/ClubTile"]
 layout_mode = 0
@@ -383,17 +397,17 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/icon_max_width = 34
-theme_override_colors/icon_normal_color = Color(1, 1, 1, 1)
-theme_override_colors/icon_pressed_color = Color(1, 1, 1, 1)
-theme_override_colors/icon_hover_color = Color(1, 1, 1, 1)
+theme_override_colors/icon_normal_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_pressed_color = Color(0, 0, 0, 1)
+theme_override_colors/icon_hover_color = Color(0, 0, 0, 1)
 theme_override_styles/normal = SubResource("StyleBoxEmpty_settings_menu")
 theme_override_styles/hover = SubResource("StyleBoxEmpty_settings_menu")
 theme_override_styles/pressed = SubResource("StyleBoxEmpty_settings_menu")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_settings_menu")
-theme_override_colors/font_color = Color(0.113725, 0.176471, 0.239216, 1)
-theme_override_colors/font_hover_color = Color(0.113725, 0.176471, 0.239216, 1)
-theme_override_colors/font_pressed_color = Color(0.113725, 0.176471, 0.239216, 1)
-theme_override_colors/font_focus_color = Color(0.113725, 0.176471, 0.239216, 1)
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_colors/font_hover_color = Color(0, 0, 0, 1)
+theme_override_colors/font_pressed_color = Color(0, 0, 0, 1)
+theme_override_colors/font_focus_color = Color(0, 0, 0, 1)
 theme_override_font_sizes/font_size = 24
 text = ""
 horizontal_alignment = 1
@@ -430,7 +444,7 @@ vertical_alignment = 1
 custom_minimum_size = Vector2(318, 26)
 layout_mode = 2
 mouse_filter = 2
-color = Color(0.223529, 0.223529, 0.223529, 0.8)
+color = Color(0.0627451, 0.0862745, 0.12549, 0.8)
 
 [node name="MetaHBox" type="HBoxContainer" parent="OverlayLayer/CourseHeaderCard/InfoBlock/CourseMetaBar" unique_id=2144498722]
 layout_mode = 0
@@ -466,7 +480,7 @@ vertical_alignment = 1
 custom_minimum_size = Vector2(28, 62)
 layout_mode = 2
 mouse_filter = 2
-color = Color(0.223529, 0.223529, 0.223529, 0.8)
+color = Color(0.0627451, 0.0862745, 0.12549, 0.8)
 
 [node name="SettingsMenu" type="Button" parent="OverlayLayer/CourseHeaderCard/SettingsBox" unique_id=2035036215]
 layout_mode = 0

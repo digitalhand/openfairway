@@ -9,7 +9,7 @@ public partial class CourseHud : Control
     private static readonly Color ControlsThemeColor = new Color(0.0431373f, 0.180392f, 0.309804f, 0.8f);
     private static readonly Color ControlsFontColor = new Color(0.96f, 0.98f, 1.0f, 1.0f);
     private static readonly Color HoleBoxDefaultColor = new Color(1f, 1f, 1f, 1f);
-    private static readonly Color HoleBoxRangeColor = new Color(0.223529f, 0.223529f, 0.223529f, 0.8f);
+    private static readonly Color HoleBoxRangeColor = new Color(1f, 1f, 1f, 1f);
     private const string MainMenuScenePath = "res://ui/main_menu.tscn";
     private const string DefaultPlayerName = "JohnDoe";
     private const string DefaultCourseName = "Airways";
@@ -46,7 +46,6 @@ public partial class CourseHud : Control
     private SpinBox _rangeTargetStepper;
     private OptionButton _rangeClubOption;
     private Label _shotLabel;
-    private Label _targetLabel;
     private Label _targetYardageLabel;
     private Label _targetElevationLabel;
     private Label _roundEndScoreOverlay;
@@ -117,14 +116,13 @@ public partial class CourseHud : Control
         _playerShotBottomBar = GetNode<Control>("OverlayLayer/PlayerShotCard/BottomBar");
         _playerNameLabel = GetNode<Label>("OverlayLayer/PlayerShotCard/TopBar/PlayerNameLabel");
         _rangeTopHud = GetNode<Control>("OverlayLayer/RangeTopHud");
-        _rangeTargetToggleButton = GetNode<Button>("OverlayLayer/RangeTopHud/LeftStrip/StripRow/TargetToggleTile/TargetToggleButton");
+        _rangeTargetToggleButton = GetNode<Button>("OverlayLayer/PlayerShotCard/BottomBar/BottomRow/TargetToggleButton");
         _rangeBuilderPanel = GetNode<Control>("OverlayLayer/RangeTopHud/RightBuilder");
         _rangeControlsBar = GetNode<Control>("OverlayLayer/PlayerShotCard/RangeControlsBar");
         _rangeTargetSlider = GetNode<HSlider>("OverlayLayer/RangeTopHud/RightBuilder/BuilderMargin/BuilderVBox/BuilderControls/TargetSlider");
         _rangeTargetStepper = GetNode<SpinBox>("OverlayLayer/RangeTopHud/RightBuilder/BuilderMargin/BuilderVBox/BuilderControls/TargetStepper");
-        _rangeClubOption = GetNode<OptionButton>("OverlayLayer/RangeTopHud/LeftStrip/StripRow/ClubTile/ClubOption");
+        _rangeClubOption = GetNode<OptionButton>("OverlayLayer/PlayerShotCard/BottomBar/BottomRow/RangeClubOption");
         _shotLabel = GetNode<Label>("OverlayLayer/PlayerShotCard/BottomBar/BottomRow/ShotLabel");
-        _targetLabel = GetNode<Label>("OverlayLayer/PlayerShotCard/BottomBar/BottomRow/TargetLabel");
         _targetYardageLabel = GetNode<Label>("OverlayLayer/PlayerShotCard/BottomBar/BottomRow/YardageLabel");
         _targetElevationLabel = GetNode<Label>("OverlayLayer/PlayerShotCard/BottomBar/BottomRow/DeltaLabel");
         _roundEndScoreOverlay = GetNode<Label>("OverlayLayer/RoundEndScoreOverlay");
@@ -311,7 +309,7 @@ public partial class CourseHud : Control
     public void SetTargetElevationVisible(bool visible)
     {
         if (_targetElevationLabel != null)
-            _targetElevationLabel.Visible = visible;
+            _targetElevationLabel.Visible = visible && !_isRangeHudControlsVisible;
     }
 
     public void SetRangeHudControlsVisible(bool visible)
@@ -320,13 +318,19 @@ public partial class CourseHud : Control
         if (_playerShotCard != null)
             _playerShotCard.Visible = true;
         if (_playerShotBottomBar != null)
-            _playerShotBottomBar.Visible = !visible;
+            _playerShotBottomBar.Visible = true;
         if (_rangeTopHud != null)
             _rangeTopHud.Visible = visible;
         if (_rangeControlsBar != null)
             _rangeControlsBar.Visible = false;
-        if (_targetLabel != null)
-            _targetLabel.Visible = false;
+        if (_rangeTargetToggleButton != null)
+            _rangeTargetToggleButton.Visible = visible;
+        if (_rangeClubOption != null)
+            _rangeClubOption.Visible = visible;
+        if (_targetYardageLabel != null)
+            _targetYardageLabel.Visible = !visible;
+        if (_targetElevationLabel != null)
+            _targetElevationLabel.Visible = !visible;
         if (_holeNumberLabel != null)
             _holeNumberLabel.Visible = !visible;
         if (_dispersionButton != null)
