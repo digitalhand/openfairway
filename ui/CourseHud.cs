@@ -620,21 +620,11 @@ public partial class CourseHud : Control
             _rangeClubOption.ItemSelected -= OnRangeClubSelected;
     }
 
-    private void OnRangeTargetSliderChanged(double value)
-    {
-        if (_isSyncingRangeControls)
-            return;
+    private void OnRangeTargetSliderChanged(double value) => SyncRangeTargetValue(value);
 
-        _rangeTargetYards = Mathf.Clamp(Mathf.RoundToInt((float)value), _rangeTargetMinYards, _rangeTargetMaxYards);
-        _isSyncingRangeControls = true;
-        if (_rangeTargetStepper != null)
-            _rangeTargetStepper.Value = _rangeTargetYards;
-        if (_rangeTargetSlider != null)
-            _rangeTargetSlider.Value = _rangeTargetYards;
-        _isSyncingRangeControls = false;
-    }
+    private void OnRangeTargetStepperChanged(double value) => SyncRangeTargetValue(value);
 
-    private void OnRangeTargetStepperChanged(double value)
+    private void SyncRangeTargetValue(double value)
     {
         if (_isSyncingRangeControls)
             return;

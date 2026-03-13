@@ -22,6 +22,7 @@ public sealed class RolloutProfile
 
     // --- Friction blending ---
     public float FrictionBlendSpeed { get; init; } = 15.0f;
+    public float TangentVelocityThreshold { get; init; } = 0.05f;
 
     // --- Metadata ---
     public string Name { get; init; } = "Default";

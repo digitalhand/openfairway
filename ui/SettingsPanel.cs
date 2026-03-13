@@ -66,17 +66,8 @@ public partial class SettingsPanel : CanvasLayer
     private GlobalSettings _globalSettings;
     private GameSettings _gameSettings;
     private AppSettings _appSettings;
-    private Setting _playerNameSetting;
-    private Setting _testShotsSetting;
-    private Setting _resolutionSetting;
-    private Setting _fullscreenSetting;
-    private Setting _cameraDistanceSetting;
-    private Setting _cameraDelaySetting;
-    private Setting _tcpPortSetting;
-    private Setting _shotRecordingEnabledSetting;
-    private Setting _shotRecordingPathSetting;
     private Setting _shotTracerCountSetting;
-    private Setting _rangeDefaultClubSetting;
+    private readonly List<SettingSubscription> _settingSubscriptions = new();
     private ShotRecordingService _shotRecordingService;
     private bool _isSyncingControls;
     private bool _isSyncingPanelsGrid;
@@ -379,58 +370,31 @@ public partial class SettingsPanel : CanvasLayer
     {
         if (_appSettings != null)
         {
-            _playerNameSetting = _appSettings.PlayerName;
-            _testShotsSetting = _appSettings.TestShotsEnabled;
-            _resolutionSetting = _appSettings.DisplayResolutionPreset;
-            _fullscreenSetting = _appSettings.DisplayFullscreen;
-            _cameraDistanceSetting = _appSettings.CameraOrbitDistance;
-            _cameraDelaySetting = _appSettings.CameraFollowDelaySeconds;
-            _tcpPortSetting = _appSettings.TcpPort;
-            _shotRecordingEnabledSetting = _appSettings.ShotRecordingEnabled;
-            _shotRecordingPathSetting = _appSettings.ShotRecordingPath;
-            _rangeDefaultClubSetting = _appSettings.RangeDefaultClub;
-
-            _playerNameSetting.SettingChanged += OnAnySettingChanged;
-            _testShotsSetting.SettingChanged += OnAnySettingChanged;
-            _resolutionSetting.SettingChanged += OnAnySettingChanged;
-            _fullscreenSetting.SettingChanged += OnAnySettingChanged;
-            _cameraDistanceSetting.SettingChanged += OnAnySettingChanged;
-            _cameraDelaySetting.SettingChanged += OnAnySettingChanged;
-            _tcpPortSetting.SettingChanged += OnAnySettingChanged;
-            _shotRecordingEnabledSetting.SettingChanged += OnAnySettingChanged;
-            _shotRecordingPathSetting.SettingChanged += OnAnySettingChanged;
-            _rangeDefaultClubSetting.SettingChanged += OnAnySettingChanged;
+            SubscribeSetting(_appSettings.PlayerName);
+            SubscribeSetting(_appSettings.TestShotsEnabled);
+            SubscribeSetting(_appSettings.DisplayResolutionPreset);
+            SubscribeSetting(_appSettings.DisplayFullscreen);
+            SubscribeSetting(_appSettings.CameraOrbitDistance);
+            SubscribeSetting(_appSettings.CameraFollowDelaySeconds);
+            SubscribeSetting(_appSettings.TcpPort);
+            SubscribeSetting(_appSettings.ShotRecordingEnabled);
+            SubscribeSetting(_appSettings.ShotRecordingPath);
+            SubscribeSetting(_appSettings.RangeDefaultClub);
         }
 
         _shotTracerCountSetting = _gameSettings?.ShotTracerCount;
         if (_shotTracerCountSetting != null)
-            _shotTracerCountSetting.SettingChanged += OnAnySettingChanged;
+            SubscribeSetting(_shotTracerCountSetting);
+    }
+
+    private void SubscribeSetting(Setting setting)
+    {
+        _settingSubscriptions.Add(new SettingSubscription(setting, OnAnySettingChanged));
     }
 
     private void DisconnectSettingSignals()
     {
-        if (_playerNameSetting != null)
-            _playerNameSetting.SettingChanged -= OnAnySettingChanged;
-        if (_testShotsSetting != null)
-            _testShotsSetting.SettingChanged -= OnAnySettingChanged;
-        if (_resolutionSetting != null)
-            _resolutionSetting.SettingChanged -= OnAnySettingChanged;
-        if (_fullscreenSetting != null)
-            _fullscreenSetting.SettingChanged -= OnAnySettingChanged;
-        if (_cameraDistanceSetting != null)
-            _cameraDistanceSetting.SettingChanged -= OnAnySettingChanged;
-        if (_cameraDelaySetting != null)
-            _cameraDelaySetting.SettingChanged -= OnAnySettingChanged;
-        if (_tcpPortSetting != null)
-            _tcpPortSetting.SettingChanged -= OnAnySettingChanged;
-        if (_shotRecordingEnabledSetting != null)
-            _shotRecordingEnabledSetting.SettingChanged -= OnAnySettingChanged;
-        if (_shotRecordingPathSetting != null)
-            _shotRecordingPathSetting.SettingChanged -= OnAnySettingChanged;
-        if (_rangeDefaultClubSetting != null)
-            _rangeDefaultClubSetting.SettingChanged -= OnAnySettingChanged;
-        if (_shotTracerCountSetting != null)
-            _shotTracerCountSetting.SettingChanged -= OnAnySettingChanged;
+        SettingSubscription.DisposeAll(_settingSubscriptions);
     }
 
     private void OnAnySettingChanged(Variant _value)
