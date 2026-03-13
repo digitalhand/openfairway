@@ -14,6 +14,7 @@ public partial class AppSettings : SettingCollector
     public const int DefaultTcpPort = 55000;
     public const bool DefaultShotRecordingEnabled = false;
     public const string DefaultShotRecordingPath = "";
+    public const string DefaultRangeDefaultClub = RangeClubCatalog.DefaultClubLabel;
 
     public Setting PlayerName { get; private set; }
     public Setting TestShotsEnabled { get; private set; }
@@ -24,6 +25,7 @@ public partial class AppSettings : SettingCollector
     public Setting TcpPort { get; private set; }
     public Setting ShotRecordingEnabled { get; private set; }
     public Setting ShotRecordingPath { get; private set; }
+    public Setting RangeDefaultClub { get; private set; }
 
     public AppSettings()
     {
@@ -36,6 +38,7 @@ public partial class AppSettings : SettingCollector
         TcpPort = new Setting(DefaultTcpPort, 1, 65535);
         ShotRecordingEnabled = new Setting(DefaultShotRecordingEnabled);
         ShotRecordingPath = new Setting(DefaultShotRecordingPath);
+        RangeDefaultClub = new Setting(DefaultRangeDefaultClub);
 
         Settings = new Dictionary<string, Setting>
         {
@@ -47,7 +50,8 @@ public partial class AppSettings : SettingCollector
             { "camera_follow_delay_seconds", CameraFollowDelaySeconds },
             { "tcp_port", TcpPort },
             { "shot_recording_enabled", ShotRecordingEnabled },
-            { "shot_recording_path", ShotRecordingPath }
+            { "shot_recording_path", ShotRecordingPath },
+            { "range_default_club", RangeDefaultClub }
         };
     }
 }

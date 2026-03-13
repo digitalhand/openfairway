@@ -89,6 +89,7 @@ public abstract partial class HoleSceneControllerBase : Node3D
     }
 
     private bool IsGoalCountdownRunning => _goalCompletionFlow != null && _goalCompletionFlow.IsRunning;
+    protected GameplayUI GameplayUi => _gameplayUi;
 
     protected virtual void OnHoleReadyAfterInit()
     {
@@ -157,6 +158,36 @@ public abstract partial class HoleSceneControllerBase : Node3D
     protected virtual bool ShouldShowCourseMeta()
     {
         return true;
+    }
+
+    protected virtual bool ShouldShowTargetElevation()
+    {
+        return true;
+    }
+
+    protected virtual bool ShouldShowRangeHudControls()
+    {
+        return false;
+    }
+
+    protected virtual int GetRangeTargetMinYards()
+    {
+        return 5;
+    }
+
+    protected virtual int GetRangeTargetMaxYards()
+    {
+        return 350;
+    }
+
+    protected virtual int GetDefaultRangeTargetYards()
+    {
+        return 100;
+    }
+
+    protected virtual string ResolveShotRecordingClubTag()
+    {
+        return string.Empty;
     }
 
     protected virtual bool ShouldShowTracerHistorySetting()
@@ -293,6 +324,7 @@ public abstract partial class HoleSceneControllerBase : Node3D
         _gameSettings.CameraFollowMode.SettingChanged += OnCameraFollowChanged;
         _gameSettings.SurfaceType.SettingChanged += OnSurfaceChanged;
         ConfigureTracerBehavior();
+        ConfigureRangeHudBehavior();
         _ball.ResolveLieSurface = ResolveLieSurfaceAtContact;
         _ball.DescribeLieSurfaceResolution = () => _lieSurfaceResolver.DescribeLastResolution();
         _cameraOrbitDistanceSetting = _appSettings?.CameraOrbitDistance;
@@ -611,7 +643,7 @@ public abstract partial class HoleSceneControllerBase : Node3D
         UpdateBallDisplay();
         PlayDriverHitAudio();
         IncrementStrokeCount();
-        _shotRecordingService?.RecordShot(data);
+        _shotRecordingService?.RecordShot(data, ResolveShotRecordingClubTag());
 
         if (useTcpTracker)
             _shotTracker.OnTcpClientHitBall(data);
@@ -733,6 +765,32 @@ public abstract partial class HoleSceneControllerBase : Node3D
         }
 
         _gameplayUi?.SetTracerHistorySettingVisible(ShouldShowTracerHistorySetting());
+    }
+
+    private void ConfigureRangeHudBehavior()
+    {
+        if (_gameplayUi == null)
+            return;
+
+        bool showRangeHudControls = ShouldShowRangeHudControls();
+        _gameplayUi.SetRangeHudControlsVisible(showRangeHudControls);
+        _gameplayUi.SetRangeDefaultClubSettingVisible(showRangeHudControls);
+        _gameplayUi.SetTargetElevationVisible(ShouldShowTargetElevation());
+        _gameplayUi.SetMarkerElevationVisible(ShouldShowTargetElevation());
+
+        if (!showRangeHudControls)
+            return;
+
+        string defaultClub = _appSettings != null
+            ? _appSettings.RangeDefaultClub.Value.ToString()
+            : AppSettings.DefaultRangeDefaultClub;
+
+        _gameplayUi.ConfigureRangeHudControls(
+            GetRangeTargetMinYards(),
+            GetRangeTargetMaxYards(),
+            GetDefaultRangeTargetYards(),
+            defaultClub
+        );
     }
 
     private float GetCameraOrbitDistanceSetting()
@@ -1269,7 +1327,8 @@ public abstract partial class HoleSceneControllerBase : Node3D
     private void RefreshTargetHud()
     {
         UpdateTargetYardageDisplay();
-        UpdateTargetElevationDisplay();
+        if (ShouldShowTargetElevation())
+            UpdateTargetElevationDisplay();
     }
 
     private void UpdateTargetYardageDisplay()

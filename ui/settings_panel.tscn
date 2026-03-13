@@ -375,6 +375,49 @@ theme_override_colors/font_placeholder_color = Color(0.82, 0.88, 0.94, 0.6)
 theme_override_font_sizes/font_size = 18
 placeholder_text = "Enter player name"
 
+[node name="RangeDefaultClubCard" type="PanelContainer" parent="Root/Panel/Margin/Content/Tabs/Player"]
+visible = false
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="RangeDefaultClubMargin" type="MarginContainer" parent="Root/Panel/Margin/Content/Tabs/Player/RangeDefaultClubCard"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 14
+
+[node name="RangeDefaultClubRow" type="HBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Player/RangeDefaultClubCard/RangeDefaultClubMargin"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="RangeDefaultClubLabel" type="Label" parent="Root/Panel/Margin/Content/Tabs/Player/RangeDefaultClubCard/RangeDefaultClubMargin/RangeDefaultClubRow"]
+custom_minimum_size = Vector2(210, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.91, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 20
+text = "Default Club (Range)"
+vertical_alignment = 1
+
+[node name="RangeDefaultClubOption" type="OptionButton" parent="Root/Panel/Margin/Content/Tabs/Player/RangeDefaultClubCard/RangeDefaultClubMargin/RangeDefaultClubRow"]
+custom_minimum_size = Vector2(220, 0)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_field")
+theme_override_styles/hover = SubResource("StyleBoxFlat_field_focus")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_field")
+theme_override_styles/focus = SubResource("StyleBoxFlat_field_focus")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_field")
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_focus_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_disabled_color = Color(0.96, 0.98, 1, 0.6)
+theme_override_font_sizes/font_size = 18
+
+[node name="RangeDefaultClubSpacer" type="Control" parent="Root/Panel/Margin/Content/Tabs/Player/RangeDefaultClubCard/RangeDefaultClubMargin/RangeDefaultClubRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
 [node name="PlayerTestShotsCard" type="PanelContainer" parent="Root/Panel/Margin/Content/Tabs/Player"]
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_card")

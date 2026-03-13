@@ -22,6 +22,22 @@ content_margin_top = 4.0
 content_margin_right = 10.0
 content_margin_bottom = 4.0
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_range_controls_button"]
+bg_color = Color(0.0627451, 0.0862745, 0.12549, 0.8)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.25)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+content_margin_left = 10.0
+content_margin_top = 4.0
+content_margin_right = 10.0
+content_margin_bottom = 4.0
+
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_settings_menu"]
 
 [node name="CourseHud" type="Control"]
@@ -85,6 +101,62 @@ theme_override_font_sizes/font_size = 26
 text = "JesseInCode"
 vertical_alignment = 1
 
+[node name="RangeControlsBar" type="ColorRect" parent="OverlayLayer/PlayerShotCard"]
+visible = false
+custom_minimum_size = Vector2(310, 39)
+layout_mode = 2
+mouse_filter = 2
+color = Color(0.0627451, 0.0862745, 0.12549, 0.8)
+
+[node name="RangeControlsRow" type="HBoxContainer" parent="OverlayLayer/PlayerShotCard/RangeControlsBar"]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 8.0
+offset_top = 11.0
+offset_right = -8.0
+offset_bottom = -2.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 6
+
+[node name="TargetSlider" type="HSlider" parent="OverlayLayer/PlayerShotCard/RangeControlsBar/RangeControlsRow"]
+custom_minimum_size = Vector2(118, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 5.0
+max_value = 350.0
+step = 1.0
+
+[node name="TargetStepper" type="SpinBox" parent="OverlayLayer/PlayerShotCard/RangeControlsBar/RangeControlsRow"]
+custom_minimum_size = Vector2(72, 0)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_controls_button")
+theme_override_styles/focus = SubResource("StyleBoxFlat_controls_button")
+theme_override_styles/read_only = SubResource("StyleBoxFlat_controls_button")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_controls_button")
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+theme_override_font_sizes/font_size = 14
+min_value = 5.0
+max_value = 350.0
+step = 1.0
+alignment = 1
+
+[node name="ClubOption" type="OptionButton" parent="OverlayLayer/PlayerShotCard/RangeControlsBar/RangeControlsRow"]
+custom_minimum_size = Vector2(82, 0)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_range_controls_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_range_controls_button")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_range_controls_button")
+theme_override_styles/focus = SubResource("StyleBoxFlat_range_controls_button")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_range_controls_button")
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_focus_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_disabled_color = Color(0.96, 0.98, 1, 0.6)
+theme_override_font_sizes/font_size = 14
+
 [node name="BottomBar" type="ColorRect" parent="OverlayLayer/PlayerShotCard" unique_id=53512468]
 custom_minimum_size = Vector2(310, 26)
 layout_mode = 2
@@ -113,6 +185,14 @@ vertical_alignment = 1
 [node name="BottomSpacer" type="Control" parent="OverlayLayer/PlayerShotCard/BottomBar/BottomRow" unique_id=201375562]
 layout_mode = 2
 size_flags_horizontal = 3
+
+[node name="TargetLabel" type="Label" parent="OverlayLayer/PlayerShotCard/BottomBar/BottomRow"]
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.84, 0.9, 0.96, 0.92)
+theme_override_font_sizes/font_size = 14
+text = "Target"
+vertical_alignment = 1
 
 [node name="YardageLabel" type="Label" parent="OverlayLayer/PlayerShotCard/BottomBar/BottomRow" unique_id=791739785]
 layout_mode = 2

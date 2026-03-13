@@ -7,6 +7,7 @@ using Godot;
 public partial class RangeCourse : HoleSceneControllerBase
 {
     private const float YardsToMeters = 1.0f / ShotSetup.YARDS_PER_METER;
+    private Vector3 _teePoint = GolfBall.START_POSITION;
 
     [ExportGroup("Range Surface")]
     [Export] public NodePath SurfaceGridPath { get; set; } = new NodePath("SurfaceGrid");
@@ -42,6 +43,31 @@ public partial class RangeCourse : HoleSceneControllerBase
         return false;
     }
 
+    protected override bool ShouldShowTargetElevation()
+    {
+        return false;
+    }
+
+    protected override bool ShouldShowRangeHudControls()
+    {
+        return true;
+    }
+
+    protected override int GetRangeTargetMinYards()
+    {
+        return 5;
+    }
+
+    protected override int GetRangeTargetMaxYards()
+    {
+        return 350;
+    }
+
+    protected override int GetDefaultRangeTargetYards()
+    {
+        return 100;
+    }
+
     protected override bool ShouldShowTracerHistorySetting()
     {
         return true;
@@ -72,8 +98,29 @@ public partial class RangeCourse : HoleSceneControllerBase
         return false;
     }
 
+    protected override Vector3? ResolveDistanceReferencePoint()
+    {
+        int selectedYards = GameplayUi != null ? GameplayUi.GetRangeTargetYardage() : GetDefaultRangeTargetYards();
+        selectedYards = Mathf.Clamp(selectedYards, GetRangeTargetMinYards(), GetRangeTargetMaxYards());
+        float meters = selectedYards * YardsToMeters;
+
+        return _teePoint + new Vector3(meters, 0.0f, 0.0f);
+    }
+
+    protected override string ResolveShotRecordingClubTag()
+    {
+        if (GameplayUi == null)
+            return RangeClubCatalog.ToFileTag(AppSettings.DefaultRangeDefaultClub);
+
+        return GameplayUi.GetRangeSelectedClubFileTag();
+    }
+
     protected override void OnHoleReadyAfterInit()
     {
+        GolfBall ball = GetNodeOrNull<GolfBall>(BallNodePath);
+        if (ball != null)
+            _teePoint = ball.GlobalPosition;
+
         ExtendFairwaySurface();
     }
 

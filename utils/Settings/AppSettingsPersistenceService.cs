@@ -16,6 +16,7 @@ public static class AppSettingsPersistenceService
 
         SetIfPresent(config, "player", "name", appSettings.PlayerName);
         SetIfPresent(config, "player", "test_shots_enabled", appSettings.TestShotsEnabled);
+        SetIfPresent(config, "player", "range_default_club", appSettings.RangeDefaultClub);
         SetIfPresent(config, "display", "resolution_preset", appSettings.DisplayResolutionPreset);
         SetIfPresent(config, "display", "fullscreen", appSettings.DisplayFullscreen);
         SetIfPresent(config, "game", "camera_orbit_distance", appSettings.CameraOrbitDistance);
@@ -34,6 +35,7 @@ public static class AppSettingsPersistenceService
         config.SetValue("meta", "version", SaveVersion);
         config.SetValue("player", "name", appSettings.PlayerName.Value);
         config.SetValue("player", "test_shots_enabled", appSettings.TestShotsEnabled.Value);
+        config.SetValue("player", "range_default_club", appSettings.RangeDefaultClub.Value);
         config.SetValue("display", "resolution_preset", appSettings.DisplayResolutionPreset.Value);
         config.SetValue("display", "fullscreen", appSettings.DisplayFullscreen.Value);
         config.SetValue("game", "camera_orbit_distance", appSettings.CameraOrbitDistance.Value);

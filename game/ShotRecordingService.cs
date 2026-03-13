@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.Json;
+using System.Text;
 using Godot;
 using Godot.Collections;
 
@@ -39,7 +40,7 @@ public partial class ShotRecordingService : Node
             _recordingEnabledSetting.SettingChanged -= OnRecordingEnabledChanged;
     }
 
-    public void RecordShot(Dictionary ballData)
+    public void RecordShot(Dictionary ballData, string clubTag = "")
     {
         if (!_isRecording || ballData == null)
             return;
@@ -50,7 +51,11 @@ public partial class ShotRecordingService : Node
         _shotCounter++;
 
         var shotJson = BuildShotJson(ballData);
-        string filePath = Path.Combine(_currentSessionPath, $"shot_{_shotCounter}.json");
+        string safeClubTag = SanitizeClubTag(clubTag);
+        string fileName = string.IsNullOrWhiteSpace(safeClubTag)
+            ? $"shot_{_shotCounter}.json"
+            : $"shot_{safeClubTag}_{_shotCounter}.json";
+        string filePath = Path.Combine(_currentSessionPath, fileName);
 
         try
         {
@@ -61,6 +66,22 @@ public partial class ShotRecordingService : Node
         {
             PhysicsLogger.Error($"ShotRecordingService: failed to write {filePath}: {ex.Message}");
         }
+    }
+
+    private static string SanitizeClubTag(string clubTag)
+    {
+        if (string.IsNullOrWhiteSpace(clubTag))
+            return string.Empty;
+
+        string lower = clubTag.Trim().ToLowerInvariant();
+        var builder = new StringBuilder(lower.Length);
+        foreach (char c in lower)
+        {
+            if (char.IsLetterOrDigit(c) || c == '_')
+                builder.Append(c);
+        }
+
+        return builder.ToString();
     }
 
     private void OnRecordingEnabledChanged(Variant value)
