@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Globalization;
 using Godot;
 
 public partial class RangeDispersionPlot : Control
@@ -8,12 +10,18 @@ public partial class RangeDispersionPlot : Control
     private const float FixedYMaxYards = 280.0f;
     private const int HorizontalDivisions = 10;
     private const int VerticalDivisions = 6;
+    private const int MinShotsForEllipse = 3;
+    private const int EllipseSegments = 72;
+    private const float EllipseConfidenceScale95 = 2.4477468f; // sqrt(chi-square(0.95, dof=2))
 
     private static readonly Color PlotBackgroundColor = new Color(0.0627451f, 0.0862745f, 0.12549f, 0.95f);
     private static readonly Color PlotBorderColor = new Color(1.0f, 1.0f, 1.0f, 0.25f);
     private static readonly Color GridLineColor = new Color(1.0f, 1.0f, 1.0f, 0.08f);
     private static readonly Color ZeroLineColor = new Color(0.30f, 0.78f, 0.98f, 0.55f);
     private static readonly Color AxisLabelColor = new Color(0.94f, 0.98f, 1.0f, 0.9f);
+    private static readonly Color LabelBackgroundColor = new Color(0.01f, 0.02f, 0.05f, 0.92f);
+    private static readonly Color LabelBorderColor = new Color(1.0f, 1.0f, 1.0f, 0.18f);
+    private static readonly Color EllipseShadowColor = new Color(0.0f, 0.0f, 0.0f, 0.38f);
 
     private static readonly Color[] ClubPalette =
     {
@@ -35,6 +43,35 @@ public partial class RangeDispersionPlot : Control
     };
 
     private readonly List<RangeDispersionShot> _shots = new();
+    private bool _clubOverlayEnabled = true;
+
+    private sealed class ClubOverlay
+    {
+        public string ClubLabel { get; init; } = RangeClubCatalog.DefaultClubLabel;
+        public Color Color { get; init; } = Colors.White;
+        public Vector2 Center { get; init; } = Vector2.Zero;
+        public Vector2 MajorAxis { get; init; } = Vector2.Right;
+        public float MajorRadius { get; init; }
+        public float MinorRadius { get; init; }
+        public float TopY { get; init; }
+        public string LabelText { get; init; } = string.Empty;
+    }
+
+    private readonly struct ClubAverages
+    {
+        public ClubAverages(float totalYards, float carryYards, float? hlaDeg, float? spinRpm)
+        {
+            TotalYards = totalYards;
+            CarryYards = carryYards;
+            HlaDeg = hlaDeg;
+            SpinRpm = spinRpm;
+        }
+
+        public float TotalYards { get; }
+        public float CarryYards { get; }
+        public float? HlaDeg { get; }
+        public float? SpinRpm { get; }
+    }
 
     public void SetShots(IReadOnlyList<RangeDispersionShot> shots)
     {
@@ -48,6 +85,15 @@ public partial class RangeDispersionPlot : Control
             }
         }
 
+        QueueRedraw();
+    }
+
+    public void SetClubOverlayEnabled(bool enabled)
+    {
+        if (_clubOverlayEnabled == enabled)
+            return;
+
+        _clubOverlayEnabled = enabled;
         QueueRedraw();
     }
 
@@ -82,6 +128,13 @@ public partial class RangeDispersionPlot : Control
             return;
         }
 
+        List<ClubOverlay> overlays = _clubOverlayEnabled
+            ? BuildClubOverlays(plotRect)
+            : new List<ClubOverlay>();
+
+        foreach (ClubOverlay overlay in overlays)
+            DrawClubEllipse(overlay);
+
         foreach (RangeDispersionShot shot in _shots)
         {
             Vector2 point = MapShotToPlot(plotRect, shot, FixedXAbsMaxYards, FixedYMinYards, FixedYMaxYards);
@@ -89,6 +142,9 @@ public partial class RangeDispersionPlot : Control
             DrawCircle(point, 4.0f, pointColor);
             DrawArc(point, 4.0f, 0.0f, Mathf.Tau, 20, new Color(0, 0, 0, 0.45f), 1.0f, antialiased: true);
         }
+
+        if (overlays.Count > 0)
+            DrawOverlayLabels(plotRect, overlays);
     }
 
     private Rect2 BuildPlotRect()
@@ -221,5 +277,293 @@ public partial class RangeDispersionPlot : Control
         );
 
         DrawString(font, position, text, HorizontalAlignment.Left, -1.0f, fontSize, AxisLabelColor);
+    }
+
+    private List<ClubOverlay> BuildClubOverlays(Rect2 plotRect)
+    {
+        var groups = new Dictionary<string, List<RangeDispersionShot>>(StringComparer.OrdinalIgnoreCase);
+        foreach (RangeDispersionShot shot in _shots)
+        {
+            if (shot == null)
+                continue;
+
+            string clubLabel = RangeClubCatalog.NormalizeLabel(shot.ClubLabel);
+            if (!groups.TryGetValue(clubLabel, out List<RangeDispersionShot> clubShots))
+            {
+                clubShots = new List<RangeDispersionShot>();
+                groups[clubLabel] = clubShots;
+            }
+
+            clubShots.Add(shot);
+        }
+
+        var overlays = new List<ClubOverlay>();
+        foreach (string clubLabel in RangeClubCatalog.Labels)
+        {
+            if (!groups.TryGetValue(clubLabel, out List<RangeDispersionShot> clubShots))
+                continue;
+
+            if (clubShots.Count < MinShotsForEllipse)
+                continue;
+
+            var points = new List<Vector2>(clubShots.Count);
+            foreach (RangeDispersionShot shot in clubShots)
+                points.Add(MapShotToPlot(plotRect, shot, FixedXAbsMaxYards, FixedYMinYards, FixedYMaxYards));
+
+            if (!TryBuildConfidenceEllipse(points, out Vector2 center, out Vector2 majorAxis, out float majorRadius, out float minorRadius))
+                continue;
+
+            ClubAverages averages = ComputeAverages(clubShots);
+            overlays.Add(new ClubOverlay
+            {
+                ClubLabel = clubLabel,
+                Color = ResolveClubColor(clubLabel),
+                Center = center,
+                MajorAxis = majorAxis,
+                MajorRadius = majorRadius,
+                MinorRadius = minorRadius,
+                TopY = ComputeEllipseTopY(center, majorAxis, majorRadius, minorRadius),
+                LabelText = BuildLabelText(clubLabel, averages)
+            });
+        }
+
+        return overlays;
+    }
+
+    private void DrawClubEllipse(ClubOverlay overlay)
+    {
+        List<Vector2> points = BuildEllipsePolyline(overlay.Center, overlay.MajorAxis, overlay.MajorRadius, overlay.MinorRadius);
+        if (points.Count < 2)
+            return;
+
+        Color stroke = new Color(overlay.Color.R, overlay.Color.G, overlay.Color.B, 0.82f);
+        for (int i = 0; i < points.Count - 1; i++)
+        {
+            DrawLine(points[i], points[i + 1], EllipseShadowColor, 3.6f, antialiased: true);
+            DrawLine(points[i], points[i + 1], stroke, 2.4f, antialiased: true);
+        }
+    }
+
+    private void DrawOverlayLabels(Rect2 plotRect, List<ClubOverlay> overlays)
+    {
+        Font font = GetThemeDefaultFont();
+        int fontSize = Mathf.Max(9, GetThemeDefaultFontSize() - 4);
+        if (font == null)
+            return;
+
+        overlays.Sort((left, right) => left.TopY.CompareTo(right.TopY));
+        const float paddingX = 6.0f;
+        const float paddingY = 4.0f;
+        var placedRects = new List<Rect2>();
+
+        foreach (ClubOverlay overlay in overlays)
+        {
+            if (string.IsNullOrWhiteSpace(overlay.LabelText))
+                continue;
+
+            Vector2 textSize = font.GetStringSize(overlay.LabelText, HorizontalAlignment.Left, -1.0f, fontSize);
+            float rectWidth = textSize.X + (paddingX * 2.0f);
+            float rectHeight = textSize.Y + (paddingY * 2.0f);
+
+            Rect2 rect = new Rect2(
+                overlay.Center.X - rectWidth * 0.5f,
+                overlay.TopY - rectHeight - 8.0f,
+                rectWidth,
+                rectHeight);
+
+            rect.Position = new Vector2(
+                Mathf.Clamp(rect.Position.X, plotRect.Position.X + 2.0f, plotRect.End.X - rect.Size.X - 2.0f),
+                Mathf.Clamp(rect.Position.Y, plotRect.Position.Y + 2.0f, plotRect.End.Y - rect.Size.Y - 2.0f));
+
+            int safety = 0;
+            while (IntersectsAny(rect, placedRects) && safety < 20)
+            {
+                float shiftedY = rect.Position.Y - (rect.Size.Y + 4.0f);
+                rect.Position = new Vector2(rect.Position.X, Mathf.Max(plotRect.Position.Y + 2.0f, shiftedY));
+                safety++;
+            }
+
+            placedRects.Add(rect);
+            DrawRect(rect, LabelBackgroundColor, filled: true);
+            DrawRect(rect, LabelBorderColor, filled: false, width: 1.0f);
+            DrawString(
+                font,
+                new Vector2(rect.Position.X + paddingX, rect.Position.Y + paddingY + fontSize),
+                overlay.LabelText,
+                HorizontalAlignment.Left,
+                -1.0f,
+                fontSize,
+                overlay.Color.Lerp(AxisLabelColor, 0.45f)
+            );
+        }
+    }
+
+    private static bool TryBuildConfidenceEllipse(
+        List<Vector2> points,
+        out Vector2 center,
+        out Vector2 majorAxis,
+        out float majorRadius,
+        out float minorRadius)
+    {
+        center = Vector2.Zero;
+        majorAxis = Vector2.Right;
+        majorRadius = 0.0f;
+        minorRadius = 0.0f;
+
+        if (points == null || points.Count < MinShotsForEllipse)
+            return false;
+
+        float meanX = 0.0f;
+        float meanY = 0.0f;
+        foreach (Vector2 point in points)
+        {
+            meanX += point.X;
+            meanY += point.Y;
+        }
+
+        float invCount = 1.0f / points.Count;
+        meanX *= invCount;
+        meanY *= invCount;
+        center = new Vector2(meanX, meanY);
+
+        float covarianceXX = 0.0f;
+        float covarianceXY = 0.0f;
+        float covarianceYY = 0.0f;
+        foreach (Vector2 point in points)
+        {
+            float dx = point.X - meanX;
+            float dy = point.Y - meanY;
+            covarianceXX += dx * dx;
+            covarianceXY += dx * dy;
+            covarianceYY += dy * dy;
+        }
+
+        float denom = Mathf.Max(1.0f, points.Count - 1.0f);
+        covarianceXX /= denom;
+        covarianceXY /= denom;
+        covarianceYY /= denom;
+
+        float trace = covarianceXX + covarianceYY;
+        float determinantTerm = (covarianceXX - covarianceYY) * (covarianceXX - covarianceYY) + 4.0f * covarianceXY * covarianceXY;
+        float rootTerm = Mathf.Sqrt(Mathf.Max(0.0f, determinantTerm));
+        float eigenValueMax = Mathf.Max((trace + rootTerm) * 0.5f, 0.0f);
+        float eigenValueMin = Mathf.Max((trace - rootTerm) * 0.5f, 0.0f);
+        if (eigenValueMax < 0.0001f)
+            return false;
+
+        if (Mathf.Abs(covarianceXY) > 0.0001f)
+            majorAxis = new Vector2(eigenValueMax - covarianceYY, covarianceXY).Normalized();
+        else
+            majorAxis = covarianceXX >= covarianceYY ? Vector2.Right : Vector2.Down;
+
+        if (majorAxis.LengthSquared() < 0.0001f)
+            majorAxis = Vector2.Right;
+
+        majorRadius = Mathf.Max(2.0f, EllipseConfidenceScale95 * Mathf.Sqrt(eigenValueMax));
+        minorRadius = Mathf.Max(2.0f, EllipseConfidenceScale95 * Mathf.Sqrt(Mathf.Max(eigenValueMin, 0.0f)));
+        return true;
+    }
+
+    private static List<Vector2> BuildEllipsePolyline(Vector2 center, Vector2 majorAxis, float majorRadius, float minorRadius)
+    {
+        Vector2 axisA = majorAxis.Normalized();
+        Vector2 axisB = new Vector2(-axisA.Y, axisA.X);
+        var points = new List<Vector2>(EllipseSegments + 1);
+
+        for (int i = 0; i <= EllipseSegments; i++)
+        {
+            float t = (i / (float)EllipseSegments) * Mathf.Tau;
+            float cos = Mathf.Cos(t);
+            float sin = Mathf.Sin(t);
+            Vector2 point = center + (axisA * (cos * majorRadius)) + (axisB * (sin * minorRadius));
+            points.Add(point);
+        }
+
+        return points;
+    }
+
+    private static float ComputeEllipseTopY(Vector2 center, Vector2 majorAxis, float majorRadius, float minorRadius)
+    {
+        List<Vector2> ellipsePoints = BuildEllipsePolyline(center, majorAxis, majorRadius, minorRadius);
+        if (ellipsePoints.Count == 0)
+            return center.Y;
+
+        float topY = ellipsePoints[0].Y;
+        for (int i = 1; i < ellipsePoints.Count; i++)
+        {
+            if (ellipsePoints[i].Y < topY)
+                topY = ellipsePoints[i].Y;
+        }
+
+        return topY;
+    }
+
+    private static bool IntersectsAny(Rect2 rect, List<Rect2> others)
+    {
+        foreach (Rect2 other in others)
+        {
+            if (rect.Intersects(other))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static ClubAverages ComputeAverages(IReadOnlyList<RangeDispersionShot> shots)
+    {
+        if (shots == null || shots.Count == 0)
+            return new ClubAverages(0.0f, 0.0f, null, null);
+
+        float totalDistance = 0.0f;
+        float totalCarry = 0.0f;
+        float sumHla = 0.0f;
+        int hlaCount = 0;
+        float sumSpin = 0.0f;
+        int spinCount = 0;
+
+        foreach (RangeDispersionShot shot in shots)
+        {
+            totalDistance += shot.DistanceYards;
+            totalCarry += shot.CarryYards;
+
+            if (shot.HlaDeg.HasValue && IsFinite(shot.HlaDeg.Value))
+            {
+                sumHla += shot.HlaDeg.Value;
+                hlaCount++;
+            }
+
+            if (shot.TotalSpinRpm.HasValue && IsFinite(shot.TotalSpinRpm.Value))
+            {
+                sumSpin += shot.TotalSpinRpm.Value;
+                spinCount++;
+            }
+        }
+
+        float count = shots.Count;
+        return new ClubAverages(
+            totalDistance / count,
+            totalCarry / count,
+            hlaCount > 0 ? sumHla / hlaCount : null,
+            spinCount > 0 ? sumSpin / spinCount : null
+        );
+    }
+
+    private static string BuildLabelText(string clubLabel, ClubAverages averages)
+    {
+        string total = averages.TotalYards.ToString("F0", CultureInfo.InvariantCulture);
+        string carry = averages.CarryYards.ToString("F0", CultureInfo.InvariantCulture);
+        string hla = averages.HlaDeg.HasValue
+            ? averages.HlaDeg.Value.ToString("F1", CultureInfo.InvariantCulture) + "°"
+            : "N/A";
+        string spin = averages.SpinRpm.HasValue
+            ? averages.SpinRpm.Value.ToString("F0", CultureInfo.InvariantCulture)
+            : "N/A";
+
+        return $"{clubLabel}  TOT {total}y  CARRY {carry}y  HLA {hla}  SPIN {spin}";
+    }
+
+    private static bool IsFinite(float value)
+    {
+        return !float.IsNaN(value) && !float.IsInfinity(value);
     }
 }

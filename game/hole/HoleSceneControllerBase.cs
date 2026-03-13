@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Threading;
 using Godot;
 using Godot.Collections;
@@ -1193,7 +1194,48 @@ public abstract partial class HoleSceneControllerBase : Node3D
         float distanceYards = _shotTracker.GetDistance() * METERS_TO_YARDS;
         float carryYards = _shotTracker.Carry * METERS_TO_YARDS;
         float offlineYards = _shotTracker.SideDistance * METERS_TO_YARDS;
-        _gameplayUi.RecordRangeDispersionShot(clubLabel, distanceYards, carryYards, offlineYards);
+        float? hlaDeg = TryGetOptionalMetric(_shotTracker.ShotData, "HLA");
+        float? totalSpinRpm = ResolveTotalSpinRpm(_shotTracker.ShotData);
+        _gameplayUi.RecordRangeDispersionShot(clubLabel, distanceYards, carryYards, offlineYards, hlaDeg, totalSpinRpm);
+    }
+
+    private static float? ResolveTotalSpinRpm(Dictionary shotData)
+    {
+        float? totalSpin = TryGetOptionalMetric(shotData, "TotalSpin");
+        if (totalSpin.HasValue)
+            return Mathf.Abs(totalSpin.Value);
+
+        float? backSpin = TryGetOptionalMetric(shotData, "BackSpin");
+        float? sideSpin = TryGetOptionalMetric(shotData, "SideSpin");
+        if (!backSpin.HasValue && !sideSpin.HasValue)
+            return null;
+
+        float back = Mathf.Abs(backSpin ?? 0.0f);
+        float side = Mathf.Abs(sideSpin ?? 0.0f);
+        return Mathf.Sqrt(back * back + side * side);
+    }
+
+    private static float? TryGetOptionalMetric(Dictionary dictionary, string key)
+    {
+        if (dictionary == null || string.IsNullOrWhiteSpace(key) || !dictionary.ContainsKey(key))
+            return null;
+
+        Variant value = dictionary[key];
+        float parsed = value.VariantType switch
+        {
+            Variant.Type.Float => (float)value,
+            Variant.Type.Int => (int)value,
+            Variant.Type.String => float.TryParse(
+                (string)value,
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out float stringParsed)
+                ? stringParsed
+                : float.NaN,
+            _ => float.NaN
+        };
+
+        return !float.IsNaN(parsed) && !float.IsInfinity(parsed) ? parsed : null;
     }
 
     private void InitializeShotMarkerController()

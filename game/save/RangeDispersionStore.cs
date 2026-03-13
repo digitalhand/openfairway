@@ -11,13 +11,21 @@ public sealed class RangeDispersionShot
     {
     }
 
-    public RangeDispersionShot(string clubLabel, float distanceYards, float carryYards, float offlineYards)
+    public RangeDispersionShot(
+        string clubLabel,
+        float distanceYards,
+        float carryYards,
+        float offlineYards,
+        float? hlaDeg = null,
+        float? totalSpinRpm = null)
     {
         ClubLabel = RangeClubCatalog.NormalizeLabel(clubLabel);
         ClubTag = RangeClubCatalog.ToFileTag(ClubLabel);
         DistanceYards = distanceYards;
         CarryYards = carryYards;
         OfflineYards = offlineYards;
+        HlaDeg = hlaDeg;
+        TotalSpinRpm = totalSpinRpm;
         RecordedUtc = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture);
     }
 
@@ -26,6 +34,8 @@ public sealed class RangeDispersionShot
     public float DistanceYards { get; set; }
     public float CarryYards { get; set; }
     public float OfflineYards { get; set; }
+    public float? HlaDeg { get; set; }
+    public float? TotalSpinRpm { get; set; }
     public string RecordedUtc { get; set; } = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture);
 }
 
@@ -41,7 +51,8 @@ public static class RangeDispersionStore
 {
     public const string SaveDirectoryPath = "user://range_dispersion";
 
-    private const int SaveVersion = 1;
+    private const int SaveVersion = 2;
+    private const int LegacySaveVersion = 1;
     private const string FilePrefix = "range_dispersion_";
     private const string FileSuffix = ".json";
     private const string TimestampFormat = "yyyyMMdd_HHmmssfff";
@@ -120,7 +131,7 @@ public static class RangeDispersionStore
                 return null;
 
             int version = VariantToInt(root["version"], 0);
-            if (version != SaveVersion)
+            if (version < LegacySaveVersion || version > SaveVersion)
             {
                 PhysicsLogger.Info($"RangeDispersionStore: unsupported save version {version} in {safeFileName}.");
                 return null;
@@ -269,6 +280,12 @@ public static class RangeDispersionStore
                     ? DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture)
                     : shot.RecordedUtc }
             };
+
+            if (shot.HlaDeg.HasValue && IsFinite(shot.HlaDeg.Value))
+                shotDict["hla_deg"] = shot.HlaDeg.Value;
+            if (shot.TotalSpinRpm.HasValue && IsFinite(shot.TotalSpinRpm.Value))
+                shotDict["total_spin_rpm"] = shot.TotalSpinRpm.Value;
+
             shotsArray.Add(shotDict);
         }
 
@@ -310,11 +327,13 @@ public static class RangeDispersionStore
         float offlineYards = shotDict.ContainsKey("offline_yards")
             ? VariantToFloat(shotDict["offline_yards"], 0.0f)
             : 0.0f;
+        float? hlaDeg = TryVariantToFloat(shotDict, "hla_deg");
+        float? totalSpinRpm = TryVariantToFloat(shotDict, "total_spin_rpm");
         string recordedUtc = shotDict.ContainsKey("recorded_utc")
             ? shotDict["recorded_utc"].ToString()
             : string.Empty;
 
-        shot = new RangeDispersionShot(clubLabel, distanceYards, carryYards, offlineYards)
+        shot = new RangeDispersionShot(clubLabel, distanceYards, carryYards, offlineYards, hlaDeg, totalSpinRpm)
         {
             RecordedUtc = string.IsNullOrWhiteSpace(recordedUtc)
                 ? DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture)
@@ -414,5 +433,19 @@ public static class RangeDispersionStore
             Variant.Type.String => float.TryParse((string)value, NumberStyles.Float, CultureInfo.InvariantCulture, out float parsed) ? parsed : fallback,
             _ => fallback
         };
+    }
+
+    private static float? TryVariantToFloat(Dictionary dictionary, string key)
+    {
+        if (dictionary == null || string.IsNullOrWhiteSpace(key) || !dictionary.ContainsKey(key))
+            return null;
+
+        float parsed = VariantToFloat(dictionary[key], float.NaN);
+        return IsFinite(parsed) ? parsed : null;
+    }
+
+    private static bool IsFinite(float value)
+    {
+        return !float.IsNaN(value) && !float.IsInfinity(value);
     }
 }

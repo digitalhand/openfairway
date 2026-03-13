@@ -166,7 +166,13 @@ public partial class RangeDispersionPopup : CanvasLayer
         ApplyViewState();
     }
 
-    public void RecordShot(string clubLabel, float distanceYards, float carryYards, float offlineYards)
+    public void RecordShot(
+        string clubLabel,
+        float distanceYards,
+        float carryYards,
+        float offlineYards,
+        float? hlaDeg = null,
+        float? totalSpinRpm = null)
     {
         if (!_isRangeMode)
             return;
@@ -182,7 +188,7 @@ public partial class RangeDispersionPopup : CanvasLayer
         if (string.IsNullOrWhiteSpace(targetFileName))
             return;
 
-        var shot = new RangeDispersionShot(clubLabel, distanceYards, carryYards, offlineYards);
+        var shot = new RangeDispersionShot(clubLabel, distanceYards, carryYards, offlineYards, hlaDeg, totalSpinRpm);
         if (!RangeDispersionStore.AppendShot(targetFileName, shot, out RangeDispersionSession updatedSession))
             return;
 
@@ -379,6 +385,7 @@ public partial class RangeDispersionPopup : CanvasLayer
 
         _singleSummaryLabel.Text = string.Empty;
         _singleSummaryLabel.Visible = false;
+        _singlePlot.SetClubOverlayEnabled(true);
         _singlePlot.SetShots(session.Shots);
         PopulateLegend(_singleLegend, session.Shots);
     }
@@ -404,6 +411,8 @@ public partial class RangeDispersionPopup : CanvasLayer
             ? RangeDispersionStore.BuildSessionLabel(rightSession)
             : "No data";
 
+        _compareLeftPlot.SetClubOverlayEnabled(false);
+        _compareRightPlot.SetClubOverlayEnabled(false);
         _compareLeftPlot.SetShots(leftSession?.Shots);
         _compareRightPlot.SetShots(rightSession?.Shots);
         PopulateLegend(_compareLeftLegend, leftSession?.Shots);

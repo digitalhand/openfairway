@@ -151,9 +151,15 @@ public partial class GameplayUI : MarginContainer
         return _courseHud?.GetRangeSelectedClubLabel() ?? RangeClubCatalog.DefaultClubLabel;
     }
 
-    public void RecordRangeDispersionShot(string clubLabel, float distanceYards, float carryYards, float offlineYards)
+    public void RecordRangeDispersionShot(
+        string clubLabel,
+        float distanceYards,
+        float carryYards,
+        float offlineYards,
+        float? hlaDeg,
+        float? totalSpinRpm)
     {
-        _courseHud?.RecordRangeDispersionShot(clubLabel, distanceYards, carryYards, offlineYards);
+        _courseHud?.RecordRangeDispersionShot(clubLabel, distanceYards, carryYards, offlineYards, hlaDeg, totalSpinRpm);
     }
 
     public void SetMarkerCamera(Camera3D camera)

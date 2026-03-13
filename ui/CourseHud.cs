@@ -374,7 +374,13 @@ public partial class CourseHud : Control
         return RangeClubCatalog.ToFileTag(GetRangeSelectedClubLabel());
     }
 
-    public void RecordRangeDispersionShot(string clubLabel, float distanceYards, float carryYards, float offlineYards)
+    public void RecordRangeDispersionShot(
+        string clubLabel,
+        float distanceYards,
+        float carryYards,
+        float offlineYards,
+        float? hlaDeg,
+        float? totalSpinRpm)
     {
         if (!_isRangeHudControlsVisible)
             return;
@@ -386,7 +392,9 @@ public partial class CourseHud : Control
             clubLabel: string.IsNullOrWhiteSpace(clubLabel) ? GetRangeSelectedClubLabel() : clubLabel,
             distanceYards: distanceYards,
             carryYards: carryYards,
-            offlineYards: offlineYards
+            offlineYards: offlineYards,
+            hlaDeg: hlaDeg,
+            totalSpinRpm: totalSpinRpm
         );
     }
 
