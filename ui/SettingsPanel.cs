@@ -32,6 +32,8 @@ public partial class SettingsPanel : CanvasLayer
     private PanelContainer _panelShadow;
     private PanelContainer _panel;
     private LineEdit _playerNameInput;
+    private PanelContainer _rangeDefaultClubCard;
+    private OptionButton _rangeDefaultClubOption;
     private CheckBox _testShotsCheck;
     private OptionButton _resolutionOption;
     private CheckBox _fullscreenCheck;
@@ -74,11 +76,13 @@ public partial class SettingsPanel : CanvasLayer
     private Setting _shotRecordingEnabledSetting;
     private Setting _shotRecordingPathSetting;
     private Setting _shotTracerCountSetting;
+    private Setting _rangeDefaultClubSetting;
     private ShotRecordingService _shotRecordingService;
     private bool _isSyncingControls;
     private bool _isSyncingPanelsGrid;
     private GridCanvas _boundGridCanvas;
     private bool _showTracerHistorySetting;
+    private bool _showRangeDefaultClubSetting;
     private readonly List<DataPanel> _boundHudPanels = new();
     private readonly Dictionary<string, CheckBox> _panelVisibilityByName = new();
 
@@ -88,6 +92,8 @@ public partial class SettingsPanel : CanvasLayer
         _panelShadow = GetNode<PanelContainer>("Root/PanelShadow");
         _panel = GetNode<PanelContainer>("Root/Panel");
         _playerNameInput = GetNode<LineEdit>("Root/Panel/Margin/Content/Tabs/Player/PlayerCard/PlayerCardMargin/PlayerCardRow/PlayerNameInput");
+        _rangeDefaultClubCard = GetNode<PanelContainer>("Root/Panel/Margin/Content/Tabs/Player/RangeDefaultClubCard");
+        _rangeDefaultClubOption = GetNode<OptionButton>("Root/Panel/Margin/Content/Tabs/Player/RangeDefaultClubCard/RangeDefaultClubMargin/RangeDefaultClubRow/RangeDefaultClubOption");
         _testShotsCheck = GetNode<CheckBox>("Root/Panel/Margin/Content/Tabs/Player/PlayerTestShotsCard/PlayerTestShotsMargin/PlayerTestShotsRow/TestShotsCheck");
         _resolutionOption = GetNode<OptionButton>("Root/Panel/Margin/Content/Tabs/Display/DisplayResolutionCard/DisplayResolutionMargin/DisplayResolutionRow/ResolutionOption");
         _fullscreenCheck = GetNode<CheckBox>("Root/Panel/Margin/Content/Tabs/Display/DisplayResolutionCard/DisplayResolutionMargin/DisplayResolutionRow/FullscreenCheck");
@@ -129,6 +135,7 @@ public partial class SettingsPanel : CanvasLayer
 
         ConfigureDistanceControls();
         ConfigureTracerHistoryControls();
+        PopulateRangeDefaultClubOptions();
         CreatePanelToggleIcons();
         ApplyPanelToggleIcons(_testShotsCheck);
         ApplyPanelToggleIcons(_fullscreenCheck);
@@ -139,6 +146,7 @@ public partial class SettingsPanel : CanvasLayer
         ConnectSettingSignals();
         RefreshControlsFromSettings();
         ApplyTracerHistoryVisibility();
+        ApplyRangeDefaultClubVisibility();
         CallDeferred(nameof(SyncPanelShadowToPanel));
 
         Visible = false;
@@ -219,6 +227,12 @@ public partial class SettingsPanel : CanvasLayer
         ApplyTracerHistoryVisibility();
     }
 
+    public void SetRangeDefaultClubSettingVisible(bool visible)
+    {
+        _showRangeDefaultClubSetting = visible;
+        ApplyRangeDefaultClubVisibility();
+    }
+
     private void PopulateResolutionOptions()
     {
         _resolutionOption.Clear();
@@ -235,6 +249,16 @@ public partial class SettingsPanel : CanvasLayer
         _cameraDistanceValue.MinValue = CameraDistanceMinFeet;
         _cameraDistanceValue.MaxValue = CameraDistanceMaxFeet;
         _cameraDistanceValue.Step = 0.1f;
+    }
+
+    private void PopulateRangeDefaultClubOptions()
+    {
+        if (_rangeDefaultClubOption == null)
+            return;
+
+        _rangeDefaultClubOption.Clear();
+        foreach (string label in RangeClubCatalog.Labels)
+            _rangeDefaultClubOption.AddItem(label);
     }
 
     private void ConfigureTracerHistoryControls()
@@ -267,6 +291,14 @@ public partial class SettingsPanel : CanvasLayer
         CallDeferred(nameof(SyncPanelShadowToPanel));
     }
 
+    private void ApplyRangeDefaultClubVisibility()
+    {
+        if (_rangeDefaultClubCard != null)
+            _rangeDefaultClubCard.Visible = _showRangeDefaultClubSetting;
+
+        CallDeferred(nameof(SyncPanelShadowToPanel));
+    }
+
     private void ConnectControlSignals()
     {
         if (_panel != null)
@@ -279,6 +311,7 @@ public partial class SettingsPanel : CanvasLayer
         _closeButton.Pressed += OnClosePressed;
         _playerNameInput.TextSubmitted += OnPlayerNameTextSubmitted;
         _playerNameInput.FocusExited += OnPlayerNameFocusExited;
+        _rangeDefaultClubOption.ItemSelected += OnRangeDefaultClubSelected;
         _testShotsCheck.Toggled += OnTestShotsToggled;
         _resolutionOption.ItemSelected += OnResolutionSelected;
         _fullscreenCheck.Toggled += OnFullscreenToggled;
@@ -312,6 +345,8 @@ public partial class SettingsPanel : CanvasLayer
             _playerNameInput.TextSubmitted -= OnPlayerNameTextSubmitted;
             _playerNameInput.FocusExited -= OnPlayerNameFocusExited;
         }
+        if (_rangeDefaultClubOption != null)
+            _rangeDefaultClubOption.ItemSelected -= OnRangeDefaultClubSelected;
         if (_testShotsCheck != null)
             _testShotsCheck.Toggled -= OnTestShotsToggled;
         if (_resolutionOption != null)
@@ -353,6 +388,7 @@ public partial class SettingsPanel : CanvasLayer
             _tcpPortSetting = _appSettings.TcpPort;
             _shotRecordingEnabledSetting = _appSettings.ShotRecordingEnabled;
             _shotRecordingPathSetting = _appSettings.ShotRecordingPath;
+            _rangeDefaultClubSetting = _appSettings.RangeDefaultClub;
 
             _playerNameSetting.SettingChanged += OnAnySettingChanged;
             _testShotsSetting.SettingChanged += OnAnySettingChanged;
@@ -363,6 +399,7 @@ public partial class SettingsPanel : CanvasLayer
             _tcpPortSetting.SettingChanged += OnAnySettingChanged;
             _shotRecordingEnabledSetting.SettingChanged += OnAnySettingChanged;
             _shotRecordingPathSetting.SettingChanged += OnAnySettingChanged;
+            _rangeDefaultClubSetting.SettingChanged += OnAnySettingChanged;
         }
 
         _shotTracerCountSetting = _gameSettings?.ShotTracerCount;
@@ -390,6 +427,8 @@ public partial class SettingsPanel : CanvasLayer
             _shotRecordingEnabledSetting.SettingChanged -= OnAnySettingChanged;
         if (_shotRecordingPathSetting != null)
             _shotRecordingPathSetting.SettingChanged -= OnAnySettingChanged;
+        if (_rangeDefaultClubSetting != null)
+            _rangeDefaultClubSetting.SettingChanged -= OnAnySettingChanged;
         if (_shotTracerCountSetting != null)
             _shotTracerCountSetting.SettingChanged -= OnAnySettingChanged;
     }
@@ -433,6 +472,18 @@ public partial class SettingsPanel : CanvasLayer
             _shotRecordingCheck.ButtonPressed = (bool)_appSettings.ShotRecordingEnabled.Value;
             _shotRecordingPathInput.Text = _appSettings.ShotRecordingPath.Value.ToString();
             UpdateShotRecordingHelper();
+
+            string defaultClub = RangeClubCatalog.NormalizeLabel(_appSettings.RangeDefaultClub.Value.ToString());
+            int selectedClubIndex = 0;
+            for (int i = 0; i < _rangeDefaultClubOption.ItemCount; i++)
+            {
+                if (_rangeDefaultClubOption.GetItemText(i) == defaultClub)
+                {
+                    selectedClubIndex = i;
+                    break;
+                }
+            }
+            _rangeDefaultClubOption.Select(selectedClubIndex);
         }
 
         if (_shotTracerCountSetting != null)
@@ -445,6 +496,7 @@ public partial class SettingsPanel : CanvasLayer
 
         SyncPanelsGridFromPanelState();
         ApplyTracerHistoryVisibility();
+        ApplyRangeDefaultClubVisibility();
 
         _isSyncingControls = false;
     }
@@ -510,6 +562,16 @@ public partial class SettingsPanel : CanvasLayer
             return;
 
         _appSettings.PlayerName.SetValue(SanitizePlayerName(input));
+    }
+
+    private void OnRangeDefaultClubSelected(long index)
+    {
+        if (_isSyncingControls || _appSettings == null || _rangeDefaultClubOption == null || _rangeDefaultClubOption.ItemCount == 0)
+            return;
+
+        int safeIndex = Mathf.Clamp((int)index, 0, _rangeDefaultClubOption.ItemCount - 1);
+        string club = RangeClubCatalog.NormalizeLabel(_rangeDefaultClubOption.GetItemText(safeIndex));
+        _appSettings.RangeDefaultClub.SetValue(club);
     }
 
     private void OnTestShotsToggled(bool enabled)

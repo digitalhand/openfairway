@@ -1,0 +1,343 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://ui/RangeDispersionPopup.cs" id="1_popup_script"]
+[ext_resource type="Script" path="res://ui/RangeDispersionPlot.cs" id="2_plot_script"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.0431373, 0.180392, 0.309804, 0.95)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.337255, 0.698039, 0.937255, 0.42)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_header"]
+bg_color = Color(0.0627451, 0.0862745, 0.12549, 0.95)
+border_width_bottom = 1
+border_color = Color(0.337255, 0.698039, 0.937255, 0.45)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_field"]
+bg_color = Color(0.0392157, 0.0705882, 0.109804, 0.96)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.2)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+content_margin_left = 10.0
+content_margin_top = 5.0
+content_margin_right = 10.0
+content_margin_bottom = 5.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button"]
+bg_color = Color(0.0627451, 0.0862745, 0.12549, 0.95)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.337255, 0.698039, 0.937255, 0.6)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+content_margin_left = 10.0
+content_margin_top = 5.0
+content_margin_right = 10.0
+content_margin_bottom = 5.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button_hover"]
+bg_color = Color(0.0901961, 0.121569, 0.172549, 0.98)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.45, 0.76, 0.99, 0.75)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+content_margin_left = 10.0
+content_margin_top = 5.0
+content_margin_right = 10.0
+content_margin_bottom = 5.0
+
+[node name="RangeDispersionPopup" type="CanvasLayer"]
+visible = false
+script = ExtResource("1_popup_script")
+
+[node name="Root" type="Control" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Backdrop" type="ColorRect" parent="Root"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+color = Color(0, 0, 0, 0.42)
+
+[node name="Panel" type="PanelContainer" parent="Root"]
+custom_minimum_size = Vector2(1120, 640)
+layout_mode = 0
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -560.0
+offset_top = -320.0
+offset_right = 560.0
+offset_bottom = 320.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="Margin" type="MarginContainer" parent="Root/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="Content" type="VBoxContainer" parent="Root/Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="HeaderRow" type="PanelContainer" parent="Root/Panel/Margin/Content"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_header")
+
+[node name="HeaderMargin" type="MarginContainer" parent="Root/Panel/Margin/Content/HeaderRow"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 6
+
+[node name="HeaderHBox" type="HBoxContainer" parent="Root/Panel/Margin/Content/HeaderRow/HeaderMargin"]
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="Root/Panel/Margin/Content/HeaderRow/HeaderMargin/HeaderHBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+theme_override_font_sizes/font_size = 24
+text = "Shot Dispersion"
+vertical_alignment = 1
+
+[node name="CloseButton" type="Button" parent="Root/Panel/Margin/Content/HeaderRow/HeaderMargin/HeaderHBox"]
+custom_minimum_size = Vector2(72, 0)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button_hover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button_hover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_button_hover")
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+text = "Close"
+
+[node name="SessionControls" type="HBoxContainer" parent="Root/Panel/Margin/Content"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="SessionOption" type="OptionButton" parent="Root/Panel/Margin/Content/SessionControls"]
+custom_minimum_size = Vector2(430, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/normal = SubResource("StyleBoxFlat_field")
+theme_override_styles/hover = SubResource("StyleBoxFlat_field")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_field")
+theme_override_styles/focus = SubResource("StyleBoxFlat_field")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_field")
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+
+[node name="NewButton" type="Button" parent="Root/Panel/Margin/Content/SessionControls"]
+custom_minimum_size = Vector2(74, 0)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button_hover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button_hover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_button_hover")
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+text = "New"
+
+[node name="DeleteButton" type="Button" parent="Root/Panel/Margin/Content/SessionControls"]
+custom_minimum_size = Vector2(86, 0)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button_hover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button_hover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_button_hover")
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+text = "Delete"
+
+[node name="Spacer" type="Control" parent="Root/Panel/Margin/Content/SessionControls"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="CompareButton" type="Button" parent="Root/Panel/Margin/Content/SessionControls"]
+custom_minimum_size = Vector2(94, 0)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button_hover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button_hover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_button_hover")
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+text = "Compare"
+
+[node name="CompareControls" type="HBoxContainer" parent="Root/Panel/Margin/Content"]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="LeftLabel" type="Label" parent="Root/Panel/Margin/Content/CompareControls"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+text = "A"
+vertical_alignment = 1
+
+[node name="LeftOption" type="OptionButton" parent="Root/Panel/Margin/Content/CompareControls"]
+custom_minimum_size = Vector2(320, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/normal = SubResource("StyleBoxFlat_field")
+theme_override_styles/hover = SubResource("StyleBoxFlat_field")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_field")
+theme_override_styles/focus = SubResource("StyleBoxFlat_field")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_field")
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+
+[node name="RightLabel" type="Label" parent="Root/Panel/Margin/Content/CompareControls"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+text = "B"
+vertical_alignment = 1
+
+[node name="RightOption" type="OptionButton" parent="Root/Panel/Margin/Content/CompareControls"]
+custom_minimum_size = Vector2(320, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/normal = SubResource("StyleBoxFlat_field")
+theme_override_styles/hover = SubResource("StyleBoxFlat_field")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_field")
+theme_override_styles/focus = SubResource("StyleBoxFlat_field")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_field")
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+
+[node name="DoneButton" type="Button" parent="Root/Panel/Margin/Content/CompareControls"]
+custom_minimum_size = Vector2(72, 0)
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button_hover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button_hover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_button_hover")
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+text = "Done"
+
+[node name="SingleView" type="VBoxContainer" parent="Root/Panel/Margin/Content"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 6
+
+[node name="SummaryLabel" type="Label" parent="Root/Panel/Margin/Content/SingleView"]
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+text = ""
+vertical_alignment = 1
+
+[node name="ChartRow" type="HBoxContainer" parent="Root/Panel/Margin/Content/SingleView"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 8
+
+[node name="Plot" type="Control" parent="Root/Panel/Margin/Content/SingleView/ChartRow"]
+custom_minimum_size = Vector2(830, 480)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+script = ExtResource("2_plot_script")
+
+[node name="LegendContainer" type="MarginContainer" parent="Root/Panel/Margin/Content/SingleView/ChartRow"]
+custom_minimum_size = Vector2(220, 480)
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_bottom = 30
+
+[node name="Legend" type="ItemList" parent="Root/Panel/Margin/Content/SingleView/ChartRow/LegendContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_field")
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+select_mode = 0
+allow_reselect = true
+
+[node name="CompareView" type="HBoxContainer" parent="Root/Panel/Margin/Content"]
+visible = false
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 8
+
+[node name="LeftColumn" type="VBoxContainer" parent="Root/Panel/Margin/Content/CompareView"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 6
+
+[node name="LeftSummary" type="Label" parent="Root/Panel/Margin/Content/CompareView/LeftColumn"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+text = "No data"
+
+[node name="LeftPlot" type="Control" parent="Root/Panel/Margin/Content/CompareView/LeftColumn"]
+custom_minimum_size = Vector2(520, 420)
+layout_mode = 2
+size_flags_vertical = 3
+script = ExtResource("2_plot_script")
+
+[node name="LeftLegend" type="ItemList" parent="Root/Panel/Margin/Content/CompareView/LeftColumn"]
+custom_minimum_size = Vector2(0, 118)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_field")
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+select_mode = 0
+
+[node name="RightColumn" type="VBoxContainer" parent="Root/Panel/Margin/Content/CompareView"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 6
+
+[node name="RightSummary" type="Label" parent="Root/Panel/Margin/Content/CompareView/RightColumn"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+text = "No data"
+
+[node name="RightPlot" type="Control" parent="Root/Panel/Margin/Content/CompareView/RightColumn"]
+custom_minimum_size = Vector2(520, 420)
+layout_mode = 2
+size_flags_vertical = 3
+script = ExtResource("2_plot_script")
+
+[node name="RightLegend" type="ItemList" parent="Root/Panel/Margin/Content/CompareView/RightColumn"]
+custom_minimum_size = Vector2(0, 118)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_field")
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+select_mode = 0

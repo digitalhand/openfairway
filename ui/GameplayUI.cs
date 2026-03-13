@@ -76,6 +76,11 @@ public partial class GameplayUI : MarginContainer
         _courseHud?.SetTargetElevationUnknown();
     }
 
+    public void SetTargetElevationVisible(bool visible)
+    {
+        _courseHud?.SetTargetElevationVisible(visible);
+    }
+
     public void SetScoreLabel(string label)
     {
         _courseHud?.SetScoreLabel(label);
@@ -116,9 +121,55 @@ public partial class GameplayUI : MarginContainer
         _courseHud?.SetTracerHistorySettingVisible(visible);
     }
 
+    public void SetRangeDefaultClubSettingVisible(bool visible)
+    {
+        _courseHud?.SetRangeDefaultClubSettingVisible(visible);
+    }
+
+    public void SetRangeHudControlsVisible(bool visible)
+    {
+        _courseHud?.SetRangeHudControlsVisible(visible);
+    }
+
+    public void ConfigureRangeHudControls(int minYards, int maxYards, int defaultYards, string defaultClub)
+    {
+        _courseHud?.ConfigureRangeHudControls(minYards, maxYards, defaultYards, defaultClub);
+    }
+
+    public int GetRangeTargetYardage()
+    {
+        return _courseHud?.GetRangeTargetYardage() ?? 0;
+    }
+
+    public string GetRangeSelectedClubFileTag()
+    {
+        return _courseHud?.GetRangeSelectedClubFileTag() ?? string.Empty;
+    }
+
+    public string GetRangeSelectedClubLabel()
+    {
+        return _courseHud?.GetRangeSelectedClubLabel() ?? RangeClubCatalog.DefaultClubLabel;
+    }
+
+    public void RecordRangeDispersionShot(
+        string clubLabel,
+        float distanceYards,
+        float carryYards,
+        float offlineYards,
+        float? hlaDeg,
+        float? totalSpinRpm)
+    {
+        _courseHud?.RecordRangeDispersionShot(clubLabel, distanceYards, carryYards, offlineYards, hlaDeg, totalSpinRpm);
+    }
+
     public void SetMarkerCamera(Camera3D camera)
     {
         _markerHud?.SetCamera(camera);
+    }
+
+    public void SetMarkerElevationVisible(bool visible)
+    {
+        _markerHud?.SetElevationVisible(visible);
     }
 
     public void ApplyMarkerSnapshot(MarkerSnapshot snapshot)

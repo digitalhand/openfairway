@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Threading;
 using Godot;
 using Godot.Collections;
@@ -17,6 +18,7 @@ public abstract partial class HoleSceneControllerBase : Node3D
     private const float ROUND_END_SCORE_DURATION_SECONDS = 4.0f;
     private const double TARGET_HUD_REFRESH_INTERVAL_SECONDS = 0.10;
     private const float TARGET_HUD_MIN_MOVE_METERS = 0.15f;
+    private const float METERS_TO_YARDS = ShotSetup.YARDS_PER_METER;
 
     [ExportGroup("Scene Nodes")]
     [Export] public NodePath ShotTrackerPath { get; set; } = new NodePath("ShotTracker");
@@ -89,6 +91,7 @@ public abstract partial class HoleSceneControllerBase : Node3D
     }
 
     private bool IsGoalCountdownRunning => _goalCompletionFlow != null && _goalCompletionFlow.IsRunning;
+    protected GameplayUI GameplayUi => _gameplayUi;
 
     protected virtual void OnHoleReadyAfterInit()
     {
@@ -157,6 +160,36 @@ public abstract partial class HoleSceneControllerBase : Node3D
     protected virtual bool ShouldShowCourseMeta()
     {
         return true;
+    }
+
+    protected virtual bool ShouldShowTargetElevation()
+    {
+        return true;
+    }
+
+    protected virtual bool ShouldShowRangeHudControls()
+    {
+        return false;
+    }
+
+    protected virtual int GetRangeTargetMinYards()
+    {
+        return 5;
+    }
+
+    protected virtual int GetRangeTargetMaxYards()
+    {
+        return 350;
+    }
+
+    protected virtual int GetDefaultRangeTargetYards()
+    {
+        return 100;
+    }
+
+    protected virtual string ResolveShotRecordingClubTag()
+    {
+        return string.Empty;
     }
 
     protected virtual bool ShouldShowTracerHistorySetting()
@@ -293,6 +326,7 @@ public abstract partial class HoleSceneControllerBase : Node3D
         _gameSettings.CameraFollowMode.SettingChanged += OnCameraFollowChanged;
         _gameSettings.SurfaceType.SettingChanged += OnSurfaceChanged;
         ConfigureTracerBehavior();
+        ConfigureRangeHudBehavior();
         _ball.ResolveLieSurface = ResolveLieSurfaceAtContact;
         _ball.DescribeLieSurfaceResolution = () => _lieSurfaceResolver.DescribeLastResolution();
         _cameraOrbitDistanceSetting = _appSettings?.CameraOrbitDistance;
@@ -477,6 +511,7 @@ public abstract partial class HoleSceneControllerBase : Node3D
                 return;
 
             UpdateBallDisplay();
+            RecordRangeDispersionIfNeeded();
 
             if (IsGoalCountdownRunning)
             {
@@ -611,7 +646,7 @@ public abstract partial class HoleSceneControllerBase : Node3D
         UpdateBallDisplay();
         PlayDriverHitAudio();
         IncrementStrokeCount();
-        _shotRecordingService?.RecordShot(data);
+        _shotRecordingService?.RecordShot(data, ResolveShotRecordingClubTag());
 
         if (useTcpTracker)
             _shotTracker.OnTcpClientHitBall(data);
@@ -733,6 +768,32 @@ public abstract partial class HoleSceneControllerBase : Node3D
         }
 
         _gameplayUi?.SetTracerHistorySettingVisible(ShouldShowTracerHistorySetting());
+    }
+
+    private void ConfigureRangeHudBehavior()
+    {
+        if (_gameplayUi == null)
+            return;
+
+        bool showRangeHudControls = ShouldShowRangeHudControls();
+        _gameplayUi.SetRangeHudControlsVisible(showRangeHudControls);
+        _gameplayUi.SetRangeDefaultClubSettingVisible(showRangeHudControls);
+        _gameplayUi.SetTargetElevationVisible(ShouldShowTargetElevation());
+        _gameplayUi.SetMarkerElevationVisible(ShouldShowTargetElevation());
+
+        if (!showRangeHudControls)
+            return;
+
+        string defaultClub = _appSettings != null
+            ? _appSettings.RangeDefaultClub.Value.ToString()
+            : AppSettings.DefaultRangeDefaultClub;
+
+        _gameplayUi.ConfigureRangeHudControls(
+            GetRangeTargetMinYards(),
+            GetRangeTargetMaxYards(),
+            GetDefaultRangeTargetYards(),
+            defaultClub
+        );
     }
 
     private float GetCameraOrbitDistanceSetting()
@@ -1121,6 +1182,62 @@ public abstract partial class HoleSceneControllerBase : Node3D
         _gameplayUi?.SetData(snapshot.ToDictionary());
     }
 
+    private void RecordRangeDispersionIfNeeded()
+    {
+        if (!ShouldShowRangeHudControls())
+            return;
+
+        if (_gameplayUi == null || _shotTracker == null)
+            return;
+
+        string clubLabel = _gameplayUi.GetRangeSelectedClubLabel();
+        float distanceYards = _shotTracker.GetDistance() * METERS_TO_YARDS;
+        float carryYards = _shotTracker.Carry * METERS_TO_YARDS;
+        float offlineYards = _shotTracker.SideDistance * METERS_TO_YARDS;
+        float? hlaDeg = TryGetOptionalMetric(_shotTracker.ShotData, "HLA");
+        float? totalSpinRpm = ResolveTotalSpinRpm(_shotTracker.ShotData);
+        _gameplayUi.RecordRangeDispersionShot(clubLabel, distanceYards, carryYards, offlineYards, hlaDeg, totalSpinRpm);
+    }
+
+    private static float? ResolveTotalSpinRpm(Dictionary shotData)
+    {
+        float? totalSpin = TryGetOptionalMetric(shotData, "TotalSpin");
+        if (totalSpin.HasValue)
+            return Mathf.Abs(totalSpin.Value);
+
+        float? backSpin = TryGetOptionalMetric(shotData, "BackSpin");
+        float? sideSpin = TryGetOptionalMetric(shotData, "SideSpin");
+        if (!backSpin.HasValue && !sideSpin.HasValue)
+            return null;
+
+        float back = Mathf.Abs(backSpin ?? 0.0f);
+        float side = Mathf.Abs(sideSpin ?? 0.0f);
+        return Mathf.Sqrt(back * back + side * side);
+    }
+
+    private static float? TryGetOptionalMetric(Dictionary dictionary, string key)
+    {
+        if (dictionary == null || string.IsNullOrWhiteSpace(key) || !dictionary.ContainsKey(key))
+            return null;
+
+        Variant value = dictionary[key];
+        float parsed = value.VariantType switch
+        {
+            Variant.Type.Float => (float)value,
+            Variant.Type.Int => (int)value,
+            Variant.Type.String => float.TryParse(
+                (string)value,
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out float stringParsed)
+                ? stringParsed
+                : float.NaN,
+            _ => float.NaN
+        };
+
+        return !float.IsNaN(parsed) && !float.IsInfinity(parsed) ? parsed : null;
+    }
+
     private void InitializeShotMarkerController()
     {
         _shotMarkerController.Initialize(new ShotMarkerInit
@@ -1269,7 +1386,8 @@ public abstract partial class HoleSceneControllerBase : Node3D
     private void RefreshTargetHud()
     {
         UpdateTargetYardageDisplay();
-        UpdateTargetElevationDisplay();
+        if (ShouldShowTargetElevation())
+            UpdateTargetElevationDisplay();
     }
 
     private void UpdateTargetYardageDisplay()

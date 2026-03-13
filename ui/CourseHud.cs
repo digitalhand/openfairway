@@ -8,12 +8,17 @@ public partial class CourseHud : Control
 
     private static readonly Color ControlsThemeColor = new Color(0.0431373f, 0.180392f, 0.309804f, 0.8f);
     private static readonly Color ControlsFontColor = new Color(0.96f, 0.98f, 1.0f, 1.0f);
+    private static readonly Color HoleBoxDefaultColor = new Color(1f, 1f, 1f, 1f);
+    private static readonly Color HoleBoxRangeColor = new Color(1f, 1f, 1f, 1f);
     private const string MainMenuScenePath = "res://ui/main_menu.tscn";
     private const string DefaultPlayerName = "JohnDoe";
     private const string DefaultCourseName = "Airways";
     private const int DefaultHoleNumber = 1;
     private const int DefaultPar = 3;
     private const int DefaultYardage = 203;
+    private const int DefaultRangeTargetYards = 100;
+    private const int DefaultRangeTargetMinYards = 5;
+    private const int DefaultRangeTargetMaxYards = 350;
 
     private string _selectedShotPath = TestShots.DefaultShot;
     private GridCanvas _gridCanvas;
@@ -23,16 +28,28 @@ public partial class CourseHud : Control
     private OptionButton _shotTypeOption;
     private Button _hitShotButton;
     private Label _courseNameLabel;
+    private ColorRect _holeBox;
     private Label _holeNumberLabel;
+    private Button _dispersionButton;
     private Label _parHeaderLabel;
     private Label _yardageHeaderLabel;
     private Control _courseMetaBar;
     private Control _courseMetaSpacer;
+    private Control _playerShotCard;
+    private Control _playerShotBottomBar;
     private Label _playerNameLabel;
+    private Control _rangeTopHud;
+    private Button _rangeTargetToggleButton;
+    private Control _rangeBuilderPanel;
+    private Control _rangeControlsBar;
+    private HSlider _rangeTargetSlider;
+    private SpinBox _rangeTargetStepper;
+    private OptionButton _rangeClubOption;
     private Label _shotLabel;
     private Label _targetYardageLabel;
     private Label _targetElevationLabel;
     private Label _roundEndScoreOverlay;
+    private RangeDispersionPopup _rangeDispersionPopup;
     private Tween _roundEndScoreTween;
     private bool _shotControlsVisible;
     private bool _isLeavingScene;
@@ -40,6 +57,12 @@ public partial class CourseHud : Control
     private Setting _shotInjectorSetting;
     private Setting _testShotsEnabledSetting;
     private Setting _playerNameSetting;
+    private Setting _rangeDefaultClubSetting;
+    private bool _isRangeHudControlsVisible;
+    private bool _isSyncingRangeControls;
+    private int _rangeTargetMinYards = DefaultRangeTargetMinYards;
+    private int _rangeTargetMaxYards = DefaultRangeTargetMaxYards;
+    private int _rangeTargetYards = DefaultRangeTargetYards;
 
     private DataPanel _panelDistance;
     private DataPanel _panelCarry;
@@ -59,15 +82,19 @@ public partial class CourseHud : Control
 
         _gridCanvas = GetNode<GridCanvas>("GridCanvas");
         _settingsPanel = GetNodeOrNull<SettingsPanel>("SettingsPanel");
+        _rangeDispersionPopup = GetNodeOrNull<RangeDispersionPopup>("RangeDispersionPopup");
         GlobalSettings globalSettings = GetNode<GlobalSettings>("/root/GlobalSettings");
         _shotInjectorSetting = globalSettings.GameSettings.ShotInjectorEnabled;
         _testShotsEnabledSetting = globalSettings.AppSettings?.TestShotsEnabled;
         _playerNameSetting = globalSettings.AppSettings?.PlayerName;
+        _rangeDefaultClubSetting = globalSettings.AppSettings?.RangeDefaultClub;
         _shotInjectorSetting.SettingChanged += OnShotInjectorSettingChanged;
         if (_testShotsEnabledSetting != null)
             _testShotsEnabledSetting.SettingChanged += OnTestShotsEnabledSettingChanged;
         if (_playerNameSetting != null)
             _playerNameSetting.SettingChanged += OnPlayerNameSettingChanged;
+        if (_rangeDefaultClubSetting != null)
+            _rangeDefaultClubSetting.SettingChanged += OnRangeDefaultClubSettingChanged;
 
         _shotInjector = GetNode<ShotInjector>("ShotInjector");
         _shotInjector.Inject += OnShotInjectorInject;
@@ -78,16 +105,32 @@ public partial class CourseHud : Control
         _shotTypeOption = GetNode<OptionButton>("OverlayLayer/CourseHeaderControlsRow/ShotTypeOption");
         _shotTypeOption.ItemSelected += OnShotTypeSelected;
         _courseNameLabel = GetNode<Label>("OverlayLayer/CourseHeaderCard/InfoBlock/CourseNameBar/CourseNameLabel");
+        _holeBox = GetNode<ColorRect>("OverlayLayer/CourseHeaderCard/HoleBox");
         _holeNumberLabel = GetNode<Label>("OverlayLayer/CourseHeaderCard/HoleBox/HoleNumberLabel");
+        _dispersionButton = GetNode<Button>("OverlayLayer/CourseHeaderCard/HoleBox/DispersionButton");
         _parHeaderLabel = GetNode<Label>("OverlayLayer/CourseHeaderCard/InfoBlock/CourseMetaBar/MetaHBox/ParLabel");
         _yardageHeaderLabel = GetNode<Label>("OverlayLayer/CourseHeaderCard/InfoBlock/CourseMetaBar/MetaHBox/YardageLabel");
         _courseMetaBar = GetNodeOrNull<Control>("OverlayLayer/CourseHeaderCard/InfoBlock/CourseMetaBar");
         _courseMetaSpacer = GetNodeOrNull<Control>("OverlayLayer/CourseHeaderCard/InfoBlock/CourseMetaBar/MetaHBox/MetaSpacer");
+        _playerShotCard = GetNode<Control>("OverlayLayer/PlayerShotCard");
+        _playerShotBottomBar = GetNode<Control>("OverlayLayer/PlayerShotCard/BottomBar");
         _playerNameLabel = GetNode<Label>("OverlayLayer/PlayerShotCard/TopBar/PlayerNameLabel");
+        _rangeTopHud = GetNode<Control>("OverlayLayer/RangeTopHud");
+        _rangeTargetToggleButton = GetNode<Button>("OverlayLayer/PlayerShotCard/BottomBar/BottomRow/TargetToggleButton");
+        _rangeBuilderPanel = GetNode<Control>("OverlayLayer/RangeTopHud/RightBuilder");
+        _rangeControlsBar = GetNode<Control>("OverlayLayer/PlayerShotCard/RangeControlsBar");
+        _rangeTargetSlider = GetNode<HSlider>("OverlayLayer/RangeTopHud/RightBuilder/BuilderMargin/BuilderVBox/BuilderControls/TargetSlider");
+        _rangeTargetStepper = GetNode<SpinBox>("OverlayLayer/RangeTopHud/RightBuilder/BuilderMargin/BuilderVBox/BuilderControls/TargetStepper");
+        _rangeClubOption = GetNode<OptionButton>("OverlayLayer/PlayerShotCard/BottomBar/BottomRow/RangeClubOption");
         _shotLabel = GetNode<Label>("OverlayLayer/PlayerShotCard/BottomBar/BottomRow/ShotLabel");
         _targetYardageLabel = GetNode<Label>("OverlayLayer/PlayerShotCard/BottomBar/BottomRow/YardageLabel");
         _targetElevationLabel = GetNode<Label>("OverlayLayer/PlayerShotCard/BottomBar/BottomRow/DeltaLabel");
         _roundEndScoreOverlay = GetNode<Label>("OverlayLayer/RoundEndScoreOverlay");
+        if (_dispersionButton != null)
+            _dispersionButton.Pressed += OnDispersionButtonPressed;
+        if (_rangeTargetToggleButton != null)
+            _rangeTargetToggleButton.Pressed += OnRangeTargetTogglePressed;
+        _rangeDispersionPopup?.SetRangeMode(false);
 
         SetPlayerName(_playerNameSetting != null ? _playerNameSetting.Value.ToString() : DefaultPlayerName);
         SetCourseHeader(DefaultCourseName, DefaultHoleNumber, DefaultPar, DefaultYardage);
@@ -116,8 +159,17 @@ public partial class CourseHud : Control
             _settingsPanel.MainMenuRequested += OnSettingsPanelMainMenuRequested;
 
         PopulateShotTypes();
+        PopulateRangeClubOptions();
+        ConfigureRangeHudControls(
+            DefaultRangeTargetMinYards,
+            DefaultRangeTargetMaxYards,
+            DefaultRangeTargetYards,
+            _rangeDefaultClubSetting != null ? _rangeDefaultClubSetting.Value.ToString() : AppSettings.DefaultRangeDefaultClub
+        );
+        ConnectRangeControlSignals();
         SetupSettingsMenu();
         ApplyDropdownThemes();
+        SetRangeHudControlsVisible(false);
         SetShotControlsVisible(true);
     }
 
@@ -129,12 +181,19 @@ public partial class CourseHud : Control
             _testShotsEnabledSetting.SettingChanged -= OnTestShotsEnabledSettingChanged;
         if (_playerNameSetting != null)
             _playerNameSetting.SettingChanged -= OnPlayerNameSettingChanged;
+        if (_rangeDefaultClubSetting != null)
+            _rangeDefaultClubSetting.SettingChanged -= OnRangeDefaultClubSettingChanged;
         if (_shotInjector != null)
             _shotInjector.Inject -= OnShotInjectorInject;
         if (_shotTypeOption != null)
             _shotTypeOption.ItemSelected -= OnShotTypeSelected;
         if (_hitShotButton != null)
             _hitShotButton.Pressed -= OnHitShotPressed;
+        DisconnectRangeControlSignals();
+        if (_dispersionButton != null)
+            _dispersionButton.Pressed -= OnDispersionButtonPressed;
+        if (_rangeTargetToggleButton != null)
+            _rangeTargetToggleButton.Pressed -= OnRangeTargetTogglePressed;
         if (_settingsMenu != null)
             _settingsMenu.Pressed -= OnSettingsMenuPressed;
         if (_settingsPanel != null)
@@ -214,26 +273,17 @@ public partial class CourseHud : Control
 
     public void SetTargetYardage(float yards)
     {
-        if (_targetYardageLabel == null)
-            return;
-
-        _targetYardageLabel.Text = $"{Mathf.Max(0.0f, yards):F1} YDS";
+        SetTargetDistanceLabelText($"{Mathf.Max(0.0f, yards):F1} YDS");
     }
 
     public void SetTargetDistanceText(string text)
     {
-        if (_targetYardageLabel == null)
-            return;
-
-        _targetYardageLabel.Text = string.IsNullOrWhiteSpace(text) ? "--.- YDS" : text.Trim().ToUpperInvariant();
+        SetTargetDistanceLabelText(string.IsNullOrWhiteSpace(text) ? "--.- YDS" : text.Trim().ToUpperInvariant());
     }
 
     public void SetTargetYardageUnknown()
     {
-        if (_targetYardageLabel == null)
-            return;
-
-        _targetYardageLabel.Text = "--.- YDS";
+        SetTargetDistanceLabelText("--.- YDS");
     }
 
     public void SetTargetElevationFeet(int feet)
@@ -254,6 +304,98 @@ public partial class CourseHud : Control
         ElevationVisual visual = ElevationPresenter.Build(0, includeSignInText: false);
         _targetElevationLabel.Text = $"{visual.Arrow} {visual.Text}";
         _targetElevationLabel.AddThemeColorOverride("font_color", visual.Color);
+    }
+
+    public void SetTargetElevationVisible(bool visible)
+    {
+        if (_targetElevationLabel != null)
+            _targetElevationLabel.Visible = visible && !_isRangeHudControlsVisible;
+    }
+
+    public void SetRangeHudControlsVisible(bool visible)
+    {
+        _isRangeHudControlsVisible = visible;
+        if (_playerShotCard != null)
+            _playerShotCard.Visible = true;
+        if (_playerShotBottomBar != null)
+            _playerShotBottomBar.Visible = true;
+        if (_rangeTopHud != null)
+            _rangeTopHud.Visible = visible;
+        if (_rangeControlsBar != null)
+            _rangeControlsBar.Visible = false;
+        if (_rangeTargetToggleButton != null)
+            _rangeTargetToggleButton.Visible = visible;
+        if (_rangeClubOption != null)
+            _rangeClubOption.Visible = visible;
+        if (_targetYardageLabel != null)
+            _targetYardageLabel.Visible = !visible;
+        if (_targetElevationLabel != null)
+            _targetElevationLabel.Visible = !visible;
+        if (_holeNumberLabel != null)
+            _holeNumberLabel.Visible = !visible;
+        if (_dispersionButton != null)
+            _dispersionButton.Visible = visible;
+        if (_holeBox != null)
+            _holeBox.Color = visible ? HoleBoxRangeColor : HoleBoxDefaultColor;
+        if (visible)
+            SetRangeBuilderVisible(false);
+        _rangeDispersionPopup?.SetRangeMode(visible);
+        if (!visible)
+        {
+            SetRangeBuilderVisible(false);
+            _rangeDispersionPopup?.HidePanel();
+        }
+    }
+
+    public void ConfigureRangeHudControls(int minYards, int maxYards, int defaultYards, string defaultClub)
+    {
+        _rangeTargetMinYards = Mathf.Max(0, minYards);
+        _rangeTargetMaxYards = Mathf.Max(_rangeTargetMinYards, maxYards);
+        _rangeTargetYards = Mathf.Clamp(defaultYards, _rangeTargetMinYards, _rangeTargetMaxYards);
+
+        _isSyncingRangeControls = true;
+        ConfigureTargetSlider();
+        ConfigureTargetStepper();
+        if (_rangeTargetSlider != null)
+            _rangeTargetSlider.Value = _rangeTargetYards;
+        if (_rangeTargetStepper != null)
+            _rangeTargetStepper.Value = _rangeTargetYards;
+        SetSelectedRangeClub(defaultClub);
+        _isSyncingRangeControls = false;
+    }
+
+    public int GetRangeTargetYardage()
+    {
+        return _rangeTargetYards;
+    }
+
+    public string GetRangeSelectedClubFileTag()
+    {
+        return RangeClubCatalog.ToFileTag(GetRangeSelectedClubLabel());
+    }
+
+    public void RecordRangeDispersionShot(
+        string clubLabel,
+        float distanceYards,
+        float carryYards,
+        float offlineYards,
+        float? hlaDeg,
+        float? totalSpinRpm)
+    {
+        if (!_isRangeHudControlsVisible)
+            return;
+
+        if (_rangeDispersionPopup == null)
+            return;
+
+        _rangeDispersionPopup.RecordShot(
+            clubLabel: string.IsNullOrWhiteSpace(clubLabel) ? GetRangeSelectedClubLabel() : clubLabel,
+            distanceYards: distanceYards,
+            carryYards: carryYards,
+            offlineYards: offlineYards,
+            hlaDeg: hlaDeg,
+            totalSpinRpm: totalSpinRpm
+        );
     }
 
     public void SetScoreLabel(string label)
@@ -352,6 +494,11 @@ public partial class CourseHud : Control
         _settingsPanel?.SetTracerHistorySettingVisible(visible);
     }
 
+    public void SetRangeDefaultClubSettingVisible(bool visible)
+    {
+        _settingsPanel?.SetRangeDefaultClubSettingVisible(visible);
+    }
+
     private string FormatAngle(Variant val)
     {
         if (val.VariantType == Variant.Type.Float || val.VariantType == Variant.Type.Int)
@@ -403,6 +550,156 @@ public partial class CourseHud : Control
                 && (bool)_shotInjectorSetting.Value;
             _shotInjector.Visible = showShotInjector;
         }
+    }
+
+    private void PopulateRangeClubOptions()
+    {
+        if (_rangeClubOption == null)
+            return;
+
+        _rangeClubOption.Clear();
+        int index = 0;
+        foreach (string label in RangeClubCatalog.Labels)
+        {
+            _rangeClubOption.AddItem(ToRangeClubShortLabel(label));
+            _rangeClubOption.SetItemMetadata(index, label);
+            index++;
+        }
+
+        PopupMenu popup = _rangeClubOption.GetPopup();
+        if (popup != null)
+        {
+            for (int i = 0; i < popup.ItemCount; i++)
+            {
+                popup.SetItemAsCheckable(i, false);
+                popup.SetItemAsRadioCheckable(i, false);
+            }
+        }
+    }
+
+    private void ConfigureTargetStepper()
+    {
+        if (_rangeTargetStepper == null)
+            return;
+
+        _rangeTargetStepper.MinValue = _rangeTargetMinYards;
+        _rangeTargetStepper.MaxValue = _rangeTargetMaxYards;
+        _rangeTargetStepper.Step = 1.0f;
+        _rangeTargetStepper.Rounded = true;
+        _rangeTargetStepper.Value = _rangeTargetYards;
+    }
+
+    private void ConfigureTargetSlider()
+    {
+        if (_rangeTargetSlider == null)
+            return;
+
+        _rangeTargetSlider.MinValue = _rangeTargetMinYards;
+        _rangeTargetSlider.MaxValue = _rangeTargetMaxYards;
+        _rangeTargetSlider.Step = 1.0f;
+        _rangeTargetSlider.Value = _rangeTargetYards;
+    }
+
+    private void ConnectRangeControlSignals()
+    {
+        if (_rangeTargetSlider != null)
+            _rangeTargetSlider.ValueChanged += OnRangeTargetSliderChanged;
+        if (_rangeTargetStepper != null)
+            _rangeTargetStepper.ValueChanged += OnRangeTargetStepperChanged;
+        if (_rangeClubOption != null)
+            _rangeClubOption.ItemSelected += OnRangeClubSelected;
+    }
+
+    private void DisconnectRangeControlSignals()
+    {
+        if (_rangeTargetSlider != null)
+            _rangeTargetSlider.ValueChanged -= OnRangeTargetSliderChanged;
+        if (_rangeTargetStepper != null)
+            _rangeTargetStepper.ValueChanged -= OnRangeTargetStepperChanged;
+        if (_rangeClubOption != null)
+            _rangeClubOption.ItemSelected -= OnRangeClubSelected;
+    }
+
+    private void OnRangeTargetSliderChanged(double value)
+    {
+        if (_isSyncingRangeControls)
+            return;
+
+        _rangeTargetYards = Mathf.Clamp(Mathf.RoundToInt((float)value), _rangeTargetMinYards, _rangeTargetMaxYards);
+        _isSyncingRangeControls = true;
+        if (_rangeTargetStepper != null)
+            _rangeTargetStepper.Value = _rangeTargetYards;
+        if (_rangeTargetSlider != null)
+            _rangeTargetSlider.Value = _rangeTargetYards;
+        _isSyncingRangeControls = false;
+    }
+
+    private void OnRangeTargetStepperChanged(double value)
+    {
+        if (_isSyncingRangeControls)
+            return;
+
+        _rangeTargetYards = Mathf.Clamp(Mathf.RoundToInt((float)value), _rangeTargetMinYards, _rangeTargetMaxYards);
+        _isSyncingRangeControls = true;
+        if (_rangeTargetSlider != null)
+            _rangeTargetSlider.Value = _rangeTargetYards;
+        if (_rangeTargetStepper != null)
+            _rangeTargetStepper.Value = _rangeTargetYards;
+        _isSyncingRangeControls = false;
+    }
+
+    private void OnRangeClubSelected(long _index)
+    {
+        // Selection is pulled on demand by gameplay/recording flow.
+    }
+
+    private void OnRangeDefaultClubSettingChanged(Variant value)
+    {
+        if (!_isRangeHudControlsVisible)
+            return;
+
+        SetSelectedRangeClub(value.ToString());
+    }
+
+    private void SetSelectedRangeClub(string clubLabel)
+    {
+        if (_rangeClubOption == null)
+            return;
+
+        string normalized = RangeClubCatalog.NormalizeLabel(clubLabel);
+        int selectedIndex = -1;
+        for (int i = 0; i < _rangeClubOption.ItemCount; i++)
+        {
+            Variant metadata = _rangeClubOption.GetItemMetadata(i);
+            if (metadata.VariantType == Variant.Type.String
+                && RangeClubCatalog.NormalizeLabel((string)metadata) == normalized)
+            {
+                selectedIndex = i;
+                break;
+            }
+        }
+
+        if (selectedIndex < 0 && _rangeClubOption.ItemCount > 0)
+            selectedIndex = 0;
+
+        if (selectedIndex >= 0)
+            _rangeClubOption.Select(selectedIndex);
+    }
+
+    public string GetRangeSelectedClubLabel()
+    {
+        if (_rangeClubOption == null || _rangeClubOption.ItemCount == 0)
+            return RangeClubCatalog.DefaultClubLabel;
+
+        int selected = _rangeClubOption.Selected;
+        if (selected < 0 || selected >= _rangeClubOption.ItemCount)
+            selected = 0;
+
+        Variant metadata = _rangeClubOption.GetItemMetadata(selected);
+        if (metadata.VariantType == Variant.Type.String)
+            return RangeClubCatalog.NormalizeLabel((string)metadata);
+
+        return RangeClubCatalog.DefaultClubLabel;
     }
 
     private void ToggleFullscreen()
@@ -489,7 +786,10 @@ public partial class CourseHud : Control
 
     private void ApplyDropdownThemes()
     {
-        ApplyPopupTheme(_shotTypeOption.GetPopup());
+        ApplyPopupTheme(_shotTypeOption?.GetPopup());
+        PopupMenu rangeClubPopup = _rangeClubOption?.GetPopup();
+        ApplyPopupTheme(rangeClubPopup);
+        ApplyRangeClubPopupTheme(rangeClubPopup);
     }
 
     private void ApplyPopupTheme(PopupMenu popup)
@@ -539,10 +839,27 @@ public partial class CourseHud : Control
         };
     }
 
+    private static void ApplyRangeClubPopupTheme(PopupMenu popup)
+    {
+        if (popup == null)
+            return;
+
+        popup.AddThemeConstantOverride("item_start_padding", 16);
+        popup.AddThemeConstantOverride("item_end_padding", 16);
+    }
+
     private void SetupSettingsMenu()
     {
         _settingsMenu = GetNode<Button>("OverlayLayer/CourseHeaderCard/SettingsBox/SettingsMenu");
         _settingsMenu.Pressed += OnSettingsMenuPressed;
+    }
+
+    private void OnDispersionButtonPressed()
+    {
+        if (_isLeavingScene || !_isRangeHudControlsVisible)
+            return;
+
+        _rangeDispersionPopup?.TogglePanel();
     }
 
     private void OnSettingsMenuPressed()
@@ -561,8 +878,11 @@ public partial class CourseHud : Control
         _isLeavingScene = true;
         if (_settingsMenu != null)
             _settingsMenu.Disabled = true;
+        if (_dispersionButton != null)
+            _dispersionButton.Disabled = true;
 
         _settingsPanel?.HidePanel();
+        _rangeDispersionPopup?.HidePanel();
 
         Error error = GetTree().ChangeSceneToFile(MainMenuScenePath);
         if (error != Error.Ok)
@@ -570,6 +890,8 @@ public partial class CourseHud : Control
             _isLeavingScene = false;
             if (_settingsMenu != null)
                 _settingsMenu.Disabled = false;
+            if (_dispersionButton != null)
+                _dispersionButton.Disabled = false;
             GD.PushError($"Settings menu: failed to load main menu scene '{MainMenuScenePath}'. Error: {error}");
         }
     }
@@ -577,6 +899,33 @@ public partial class CourseHud : Control
     private void OnPlayerNameSettingChanged(Variant value)
     {
         SetPlayerName(value.ToString());
+    }
+
+    private void SetTargetDistanceLabelText(string text)
+    {
+        if (_targetYardageLabel != null)
+            _targetYardageLabel.Text = text;
+    }
+
+    private void OnRangeTargetTogglePressed()
+    {
+        if (!_isRangeHudControlsVisible)
+            return;
+
+        bool visible = _rangeBuilderPanel != null && _rangeBuilderPanel.Visible;
+        SetRangeBuilderVisible(!visible);
+    }
+
+    private void SetRangeBuilderVisible(bool visible)
+    {
+        if (_rangeBuilderPanel != null)
+            _rangeBuilderPanel.Visible = visible;
+    }
+
+    private static string ToRangeClubShortLabel(string clubLabel)
+    {
+        string normalized = RangeClubCatalog.NormalizeLabel(clubLabel);
+        return normalized == "DRIVER" ? "DR" : normalized;
     }
 
     private void SetShotControlsVisible(bool visible)
