@@ -70,18 +70,30 @@ def main():
     parser = argparse.ArgumentParser(description="Export FlightScope reference CSV")
     parser.add_argument(
         "--reference",
-        default=os.path.join(DATA_DIR, "SOT", "flightscope_reference.json"),
+        default=None,
         help="Path to flightscope_reference.json (default: assets/data/SOT/flightscope_reference.json)",
     )
     parser.add_argument(
         "--data-dir",
-        default=DATA_DIR,
+        default=None,
         help="Path to shot data directory (default: assets/data/)",
+    )
+    parser.add_argument(
+        "--session",
+        default=None,
+        help="Session directory path (overrides --data-dir and --reference defaults)",
     )
     args = parser.parse_args()
 
-    data_dir = os.path.normpath(args.data_dir)
-    ref = load_reference(args.reference)
+    # Resolve session mode: --session sets defaults for --data-dir and --reference
+    if args.session:
+        session_dir = os.path.normpath(args.session)
+        data_dir = os.path.normpath(args.data_dir) if args.data_dir else session_dir
+        reference = args.reference if args.reference else os.path.join(session_dir, "flightscope_reference.json")
+    else:
+        data_dir = os.path.normpath(args.data_dir) if args.data_dir else os.path.normpath(DATA_DIR)
+        reference = args.reference if args.reference else os.path.join(DATA_DIR, "SOT", "flightscope_reference.json")
+    ref = load_reference(reference)
     files = discover_shots(data_dir)
 
     print(HEADER)

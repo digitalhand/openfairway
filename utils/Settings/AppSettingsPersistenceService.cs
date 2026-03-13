@@ -21,6 +21,8 @@ public static class AppSettingsPersistenceService
         SetIfPresent(config, "game", "camera_orbit_distance", appSettings.CameraOrbitDistance);
         SetIfPresent(config, "game", "camera_follow_delay_seconds", appSettings.CameraFollowDelaySeconds);
         SetIfPresent(config, "game", "tcp_port", appSettings.TcpPort);
+        SetIfPresent(config, "game", "shot_recording_enabled", appSettings.ShotRecordingEnabled);
+        SetIfPresent(config, "game", "shot_recording_path", appSettings.ShotRecordingPath);
     }
 
     public static void Save(AppSettings appSettings)
@@ -37,6 +39,8 @@ public static class AppSettingsPersistenceService
         config.SetValue("game", "camera_orbit_distance", appSettings.CameraOrbitDistance.Value);
         config.SetValue("game", "camera_follow_delay_seconds", appSettings.CameraFollowDelaySeconds.Value);
         config.SetValue("game", "tcp_port", appSettings.TcpPort.Value);
+        config.SetValue("game", "shot_recording_enabled", appSettings.ShotRecordingEnabled.Value);
+        config.SetValue("game", "shot_recording_path", appSettings.ShotRecordingPath.Value);
 
         Error error = config.Save(SavePath);
         if (error != Error.Ok)

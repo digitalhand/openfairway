@@ -7,11 +7,12 @@ const CSV_HEADER := "shot_name,filename,speed_mph,vla_deg,hla_deg,total_spin_rpm
 const DEFAULT_CSV_OUTPUT_PATH := "res://assets/data/calibration/physics.csv"
 const DEFAULT_JSON_OUTPUT_PATH := "res://assets/data/calibration/physics.json"
 
-func collect_rows() -> Array[Dictionary]:
+func collect_rows(data_dir_override: String = "") -> Array[Dictionary]:
+	var data_dir := data_dir_override if data_dir_override != "" else DATA_DIR_PATH
 	var adapter := _create_adapter()
-	var dir := DirAccess.open(DATA_DIR_PATH)
+	var dir := DirAccess.open(data_dir)
 	if dir == null:
-		push_error("ERROR: cannot open %s" % DATA_DIR_PATH)
+		push_error("ERROR: cannot open %s" % data_dir)
 		return []
 
 	var files: Array[String] = []
@@ -26,11 +27,54 @@ func collect_rows() -> Array[Dictionary]:
 
 	var rows: Array[Dictionary] = []
 	for fname_iter in files:
-		var row := _collect_row(adapter, fname_iter)
+		var row := _collect_row(adapter, fname_iter, data_dir)
 		if not row.is_empty():
 			rows.append(row)
 
 	return rows
+
+func resolve_dirs_spec() -> String:
+	var args := OS.get_cmdline_user_args()
+	for i in range(args.size()):
+		var arg: String = args[i]
+		if arg.begins_with("--dirs="):
+			return arg.trim_prefix("--dirs=")
+		if arg == "--dirs" and i + 1 < args.size():
+			return args[i + 1]
+	return ""
+
+func collect_rows_multi(dirs_spec: String) -> Array[Dictionary]:
+	var adapter := _create_adapter()
+	var all_rows: Array[Dictionary] = []
+	var entries := dirs_spec.split(",", false)
+	for entry in entries:
+		var parts := entry.split("|", true, 1)
+		var dir_path := parts[0].strip_edges()
+		var prefix := parts[1].strip_edges() if parts.size() > 1 else ""
+
+		var dir := DirAccess.open(dir_path)
+		if dir == null:
+			push_error("ERROR: cannot open %s" % dir_path)
+			continue
+
+		var files: Array[String] = []
+		dir.list_dir_begin()
+		var fname := dir.get_next()
+		while fname != "":
+			if fname.ends_with(".json") and fname not in SKIP_FILES:
+				files.append(fname)
+			fname = dir.get_next()
+		dir.list_dir_end()
+		files.sort()
+
+		for fname_iter in files:
+			var row := _collect_row(adapter, fname_iter, dir_path)
+			if not row.is_empty():
+				if prefix != "":
+					row["shot_name"] = prefix + "_" + row["shot_name"]
+				all_rows.append(row)
+
+	return all_rows
 
 func to_keyed_dictionary(rows: Array[Dictionary]) -> Dictionary:
 	var output := {}
@@ -68,8 +112,8 @@ func format_csv_row(row: Dictionary) -> String:
 		row["initial_cl"], row["peak_cl"], row["carry_only_yd"],
 	]
 
-func _collect_row(adapter: PhysicsAdapter, fname_iter: String) -> Dictionary:
-	var path := "%s/%s" % [DATA_DIR_PATH, fname_iter]
+func _collect_row(adapter: PhysicsAdapter, fname_iter: String, data_dir: String = DATA_DIR_PATH) -> Dictionary:
+	var path := "%s/%s" % [data_dir, fname_iter]
 	var file := FileAccess.open(path, FileAccess.READ)
 	if file == null:
 		push_warning("WARN: cannot open %s" % path)
@@ -132,6 +176,16 @@ func resolve_profile_path() -> String:
 		if arg.begins_with("--profile="):
 			return _normalize_output_path(arg.trim_prefix("--profile="))
 		if arg == "--profile" and i + 1 < args.size():
+			return _normalize_output_path(args[i + 1])
+	return ""
+
+func resolve_session_path() -> String:
+	var args := OS.get_cmdline_user_args()
+	for i in range(args.size()):
+		var arg: String = args[i]
+		if arg.begins_with("--session="):
+			return _normalize_output_path(arg.trim_prefix("--session="))
+		if arg == "--session" and i + 1 < args.size():
 			return _normalize_output_path(args[i + 1])
 	return ""
 

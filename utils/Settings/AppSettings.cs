@@ -11,6 +11,8 @@ public partial class AppSettings : SettingCollector
     public const float DefaultCameraOrbitDistance = 2.5f;
     public const float DefaultCameraFollowDelaySeconds = 0.0f;
     public const int DefaultTcpPort = 55000;
+    public const bool DefaultShotRecordingEnabled = false;
+    public const string DefaultShotRecordingPath = "";
 
     public Setting PlayerName { get; private set; }
     public Setting TestShotsEnabled { get; private set; }
@@ -19,6 +21,8 @@ public partial class AppSettings : SettingCollector
     public Setting CameraOrbitDistance { get; private set; }
     public Setting CameraFollowDelaySeconds { get; private set; }
     public Setting TcpPort { get; private set; }
+    public Setting ShotRecordingEnabled { get; private set; }
+    public Setting ShotRecordingPath { get; private set; }
 
     public AppSettings()
     {
@@ -29,6 +33,8 @@ public partial class AppSettings : SettingCollector
         CameraOrbitDistance = new Setting(DefaultCameraOrbitDistance, 1.0f, 8.0f);
         CameraFollowDelaySeconds = new Setting(DefaultCameraFollowDelaySeconds, 0.0f, 2.0f);
         TcpPort = new Setting(DefaultTcpPort, 1, 65535);
+        ShotRecordingEnabled = new Setting(DefaultShotRecordingEnabled);
+        ShotRecordingPath = new Setting(DefaultShotRecordingPath);
 
         Settings = new Dictionary<string, Setting>
         {
@@ -38,7 +44,9 @@ public partial class AppSettings : SettingCollector
             { "display_fullscreen", DisplayFullscreen },
             { "camera_orbit_distance", CameraOrbitDistance },
             { "camera_follow_delay_seconds", CameraFollowDelaySeconds },
-            { "tcp_port", TcpPort }
+            { "tcp_port", TcpPort },
+            { "shot_recording_enabled", ShotRecordingEnabled },
+            { "shot_recording_path", ShotRecordingPath }
         };
     }
 }

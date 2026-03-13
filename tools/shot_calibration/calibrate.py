@@ -22,16 +22,135 @@ import sys
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.normpath(os.path.join(SCRIPT_DIR, "..", ".."))
-CALIBRATION_DIR = os.path.join(PROJECT_ROOT, "assets", "data", "calibration")
+DATA_DIR = os.path.join(PROJECT_ROOT, "assets", "data")
+CALIBRATION_DIR = os.path.join(DATA_DIR, "calibration")
 HISTORY_DIR = os.path.join(CALIBRATION_DIR, "history")
 PHYSICS_CSV = os.path.join(CALIBRATION_DIR, "physics.csv")
 FLIGHTSCOPE_CSV = os.path.join(CALIBRATION_DIR, "flightscope.csv")
-SOT_CSV = os.path.join(PROJECT_ROOT, "assets", "data", "SOT", "flightscope_SoT.csv")
+SOT_CSV = os.path.join(DATA_DIR, "SOT", "flightscope_SoT.csv")
 DIFF_CSV = os.path.join(CALIBRATION_DIR, "shot_diff_analysis.csv")
 DEFAULT_PROFILE = os.path.join(CALIBRATION_DIR, "calibration_profile.json")
 
 sys.path.insert(0, SCRIPT_DIR)
 from calibration_analyzer import load_diff_csv, analyze, format_report
+
+
+def discover_session_dirs():
+    """Scan assets/data/ for shot_session_* directories."""
+    sessions = []
+    for entry in sorted(os.listdir(DATA_DIR)):
+        if entry.startswith("shot_session_") and os.path.isdir(os.path.join(DATA_DIR, entry)):
+            sessions.append(os.path.join(DATA_DIR, entry))
+    return sessions
+
+
+def session_prefix(session_dir):
+    """Extract prefix like 's2' from 'shot_session_2'."""
+    basename = os.path.basename(session_dir)
+    num = basename.replace("shot_session_", "")
+    return f"s{num}"
+
+
+def build_dirs_spec(session_dirs):
+    """Build --dirs spec string for Godot: 'res://assets/data|,res://assets/data/shot_session_2|s2,...'"""
+    parts = ["res://assets/data|"]
+    for sd in session_dirs:
+        rel = os.path.relpath(sd, PROJECT_ROOT).replace(os.sep, "/")
+        prefix = session_prefix(sd)
+        parts.append(f"res://{rel}|{prefix}")
+    return ",".join(parts)
+
+
+def load_session_reference(session_dir):
+    """Load flightscope_reference.json from a session directory. Returns dict keyed by shot key."""
+    ref_path = os.path.join(session_dir, "flightscope_reference.json")
+    if not os.path.exists(ref_path):
+        return {}
+    with open(ref_path, "r") as f:
+        return json.load(f)
+
+
+def build_merged_flightscope_csv(sot_csv, session_dirs, output_path):
+    """Merge SoT CSV rows with session flightscope_reference.json entries into a combined CSV.
+
+    Session shots get prefixed names (e.g., s2_shot_10). BackSpin/SideSpin are read from
+    the shot JSON files since the reference JSON doesn't contain them.
+    """
+    rows = []
+
+    # Read standard SoT rows
+    if os.path.exists(sot_csv):
+        with open(sot_csv, "r") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                rows.append(row)
+
+    # Process each session's reference data
+    for sd in session_dirs:
+        ref_data = load_session_reference(sd)
+        prefix = session_prefix(sd)
+
+        for shot_key, entry in sorted(ref_data.items()):
+            fname = entry.get("filename", f"{shot_key}.json")
+            shot_path = os.path.join(sd, fname)
+
+            # Read backspin/sidespin from the shot JSON
+            backspin = 0.0
+            sidespin = 0.0
+            if os.path.exists(shot_path):
+                with open(shot_path, "r") as f:
+                    shot_data = json.load(f)
+                ball = shot_data.get("BallData", shot_data)
+                backspin = ball.get("BackSpin", 0.0)
+                sidespin = ball.get("SideSpin", 0.0)
+
+            carry = entry.get("carry_yd", 0.0)
+            total = entry.get("total_yd", 0.0)
+            rollout = total - carry if total > 0 and carry > 0 else 0.0
+
+            rows.append({
+                "shot_name": f"{prefix}_{shot_key}",
+                "filename": fname,
+                "speed_mph": f"{entry.get('speed_mph', 0.0):.2f}",
+                "vla_deg": f"{entry.get('vla_deg', 0.0):.2f}",
+                "hla_deg": f"{entry.get('hla_deg', 0.0):.2f}",
+                "total_spin_rpm": f"{entry.get('total_spin_rpm', 0.0):.1f}",
+                "spin_axis_deg": f"{entry.get('spin_axis_deg', 0.0):.2f}",
+                "backspin_rpm": f"{backspin:.1f}",
+                "sidespin_rpm": f"{sidespin:.1f}",
+                "carry_yd": f"{carry:.1f}",
+                "total_yd": f"{total:.1f}",
+                "rollout_yd": f"{rollout:.1f}",
+                "apex_ft": f"{entry.get('apex_ft', 0.0):.1f}",
+            })
+
+    # Write combined CSV
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    fieldnames = ["shot_name", "filename", "speed_mph", "vla_deg", "hla_deg",
+                  "total_spin_rpm", "spin_axis_deg", "backspin_rpm", "sidespin_rpm",
+                  "carry_yd", "total_yd", "rollout_yd", "apex_ft"]
+    with open(output_path, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
+        writer.writeheader()
+        for row in rows:
+            writer.writerow(row)
+
+    return rows
+
+
+def filter_physics_csv(physics_csv, reference_shot_names):
+    """Remove rows from physics CSV whose shot_name is not in the reference set."""
+    if not os.path.exists(physics_csv):
+        return
+    with open(physics_csv, "r") as f:
+        reader = csv.DictReader(f)
+        fieldnames = reader.fieldnames
+        rows = [row for row in reader if row["shot_name"] in reference_shot_names]
+
+    with open(physics_csv, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
 
 
 def run_command(cmd, description, cwd=None):
@@ -58,11 +177,11 @@ def find_godot():
     return "godot"
 
 
-def get_next_iteration():
+def _get_next_iteration(history_dir):
     """Get the next iteration number from history."""
-    os.makedirs(HISTORY_DIR, exist_ok=True)
+    os.makedirs(history_dir, exist_ok=True)
     existing = [
-        f for f in os.listdir(HISTORY_DIR)
+        f for f in os.listdir(history_dir)
         if f.startswith("iteration_") and f.endswith(".json")
     ]
     if not existing:
@@ -77,18 +196,26 @@ def get_next_iteration():
     return max(numbers) + 1 if numbers else 1
 
 
-def load_iteration(n):
+def get_next_iteration():
+    return _get_next_iteration(HISTORY_DIR)
+
+
+def _load_iteration(history_dir, n):
     """Load a specific iteration from history."""
-    path = os.path.join(HISTORY_DIR, f"iteration_{n:03d}.json")
+    path = os.path.join(history_dir, f"iteration_{n:03d}.json")
     if not os.path.exists(path):
         return None
     with open(path, "r") as f:
         return json.load(f)
 
 
-def save_iteration(iteration_num, profile_overrides, analysis_result, prev_iteration=None):
+def load_iteration(n):
+    return _load_iteration(HISTORY_DIR, n)
+
+
+def _save_iteration(history_dir, iteration_num, profile_overrides, analysis_result, prev_iteration=None):
     """Save an iteration snapshot to history."""
-    os.makedirs(HISTORY_DIR, exist_ok=True)
+    os.makedirs(history_dir, exist_ok=True)
 
     per_shot = {}
     for diag in analysis_result["diagnostics"]:
@@ -127,7 +254,7 @@ def save_iteration(iteration_num, profile_overrides, analysis_result, prev_itera
         "conflicts": [c["parameter"] for c in analysis_result["conflicts"]],
     }
 
-    path = os.path.join(HISTORY_DIR, f"iteration_{iteration_num:03d}.json")
+    path = os.path.join(history_dir, f"iteration_{iteration_num:03d}.json")
     with open(path, "w") as f:
         json.dump(snapshot, f, indent=2)
         f.write("\n")
@@ -135,8 +262,27 @@ def save_iteration(iteration_num, profile_overrides, analysis_result, prev_itera
     return snapshot
 
 
+def save_iteration(iteration_num, profile_overrides, analysis_result, prev_iteration=None):
+    return _save_iteration(HISTORY_DIR, iteration_num, profile_overrides, analysis_result, prev_iteration)
+
+
 def cmd_run(args):
     """Run a full calibration iteration."""
+    # Resolve session mode: override all path constants when --session is provided
+    session_dir = None
+    physics_csv = PHYSICS_CSV
+    flightscope_csv = FLIGHTSCOPE_CSV
+    diff_csv = DIFF_CSV
+    history_dir = HISTORY_DIR
+
+    if args.session:
+        session_dir = os.path.normpath(os.path.join(PROJECT_ROOT, args.session)) if not os.path.isabs(args.session) else os.path.normpath(args.session)
+        physics_csv = os.path.join(session_dir, "physics.csv")
+        flightscope_csv = os.path.join(session_dir, "flightscope.csv")
+        diff_csv = os.path.join(session_dir, "shot_diff_analysis.csv")
+        history_dir = os.path.join(session_dir, "history")
+        print(f"Session mode: {session_dir}")
+
     profile_path = args.profile
     if not profile_path and os.path.exists(DEFAULT_PROFILE):
         profile_path = DEFAULT_PROFILE
@@ -147,12 +293,24 @@ def cmd_run(args):
         with open(profile_path, "r") as f:
             profile_overrides = json.load(f)
 
+    # Discover session directories for unified mode (default, non-session)
+    session_dirs = []
+    if not session_dir and not args.no_sessions:
+        session_dirs = discover_session_dirs()
+        if session_dirs:
+            prefixes = [session_prefix(sd) for sd in session_dirs]
+            print(f"Unified mode: including {len(session_dirs)} session(s): {', '.join(prefixes)}")
+
     # Step 1: Export physics CSV (requires Godot)
     godot = find_godot()
     godot_cmd = [godot, "--headless", "--script", "tools/shot_calibration/export_physics_csv.gd", "--"]
     if profile_path:
         godot_cmd.append(f"--profile={profile_path}")
-    godot_cmd.append(f"--output={PHYSICS_CSV}")
+    if session_dir:
+        godot_cmd.append(f"--session={session_dir}")
+    elif session_dirs:
+        godot_cmd.append(f"--dirs={build_dirs_spec(session_dirs)}")
+    godot_cmd.append(f"--output={physics_csv}")
 
     if not args.skip_godot:
         if not run_command(godot_cmd, "Exporting physics CSV (Godot headless)"):
@@ -160,13 +318,36 @@ def cmd_run(args):
             sys.exit(1)
     else:
         print("\n--- Skipping Godot export (--skip-godot) ---")
-        if not os.path.exists(PHYSICS_CSV):
-            print(f"ERROR: Physics CSV not found at {PHYSICS_CSV}", file=sys.stderr)
+        if not os.path.exists(physics_csv):
+            print(f"ERROR: Physics CSV not found at {physics_csv}", file=sys.stderr)
             sys.exit(1)
 
     # Step 2: FlightScope reference CSV
-    os.makedirs(os.path.dirname(FLIGHTSCOPE_CSV), exist_ok=True)
-    if args.export_flightscope:
+    os.makedirs(os.path.dirname(flightscope_csv), exist_ok=True)
+    if session_dir:
+        # Session mode: scrape FlightScope for session shots, then export CSV
+        print(f"\n--- Generating FlightScope reference for session ---")
+        scraper_cmd = [
+            sys.executable, os.path.join(SCRIPT_DIR, "flightscope_scraper.py"),
+            "--session", session_dir,
+        ]
+        if not run_command(scraper_cmd, "Scraping FlightScope for session shots"):
+            print("WARNING: FlightScope scraper failed. Attempting export from existing reference.", file=sys.stderr)
+
+        export_cmd = [
+            sys.executable, os.path.join(SCRIPT_DIR, "export_flightscope_csv.py"),
+            "--session", session_dir,
+        ]
+        result = subprocess.run(
+            export_cmd, cwd=PROJECT_ROOT, capture_output=True, text=True
+        )
+        if result.returncode != 0:
+            print(f"ERROR: FlightScope CSV export failed: {result.stderr}", file=sys.stderr)
+            sys.exit(1)
+        with open(flightscope_csv, "w") as f:
+            f.write(result.stdout)
+        print(f"  Wrote {flightscope_csv}")
+    elif args.export_flightscope:
         # Legacy path: run export_flightscope_csv.py against flightscope_reference.json
         flightscope_cmd = [
             sys.executable, os.path.join(SCRIPT_DIR, "export_flightscope_csv.py"),
@@ -178,21 +359,38 @@ def cmd_run(args):
         if result.returncode != 0:
             print(f"ERROR: FlightScope export failed: {result.stderr}", file=sys.stderr)
             sys.exit(1)
-        with open(FLIGHTSCOPE_CSV, "w") as f:
+        with open(flightscope_csv, "w") as f:
             f.write(result.stdout)
-        print(f"  Wrote {FLIGHTSCOPE_CSV}")
+        print(f"  Wrote {flightscope_csv}")
     else:
-        # Default: copy the manually-maintained SoT CSV
-        print(f"\n--- Loading FlightScope SoT CSV ---")
+        # Default: SoT CSV + session references merged
+        print(f"\n--- Loading FlightScope reference data ---")
         if not os.path.exists(SOT_CSV):
             print(f"ERROR: SoT CSV not found at {SOT_CSV}", file=sys.stderr)
             print("  Use --export-flightscope to fall back to export_flightscope_csv.py", file=sys.stderr)
             sys.exit(1)
-        shutil.copy2(SOT_CSV, FLIGHTSCOPE_CSV)
-        print(f"  Copied {SOT_CSV} -> {FLIGHTSCOPE_CSV}")
+
+        if session_dirs:
+            merged_rows = build_merged_flightscope_csv(SOT_CSV, session_dirs, flightscope_csv)
+            # Count standard vs session shots
+            sot_count = 0
+            session_count = 0
+            for row in merged_rows:
+                carry = float(row.get("carry_yd", 0) or 0)
+                total = float(row.get("total_yd", 0) or 0)
+                if carry > 0 or total > 0:
+                    if "_" in row["shot_name"] and row["shot_name"].split("_")[0].startswith("s"):
+                        session_count += 1
+                    else:
+                        sot_count += 1
+            print(f"  Merged FlightScope CSV: {sot_count} standard + {session_count} session shots")
+            print(f"  Wrote {flightscope_csv}")
+        else:
+            shutil.copy2(SOT_CSV, flightscope_csv)
+            print(f"  Copied {SOT_CSV} -> {flightscope_csv}")
 
         # Print reference coverage summary
-        with open(SOT_CSV, "r") as f:
+        with open(flightscope_csv, "r") as f:
             reader = csv.DictReader(f)
             total_shots = 0
             shots_with_ref = 0
@@ -203,30 +401,39 @@ def cmd_run(args):
                 if carry > 0 or total > 0:
                     shots_with_ref += 1
             missing = total_shots - shots_with_ref
-            print(f"  FlightScope SoT: {shots_with_ref} of {total_shots} shots have reference data ({missing} missing)")
+            print(f"  FlightScope reference: {shots_with_ref} of {total_shots} shots have reference data ({missing} missing)")
+
+    # Step 2b: Filter physics CSV to only include shots with FlightScope reference data
+    if session_dirs and not session_dir:
+        with open(flightscope_csv, "r") as f:
+            reader = csv.DictReader(f)
+            ref_names = {row["shot_name"] for row in reader}
+        filter_physics_csv(physics_csv, ref_names)
+        print(f"  Filtered physics CSV to {len(ref_names)} referenced shots")
 
     # Step 3: Compare CSVs
     compare_cmd = [
         sys.executable, os.path.join(SCRIPT_DIR, "compare_csv.py"),
-        PHYSICS_CSV, FLIGHTSCOPE_CSV,
-        "--output", DIFF_CSV,
+        physics_csv, flightscope_csv,
+        "--output", diff_csv,
     ]
     if not run_command(compare_cmd, "Comparing physics vs FlightScope"):
         sys.exit(1)
 
     # Step 4: Run diagnostic analyzer
     print("\n--- Running diagnostic analysis ---")
-    rows = load_diff_csv(DIFF_CSV)
+    rows = load_diff_csv(diff_csv)
     if not rows:
         print("ERROR: No rows in diff CSV", file=sys.stderr)
         sys.exit(1)
 
     analysis_result = analyze(rows)
 
-    # Step 5: Save iteration snapshot
-    iteration_num = get_next_iteration()
-    prev_iteration = load_iteration(iteration_num - 1) if iteration_num > 1 else None
-    snapshot = save_iteration(iteration_num, profile_overrides, analysis_result, prev_iteration)
+    # Step 5: Save iteration snapshot (use session-local history dir)
+    os.makedirs(history_dir, exist_ok=True)
+    iteration_num = _get_next_iteration(history_dir)
+    prev_iteration = _load_iteration(history_dir, iteration_num - 1) if iteration_num > 1 else None
+    snapshot = _save_iteration(history_dir, iteration_num, profile_overrides, analysis_result, prev_iteration)
 
     # Step 6: Print report
     print(format_report(analysis_result))
@@ -241,7 +448,7 @@ def cmd_run(args):
                 f"(total_diff: {reg['prev_total_diff']} -> {reg['curr_total_diff']})"
             )
 
-    print(f"\nIteration {iteration_num} saved to {HISTORY_DIR}/iteration_{iteration_num:03d}.json")
+    print(f"\nIteration {iteration_num} saved to {history_dir}/iteration_{iteration_num:03d}.json")
     summary = analysis_result["summary"]
     print(f"Summary: {summary['pass']} pass, {summary['moderate']} moderate, {summary['severe']} severe")
 
@@ -362,6 +569,8 @@ def parse_args():
     run_parser.add_argument("--profile", default=None, help="Path to profile override JSON")
     run_parser.add_argument("--skip-godot", action="store_true", help="Skip Godot export (use existing physics CSV)")
     run_parser.add_argument("--export-flightscope", action="store_true", help="Run export_flightscope_csv.py instead of using SoT CSV")
+    run_parser.add_argument("--session", default=None, help="Session directory path (all outputs go into session dir)")
+    run_parser.add_argument("--no-sessions", action="store_true", help="Exclude session directories (standard shots only)")
 
     subparsers.add_parser("status", help="Show last iteration summary")
     subparsers.add_parser("history", help="Show all iteration summaries")

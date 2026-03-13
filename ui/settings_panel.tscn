@@ -603,6 +603,88 @@ theme_override_colors/font_color = Color(0.72, 0.8, 0.88, 0.96)
 theme_override_font_sizes/font_size = 15
 text = "Launch monitor TCP listening port."
 
+[node name="ShotRecordingCard" type="PanelContainer" parent="Root/Panel/Margin/Content/Tabs/Game"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="ShotRecordingMargin" type="MarginContainer" parent="Root/Panel/Margin/Content/Tabs/Game/ShotRecordingCard"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 14
+
+[node name="ShotRecordingContent" type="VBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Game/ShotRecordingCard/ShotRecordingMargin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="ShotRecordingRow" type="HBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Game/ShotRecordingCard/ShotRecordingMargin/ShotRecordingContent"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="ShotRecordingLabel" type="Label" parent="Root/Panel/Margin/Content/Tabs/Game/ShotRecordingCard/ShotRecordingMargin/ShotRecordingContent/ShotRecordingRow"]
+custom_minimum_size = Vector2(210, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.91, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 20
+text = "Shot Recording"
+vertical_alignment = 1
+
+[node name="ShotRecordingCheck" type="CheckBox" parent="Root/Panel/Margin/Content/Tabs/Game/ShotRecordingCard/ShotRecordingMargin/ShotRecordingContent/ShotRecordingRow"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.91, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 20
+text = "Enabled"
+
+[node name="ShotRecordingSpacer" type="Control" parent="Root/Panel/Margin/Content/Tabs/Game/ShotRecordingCard/ShotRecordingMargin/ShotRecordingContent/ShotRecordingRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ShotRecordingPathRow" type="HBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Game/ShotRecordingCard/ShotRecordingMargin/ShotRecordingContent"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="ShotRecordingPathLabel" type="Label" parent="Root/Panel/Margin/Content/Tabs/Game/ShotRecordingCard/ShotRecordingMargin/ShotRecordingContent/ShotRecordingPathRow"]
+custom_minimum_size = Vector2(210, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.91, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 20
+text = "Save Path"
+vertical_alignment = 1
+
+[node name="ShotRecordingPathInput" type="LineEdit" parent="Root/Panel/Margin/Content/Tabs/Game/ShotRecordingCard/ShotRecordingMargin/ShotRecordingContent/ShotRecordingPathRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/normal = SubResource("StyleBoxFlat_field")
+theme_override_styles/focus = SubResource("StyleBoxFlat_field_focus")
+theme_override_styles/read_only = SubResource("StyleBoxFlat_field")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_field")
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_placeholder_color = Color(0.82, 0.88, 0.94, 0.6)
+theme_override_font_sizes/font_size = 18
+placeholder_text = "Select directory..."
+editable = false
+
+[node name="ShotRecordingBrowseButton" type="Button" parent="Root/Panel/Margin/Content/Tabs/Game/ShotRecordingCard/ShotRecordingMargin/ShotRecordingContent/ShotRecordingPathRow"]
+layout_mode = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_button_secondary")
+theme_override_styles/hover = SubResource("StyleBoxFlat_button_secondary_hover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button_secondary")
+theme_override_styles/focus = SubResource("StyleBoxFlat_button_secondary_hover")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_button_secondary")
+theme_override_colors/font_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_hover_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_pressed_color = Color(0.96, 0.98, 1, 1)
+theme_override_colors/font_focus_color = Color(0.96, 0.98, 1, 1)
+theme_override_font_sizes/font_size = 18
+text = "Browse"
+
+[node name="ShotRecordingHelper" type="Label" parent="Root/Panel/Margin/Content/Tabs/Game/ShotRecordingCard/ShotRecordingMargin/ShotRecordingContent"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.72, 0.8, 0.88, 0.96)
+theme_override_font_sizes/font_size = 15
+text = "Not recording"
+
 [node name="Panels" type="VBoxContainer" parent="Root/Panel/Margin/Content/Tabs"]
 layout_mode = 2
 theme_override_constants/separation = 10
