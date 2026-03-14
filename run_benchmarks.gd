@@ -13,7 +13,6 @@ var shots := {
 	"Wedge S2":   "res://assets/data/wedge_shot_2.json",
 	"Bump":       "res://assets/data/bump_test_shot.json",
 	"Bump & Run": "res://assets/data/bump_and_run.json",
-	"Approach":   "res://assets/data/approach_test_shot.json",
 	"Mid Iron":   "res://assets/data/approach_mid_iron_test_shot.json",
 	"Topped":     "res://assets/data/topped_test_shot.json",
 	"Checked":    "res://assets/data/checked_test_shot.json",

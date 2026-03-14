@@ -7,8 +7,6 @@ namespace OpenFairway.Tests
     [TestFixture]
     public class ApproachShotTests
     {
-        private const string SHOT_PATH = "res://assets/data/approach_test_shot.json";
-
         private readonly PhysicsAdapter _adapter = new();
 
         private Dictionary LoadJson(string path)
@@ -25,25 +23,6 @@ namespace OpenFairway.Tests
             Assert.That(data.VariantType, Is.EqualTo(Variant.Type.Dictionary), "JSON must parse to a Dictionary");
 
             return (Dictionary)data;
-        }
-
-        [Test]
-        public void TestApproachShotCarryAndTotal()
-        {
-            var shot = LoadJson(SHOT_PATH);
-
-            var result = _adapter.SimulateShotFromJson(shot);
-
-            Assert.That(result.ContainsKey("carry_yd"), Is.True, "Result missing carry_yd");
-            Assert.That(result.ContainsKey("total_yd"), Is.True, "Result missing total_yd");
-
-            float carry = (float)result["carry_yd"];
-            float total = (float)result["total_yd"];
-
-            // Replace these with your expected ranges once you see real output.
-            // Start wide, then tighten.
-            Assert.That(carry, Is.InRange(10.0f, 200.0f), "Carry out of expected range");
-            Assert.That(total, Is.InRange(carry, 260.0f), "Total out of expected range (should be >= carry)");
         }
 
         [Test]

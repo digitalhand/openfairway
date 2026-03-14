@@ -6,6 +6,8 @@ Main entry point for the tune-simulate-compare loop.
 Usage:
     python tools/shot_calibration/calibrate.py run
     python tools/shot_calibration/calibrate.py run --profile assets/data/calibration/calibration_profile.json
+    python tools/shot_calibration/calibrate.py analyze
+    python tools/shot_calibration/calibrate.py analyze --session assets/data/shot_session_3
     python tools/shot_calibration/calibrate.py status
     python tools/shot_calibration/calibrate.py history
     python tools/shot_calibration/calibrate.py diff 1 3
@@ -15,6 +17,7 @@ import argparse
 import csv
 import datetime
 import json
+import math
 import os
 import shutil
 import subprocess
@@ -268,7 +271,7 @@ def save_iteration(iteration_num, profile_overrides, analysis_result, prev_itera
 
 def cmd_run(args):
     """Run a full calibration iteration."""
-    # Resolve session mode: override all path constants when --session is provided
+    # Override all path constants when --session is provided
     session_dir = None
     physics_csv = PHYSICS_CSV
     flightscope_csv = FLIGHTSCOPE_CSV
@@ -281,7 +284,7 @@ def cmd_run(args):
         flightscope_csv = os.path.join(session_dir, "flightscope.csv")
         diff_csv = os.path.join(session_dir, "shot_diff_analysis.csv")
         history_dir = os.path.join(session_dir, "history")
-        print(f"Session mode: {session_dir}")
+        print(f"Session: {session_dir}")
 
     profile_path = args.profile
     if not profile_path and os.path.exists(DEFAULT_PROFILE):
@@ -293,13 +296,13 @@ def cmd_run(args):
         with open(profile_path, "r") as f:
             profile_overrides = json.load(f)
 
-    # Discover session directories for unified mode (default, non-session)
+    # Discover session directories (default: include all sessions)
     session_dirs = []
     if not session_dir and not args.no_sessions:
         session_dirs = discover_session_dirs()
         if session_dirs:
             prefixes = [session_prefix(sd) for sd in session_dirs]
-            print(f"Unified mode: including {len(session_dirs)} session(s): {', '.join(prefixes)}")
+            print(f"Including {len(session_dirs)} session(s): {', '.join(prefixes)}")
 
     # Step 1: Export physics CSV (requires Godot)
     godot = find_godot()
@@ -325,7 +328,7 @@ def cmd_run(args):
     # Step 2: FlightScope reference CSV
     os.makedirs(os.path.dirname(flightscope_csv), exist_ok=True)
     if session_dir:
-        # Session mode: scrape FlightScope for session shots, then export CSV
+        # Scrape FlightScope for session shots, then export CSV
         print(f"\n--- Generating FlightScope reference for session ---")
         scraper_cmd = [
             sys.executable, os.path.join(SCRIPT_DIR, "flightscope_scraper.py"),
@@ -437,6 +440,291 @@ def cmd_run(args):
 
     # Step 6: Print report
     print(format_report(analysis_result))
+
+    if snapshot["regressions"]:
+        print("\n" + "!" * 70)
+        print("REGRESSIONS DETECTED")
+        print("!" * 70)
+        for reg in snapshot["regressions"]:
+            print(
+                f"  {reg['shot']}: {reg['was']} -> {reg['now']} "
+                f"(total_diff: {reg['prev_total_diff']} -> {reg['curr_total_diff']})"
+            )
+
+    print(f"\nIteration {iteration_num} saved to {history_dir}/iteration_{iteration_num:03d}.json")
+    summary = analysis_result["summary"]
+    print(f"Summary: {summary['pass']} pass, {summary['moderate']} moderate, {summary['severe']} severe")
+
+
+def _compute_accuracy_stats(diffs, thresholds):
+    """Compute accuracy statistics from a list of diff values.
+
+    Args:
+        diffs: List of numeric diff values (physics - reference).
+        thresholds: List of (threshold_value, label_suffix) tuples for within-X percentages.
+
+    Returns:
+        Dict with mean_error, mean_abs_error, median_abs_error, std_dev, max_abs_error,
+        and within_<threshold>_pct entries.
+    """
+    if not diffs:
+        return {}
+
+    n = len(diffs)
+    abs_diffs = [abs(d) for d in diffs]
+    mean_error = sum(diffs) / n
+    mean_abs = sum(abs_diffs) / n
+    sorted_abs = sorted(abs_diffs)
+    if n % 2 == 1:
+        median_abs = sorted_abs[n // 2]
+    else:
+        median_abs = (sorted_abs[n // 2 - 1] + sorted_abs[n // 2]) / 2
+    variance = sum((d - mean_error) ** 2 for d in diffs) / n
+    std_dev = math.sqrt(variance)
+    max_abs = max(abs_diffs)
+
+    stats = {
+        "mean_error": round(mean_error, 1),
+        "mean_abs_error": round(mean_abs, 1),
+        "median_abs_error": round(median_abs, 1),
+        "std_dev": round(std_dev, 1),
+        "max_abs_error": round(max_abs, 1),
+    }
+
+    for threshold, label in thresholds:
+        count = sum(1 for ad in abs_diffs if ad <= threshold)
+        stats[label] = round(count / n * 100, 1)
+
+    return stats
+
+
+def _generate_accuracy_reports(diff_csv, output_dir, top_n=20):
+    """Read shot_diff_analysis.csv and generate accuracy report files.
+
+    Returns list of paths written.
+    """
+    with open(diff_csv, "r") as f:
+        reader = csv.DictReader(f)
+        all_rows = list(reader)
+
+    # Filter to shots with reference data (non-zero flightscope carry or total)
+    ref_rows = [
+        r for r in all_rows
+        if float(r.get("flightscope_carry_yd", 0) or 0) > 0
+        or float(r.get("flightscope_total_yd", 0) or 0) > 0
+    ]
+
+    carry_diffs = [float(r["diff_carry_yd"]) for r in ref_rows if r.get("diff_carry_yd")]
+    total_diffs = [float(r["diff_total_yd"]) for r in ref_rows if r.get("diff_total_yd")]
+    apex_diffs = [float(r["diff_apex_ft"]) for r in ref_rows if r.get("diff_apex_ft")]
+
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M")
+    os.makedirs(output_dir, exist_ok=True)
+    written = []
+
+    # --- 1. Carry-only accuracy summary ---
+    carry_stats = _compute_accuracy_stats(carry_diffs, [
+        (3, "within_3yd_pct"),
+        (5, "within_5yd_pct"),
+        (7, "within_7yd_pct"),
+    ])
+    # Rename keys with _yd suffix
+    carry_accuracy = {}
+    for k, v in carry_stats.items():
+        if k.startswith("within_"):
+            carry_accuracy[k] = v
+        else:
+            carry_accuracy[f"{k}_yd"] = v
+
+    carry_summary = {
+        "timestamp": datetime.datetime.now().strftime("%Y-%m-%dT%H:%M"),
+        "total_shots": len(all_rows),
+        "shots_with_reference": len(ref_rows),
+        "carry_accuracy": carry_accuracy,
+    }
+    carry_path = os.path.join(output_dir, f"openfairway_carry_accuracy_summary_{timestamp}.json")
+    with open(carry_path, "w") as f:
+        json.dump(carry_summary, f, indent=2)
+        f.write("\n")
+    written.append(carry_path)
+
+    # --- 2. Full accuracy summary (carry + total + apex) ---
+    total_stats = _compute_accuracy_stats(total_diffs, [
+        (5, "within_5yd_pct"),
+        (7, "within_7yd_pct"),
+        (10, "within_10yd_pct"),
+    ])
+    total_accuracy = {}
+    for k, v in total_stats.items():
+        if k.startswith("within_"):
+            total_accuracy[k] = v
+        else:
+            total_accuracy[f"{k}_yd"] = v
+
+    apex_stats = _compute_accuracy_stats(apex_diffs, [
+        (5, "within_5ft_pct"),
+        (10, "within_10ft_pct"),
+    ])
+    apex_accuracy = {}
+    for k, v in apex_stats.items():
+        if k.startswith("within_"):
+            apex_accuracy[k] = v
+        else:
+            apex_accuracy[f"{k}_ft"] = v
+
+    full_summary = {
+        "timestamp": datetime.datetime.now().strftime("%Y-%m-%dT%H:%M"),
+        "total_shots": len(all_rows),
+        "shots_with_reference": len(ref_rows),
+        "carry_accuracy": carry_accuracy,
+        "total_accuracy": total_accuracy,
+        "apex_accuracy": apex_accuracy,
+    }
+    full_path = os.path.join(output_dir, f"openfairway_accuracy_summary_{timestamp}.json")
+    with open(full_path, "w") as f:
+        json.dump(full_summary, f, indent=2)
+        f.write("\n")
+    written.append(full_path)
+
+    # --- 3. Critical carry CSV (top 20 by |diff_carry_yd|) ---
+    sorted_by_carry = sorted(
+        ref_rows,
+        key=lambda r: abs(float(r.get("diff_carry_yd", 0) or 0)),
+        reverse=True,
+    )[:top_n]
+    carry_csv_path = os.path.join(output_dir, f"openfairway_critical_carry_{timestamp}.csv")
+    if sorted_by_carry:
+        fieldnames = list(all_rows[0].keys())
+        with open(carry_csv_path, "w", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(sorted_by_carry)
+    written.append(carry_csv_path)
+
+    # --- 4. Critical overall CSV (top 20 by max(|diff_carry|, |diff_total|)) ---
+    sorted_by_overall = sorted(
+        ref_rows,
+        key=lambda r: max(
+            abs(float(r.get("diff_carry_yd", 0) or 0)),
+            abs(float(r.get("diff_total_yd", 0) or 0)),
+        ),
+        reverse=True,
+    )[:top_n]
+    overall_csv_path = os.path.join(output_dir, f"openfairway_critical_overall_{timestamp}.csv")
+    if sorted_by_overall:
+        fieldnames = list(all_rows[0].keys())
+        with open(overall_csv_path, "w", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(sorted_by_overall)
+    written.append(overall_csv_path)
+
+    return written
+
+
+def cmd_analyze(args):
+    """Post-scrape analysis: compare, diagnose, generate accuracy reports, save iteration."""
+    # Resolve paths based on --session flag
+    session_dir = None
+    physics_csv = PHYSICS_CSV
+    flightscope_csv = FLIGHTSCOPE_CSV
+    diff_csv = DIFF_CSV
+    history_dir = HISTORY_DIR
+    report_output_dir = DATA_DIR
+
+    if args.session:
+        session_dir = (
+            os.path.normpath(os.path.join(PROJECT_ROOT, args.session))
+            if not os.path.isabs(args.session)
+            else os.path.normpath(args.session)
+        )
+        physics_csv = os.path.join(session_dir, "physics.csv")
+        flightscope_csv = os.path.join(session_dir, "flightscope.csv")
+        diff_csv = os.path.join(session_dir, "shot_diff_analysis.csv")
+        history_dir = os.path.join(session_dir, "history")
+        print(f"Session: {session_dir}")
+
+    # Discover session directories (default: include all sessions)
+    session_dirs = []
+    if not session_dir and not args.no_sessions:
+        session_dirs = discover_session_dirs()
+        if session_dirs:
+            prefixes = [session_prefix(sd) for sd in session_dirs]
+            print(f"Including {len(session_dirs)} session(s): {', '.join(prefixes)}")
+
+    # Validate physics.csv exists
+    if not os.path.exists(physics_csv):
+        print(f"ERROR: Physics CSV not found at {physics_csv}", file=sys.stderr)
+        print("  Run 'calibrate.py run' or Godot export first.", file=sys.stderr)
+        sys.exit(1)
+
+    # Step 1: FlightScope CSV (optional re-export, or validate existence)
+    if args.flightscope_export:
+        if session_dir:
+            export_cmd = [
+                sys.executable, os.path.join(SCRIPT_DIR, "export_flightscope_csv.py"),
+                "--session", session_dir,
+            ]
+            result = subprocess.run(
+                export_cmd, cwd=PROJECT_ROOT, capture_output=True, text=True
+            )
+            if result.returncode != 0:
+                print(f"ERROR: FlightScope CSV export failed: {result.stderr}", file=sys.stderr)
+                sys.exit(1)
+            os.makedirs(os.path.dirname(flightscope_csv), exist_ok=True)
+            with open(flightscope_csv, "w") as f:
+                f.write(result.stdout)
+            print(f"  Exported FlightScope CSV -> {flightscope_csv}")
+        elif session_dirs:
+            merged_rows = build_merged_flightscope_csv(SOT_CSV, session_dirs, flightscope_csv)
+            print(f"  Merged FlightScope CSV: {len(merged_rows)} rows -> {flightscope_csv}")
+        else:
+            shutil.copy2(SOT_CSV, flightscope_csv)
+            print(f"  Copied {SOT_CSV} -> {flightscope_csv}")
+    else:
+        if not os.path.exists(flightscope_csv):
+            print(f"ERROR: FlightScope CSV not found at {flightscope_csv}", file=sys.stderr)
+            print("  Use --flightscope-export to generate it, or run scraper first.", file=sys.stderr)
+            sys.exit(1)
+
+    # Filter physics CSV to only include shots with FlightScope reference
+    if session_dirs and not session_dir:
+        with open(flightscope_csv, "r") as f:
+            reader = csv.DictReader(f)
+            ref_names = {row["shot_name"] for row in reader}
+        filter_physics_csv(physics_csv, ref_names)
+        print(f"  Filtered physics CSV to {len(ref_names)} referenced shots")
+
+    # Step 2: Compare physics vs FlightScope -> shot_diff_analysis.csv
+    compare_cmd = [
+        sys.executable, os.path.join(SCRIPT_DIR, "compare_csv.py"),
+        physics_csv, flightscope_csv,
+        "--output", diff_csv,
+    ]
+    if not run_command(compare_cmd, "Comparing physics vs FlightScope"):
+        sys.exit(1)
+
+    # Step 3: Run diagnostic analyzer
+    print("\n--- Running diagnostic analysis ---")
+    rows = load_diff_csv(diff_csv)
+    if not rows:
+        print("ERROR: No rows in diff CSV", file=sys.stderr)
+        sys.exit(1)
+
+    analysis_result = analyze(rows)
+    print(format_report(analysis_result))
+
+    # Step 4: Generate accuracy reports
+    print("\n--- Generating accuracy reports ---")
+    report_paths = _generate_accuracy_reports(diff_csv, report_output_dir, top_n=args.show)
+    for p in report_paths:
+        print(f"  {p}")
+
+    # Step 5: Save iteration snapshot
+    os.makedirs(history_dir, exist_ok=True)
+    iteration_num = _get_next_iteration(history_dir)
+    prev_iteration = _load_iteration(history_dir, iteration_num - 1) if iteration_num > 1 else None
+    snapshot = _save_iteration(history_dir, iteration_num, {}, analysis_result, prev_iteration)
 
     if snapshot["regressions"]:
         print("\n" + "!" * 70)
@@ -572,6 +860,12 @@ def parse_args():
     run_parser.add_argument("--session", default=None, help="Session directory path (all outputs go into session dir)")
     run_parser.add_argument("--no-sessions", action="store_true", help="Exclude session directories (standard shots only)")
 
+    analyze_parser = subparsers.add_parser("analyze", help="Post-scrape analysis: compare, diagnose, generate accuracy reports")
+    analyze_parser.add_argument("--session", default=None, help="Session directory path")
+    analyze_parser.add_argument("--no-sessions", action="store_true", help="Exclude session directories (standard shots only)")
+    analyze_parser.add_argument("--flightscope-export", action="store_true", help="Re-export FlightScope CSV before comparing")
+    analyze_parser.add_argument("--show", type=int, default=20, help="Number of worst shots to include in critical CSVs (default: 20)")
+
     subparsers.add_parser("status", help="Show last iteration summary")
     subparsers.add_parser("history", help="Show all iteration summaries")
 
@@ -586,11 +880,12 @@ def main():
     args = parse_args()
 
     if args.command is None:
-        print("Usage: calibrate.py {run|status|history|diff}", file=sys.stderr)
+        print("Usage: calibrate.py {run|analyze|status|history|diff}", file=sys.stderr)
         sys.exit(1)
 
     commands = {
         "run": cmd_run,
+        "analyze": cmd_analyze,
         "status": cmd_status,
         "history": cmd_history,
         "diff": cmd_diff,
