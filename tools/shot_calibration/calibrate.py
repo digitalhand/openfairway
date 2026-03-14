@@ -461,11 +461,11 @@ def _compute_accuracy_stats(diffs, thresholds):
 
     Args:
         diffs: List of numeric diff values (physics - reference).
-        thresholds: List of (threshold_value, label_suffix) tuples for within-X percentages.
+        thresholds: List of threshold values for within-X percentages.
 
     Returns:
-        Dict with mean_error, mean_abs_error, median_abs_error, std_dev, max_abs_error,
-        and within_<threshold>_pct entries.
+        Dict with avg_error, avg_off, typical_off, consistency, worst_off,
+        and within_pct (dict mapping threshold to percentage).
     """
     if not diffs:
         return {}
@@ -483,19 +483,19 @@ def _compute_accuracy_stats(diffs, thresholds):
     std_dev = math.sqrt(variance)
     max_abs = max(abs_diffs)
 
-    stats = {
-        "mean_error": round(mean_error, 1),
-        "mean_abs_error": round(mean_abs, 1),
-        "median_abs_error": round(median_abs, 1),
-        "std_dev": round(std_dev, 1),
-        "max_abs_error": round(max_abs, 1),
-    }
-
-    for threshold, label in thresholds:
+    within_pct = {}
+    for threshold in thresholds:
         count = sum(1 for ad in abs_diffs if ad <= threshold)
-        stats[label] = round(count / n * 100, 1)
+        within_pct[str(threshold)] = round(count / n * 100, 1)
 
-    return stats
+    return {
+        "avg_error": round(mean_error, 1),
+        "avg_off": round(mean_abs, 1),
+        "typical_off": round(median_abs, 1),
+        "consistency": round(std_dev, 1),
+        "worst_off": round(max_abs, 1),
+        "within_pct": within_pct,
+    }
 
 
 def _generate_accuracy_reports(diff_csv, output_dir, top_n=20):
@@ -522,55 +522,21 @@ def _generate_accuracy_reports(diff_csv, output_dir, top_n=20):
     os.makedirs(output_dir, exist_ok=True)
     written = []
 
-    # --- 1. Carry-only accuracy summary ---
-    carry_stats = _compute_accuracy_stats(carry_diffs, [
-        (3, "within_3yd_pct"),
-        (5, "within_5yd_pct"),
-        (7, "within_7yd_pct"),
-    ])
-    # Rename keys with _yd suffix
-    carry_accuracy = {}
-    for k, v in carry_stats.items():
-        if k.startswith("within_"):
-            carry_accuracy[k] = v
-        else:
-            carry_accuracy[f"{k}_yd"] = v
+    # --- 1. Full accuracy summary (carry + total + apex) ---
+    _YD_THRESHOLDS = [1, 2, 3, 5, 7, 10, 15, 20]
+    _FT_THRESHOLDS = [1, 2, 3, 5, 7, 10, 13, 15, 20, 50]
 
-    carry_summary = {
-        "timestamp": datetime.datetime.now().strftime("%Y-%m-%dT%H:%M"),
-        "total_shots": len(all_rows),
-        "shots_with_reference": len(ref_rows),
-        "carry_accuracy": carry_accuracy,
-    }
-    carry_path = os.path.join(output_dir, f"openfairway_carry_accuracy_summary_{timestamp}.json")
-    with open(carry_path, "w") as f:
-        json.dump(carry_summary, f, indent=2)
-        f.write("\n")
-    written.append(carry_path)
+    carry_stats = _compute_accuracy_stats(carry_diffs, _YD_THRESHOLDS)
+    carry_accuracy = {f"{k}_yd": v for k, v in carry_stats.items() if k != "within_pct"}
+    carry_accuracy["within_pct_yd"] = carry_stats.get("within_pct", {})
 
-    # --- 2. Full accuracy summary (carry + total + apex) ---
-    total_stats = _compute_accuracy_stats(total_diffs, [
-        (5, "within_5yd_pct"),
-        (7, "within_7yd_pct"),
-        (10, "within_10yd_pct"),
-    ])
-    total_accuracy = {}
-    for k, v in total_stats.items():
-        if k.startswith("within_"):
-            total_accuracy[k] = v
-        else:
-            total_accuracy[f"{k}_yd"] = v
+    total_stats = _compute_accuracy_stats(total_diffs, _YD_THRESHOLDS)
+    total_accuracy = {f"{k}_yd": v for k, v in total_stats.items() if k != "within_pct"}
+    total_accuracy["within_pct_yd"] = total_stats.get("within_pct", {})
 
-    apex_stats = _compute_accuracy_stats(apex_diffs, [
-        (5, "within_5ft_pct"),
-        (10, "within_10ft_pct"),
-    ])
-    apex_accuracy = {}
-    for k, v in apex_stats.items():
-        if k.startswith("within_"):
-            apex_accuracy[k] = v
-        else:
-            apex_accuracy[f"{k}_ft"] = v
+    apex_stats = _compute_accuracy_stats(apex_diffs, _FT_THRESHOLDS)
+    apex_accuracy = {f"{k}_ft": v for k, v in apex_stats.items() if k != "within_pct"}
+    apex_accuracy["within_pct_ft"] = apex_stats.get("within_pct", {})
 
     full_summary = {
         "timestamp": datetime.datetime.now().strftime("%Y-%m-%dT%H:%M"),
@@ -586,7 +552,7 @@ def _generate_accuracy_reports(diff_csv, output_dir, top_n=20):
         f.write("\n")
     written.append(full_path)
 
-    # --- 3. Critical carry CSV (top 20 by |diff_carry_yd|) ---
+    # --- 2. Critical carry CSV (top 20 by |diff_carry_yd|) ---
     sorted_by_carry = sorted(
         ref_rows,
         key=lambda r: abs(float(r.get("diff_carry_yd", 0) or 0)),
@@ -601,7 +567,7 @@ def _generate_accuracy_reports(diff_csv, output_dir, top_n=20):
             writer.writerows(sorted_by_carry)
     written.append(carry_csv_path)
 
-    # --- 4. Critical overall CSV (top 20 by max(|diff_carry|, |diff_total|)) ---
+    # --- 3. Critical overall CSV (top 20 by max(|diff_carry|, |diff_total|)) ---
     sorted_by_overall = sorted(
         ref_rows,
         key=lambda r: max(

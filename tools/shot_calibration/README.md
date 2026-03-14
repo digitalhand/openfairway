@@ -44,11 +44,24 @@ The `analyze` command:
 1. Compares `physics.csv` vs `flightscope.csv` → `shot_diff_analysis.csv`
 2. Prints a diagnostic report
 3. Writes accuracy reports to `assets/data/`:
-   - `openfairway_carry_accuracy_summary_<timestamp>.json` — carry accuracy stats
    - `openfairway_accuracy_summary_<timestamp>.json` — carry + total + apex accuracy stats
    - `openfairway_critical_carry_<timestamp>.csv` — top 20 worst shots by carry error
    - `openfairway_critical_overall_<timestamp>.csv` — top 20 worst shots by max(carry, total) error
 4. Saves an iteration snapshot to history
+
+**Accuracy report field reference:**
+
+| Field | What it means |
+|-------|---------------|
+| `avg_error` | Average error (positive = physics flies long, negative = short) |
+| `avg_off` | Average how far off, ignoring direction |
+| `typical_off` | Typical how far off (middle value, less affected by outliers) |
+| `consistency` | How spread out errors are (lower = more consistent) |
+| `worst_off` | Single worst shot error |
+| `within_pct_yd` | Distribution of shots within N yards of reference (N = 1, 2, 3, 5, 7, 10, 15, 20) |
+| `within_pct_ft` | Distribution of shots within N feet of reference (N = 1, 2, 3, 5, 7, 10, 13, 15, 20, 50) |
+
+Fields end in `_yd` (yards) for carry/total or `_ft` (feet) for apex.
 
 ### Iteration History
 
