@@ -15,6 +15,9 @@ Usage:
     python tools/shot_calibration/flightscope_scraper.py --shots driver2 --visible
     python tools/shot_calibration/flightscope_scraper.py --shots driver1.json wood1.json
     python tools/shot_calibration/flightscope_scraper.py --visible
+    python tools/shot_calibration/flightscope_scraper.py --session assets/data/shot_session_3 --visible
+    python tools/shot_calibration/flightscope_scraper.py --retry-failed    # re-attempt failed shots
+    python tools/shot_calibration/flightscope_scraper.py --force           # ignore existing, start fresh
 """
 
 import argparse
@@ -75,7 +78,6 @@ DEFAULT_SHOTS = {
     "wedge2": "wedge_test_shot2.json",
     "wood_low": "wood_low_test_shot.json",
     "approach_mid": "approach_mid_iron_test_shot.json",
-    "approach_test_shot": "approach_test_shot.json",
     "bump_and_run": "bump_and_run.json",
     "bump_and_run_slow": "bump_and_run_slow.json",
     "bump_test_shot": "bump_test_shot.json",
@@ -162,14 +164,23 @@ def load_shot_data(filename: str, data_dir: Path = None) -> dict:
         sidespin = total_spin * math.sin(axis_rad)
 
     # Filter out shots outside FlightScope's useful input range
-    if speed <= 45:
-        print(f"  SKIP: {filename} — speed {speed:.1f} mph <= 45 mph")
+    if speed < 45:
+        print(f"  SKIP: {filename} — speed {speed:.1f} mph < 45 mph")
         return None
     if vla <= 5:
         print(f"  SKIP: {filename} — VLA {vla:.1f}° <= 5°")
         return None
+    if vla > 45:
+        print(f"  SKIP: {filename} — VLA {vla:.1f}° > 45° (too steep for FlightScope)")
+        return None
     if total_spin < 1000 or total_spin > 12000:
         print(f"  SKIP: {filename} — total spin {total_spin:.0f} RPM outside 1000–12000 range")
+        return None
+    if hla <= -45 or hla >= 45:
+        print(f"  SKIP: {filename} — HLA {hla:.1f}° outside ±45° range")
+        return None
+    if spin_axis <= -45 or spin_axis >= 45:
+        print(f"  SKIP: {filename} — spin axis {spin_axis:.1f}° outside ±45° range")
         return None
 
     return {
@@ -909,22 +920,40 @@ def _save_results(results: dict, output_path: Path):
         json.dump(results, f, indent=2)
 
 
+def _load_existing_results(output_path: Path) -> dict:
+    """Load previously scraped results from output file, if it exists."""
+    if output_path and output_path.exists():
+        with open(output_path) as f:
+            return json.load(f)
+    return {}
+
+
+def _is_completed(entry: dict) -> bool:
+    """Check if a result entry represents a successful scrape (has carry data, no failure status)."""
+    return entry.get("carry_yd") is not None and entry.get("_status") != "failed"
+
+
 def scrape_flightscope(
     shots: dict,
     visible: bool = False,
     debug_port: int = None,
     output_path: Path = None,
     browser_profile: str = None,
+    existing_results: dict = None,
+    retry_failed: bool = False,
 ) -> dict:
     """
     Automate FlightScope trajectory optimizer to get carry/total/apex.
 
     When *debug_port* is set, attaches to an existing browser and leaves it
     running after scraping completes.
+
+    When *existing_results* is provided, already-completed shots are skipped.
+    Failed shots are also skipped unless *retry_failed* is True.
     """
     driver = _create_driver(visible, debug_port=debug_port, browser_profile=browser_profile)
     wait = WebDriverWait(driver, 15)
-    results = {}
+    results = dict(existing_results or {})
     shot_statuses = {}
 
     try:
@@ -957,6 +986,15 @@ def scrape_flightscope(
         for shot_index, (shot_name, shot_data) in enumerate(shots.items()):
             if shot_data is None:
                 continue
+
+            if shot_name in results:
+                existing = results[shot_name]
+                if _is_completed(existing):
+                    _log(f"Skipping {shot_name} (already completed)")
+                    continue
+                if existing.get("_status") == "failed" and not retry_failed:
+                    _log(f"Skipping {shot_name} (previously failed, use --retry-failed to re-attempt)")
+                    continue
 
             _log(f"Processing {shot_name}: speed={shot_data['speed_mph']:.1f} mph, "
                  f"VLA={shot_data['vla_deg']:.1f}, spin={shot_data['total_spin_rpm']:.0f} rpm, "
@@ -1150,6 +1188,8 @@ def main():
         help="Chrome user-data-dir for persistent profile (default: ~/.config/openfairway/scraper-profile)",
     )
     parser.add_argument("--output", type=str, default=None, help="Output file path")
+    parser.add_argument("--retry-failed", action="store_true", help="Re-scrape shots that previously failed")
+    parser.add_argument("--force", action="store_true", help="Ignore existing results and start from scratch")
     args = parser.parse_args()
 
     # Resolve session mode
@@ -1181,18 +1221,27 @@ def main():
 
     print(f"Loaded {len(shots)} shots")
 
+    # Load existing results for resume capability
+    existing_results = {} if args.force else _load_existing_results(output_path)
+
+    if existing_results:
+        completed = sum(1 for e in existing_results.values() if _is_completed(e))
+        failed = sum(1 for e in existing_results.values() if e.get("_status") == "failed")
+        remaining = len(shots) - completed - (0 if args.retry_failed else failed)
+        print(f"Resume: {completed} completed, {failed} failed, {remaining} remaining")
+
     if args.template:
         results = create_manual_reference(shots)
+        # Write template output
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(output_path, "w") as f:
+            json.dump(results, f, indent=2)
     else:
         results = scrape_flightscope(
             shots, visible=args.visible, debug_port=args.debug_port,
             output_path=output_path, browser_profile=args.browser_profile,
+            existing_results=existing_results, retry_failed=args.retry_failed,
         )
-
-    # Write output
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(output_path, "w") as f:
-        json.dump(results, f, indent=2)
 
     print(f"\nWrote {len(results)} entries to {output_path}")
 

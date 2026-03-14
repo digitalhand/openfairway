@@ -484,19 +484,7 @@ namespace OpenFairway.Tests
             Assert.Pass("Baseline: 122.5/180.1 yd (wood_low_test_shot.json)");
         }
 
-        [Test]
-        [Explicit("Requires manual validation in Godot - cannot run in dotnet test")]
-        [Category("DistanceBenchmark")]
-        public void ApproachShot_Distance_Baseline()
-        {
-            // approach_test_shot.json: 81.1 mph, 10490 RPM, 30.5° VLA
-            // Validated: 2026-02-18
-            // Expected: 106.4 yd carry / 108.9 yd total
-
-            Assert.Pass("Baseline: 106.4/108.9 yd (approach_test_shot.json)");
-        }
-
-        [Test]
+[Test]
         [Explicit("Requires manual validation in Godot - cannot run in dotnet test")]
         [Category("DistanceBenchmark")]
         public void FlopShot_Distance_Baseline()

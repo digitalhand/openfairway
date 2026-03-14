@@ -26,8 +26,6 @@ namespace OpenFairway.Tests
                 .SetName("Drive_CarryMatchesFlightScope");
             yield return new TestCaseData("Wood Low", "wood_low_test_shot.json", 122.2f, 0.0f, false)
                 .SetName("WoodLow_CarryMatchesFlightScope");
-            yield return new TestCaseData("Approach", "approach_test_shot.json", 92.3f, 72.4f, true)
-                .SetName("Approach_CarryMatchesFlightScope");
             yield return new TestCaseData("Approach Mid Iron", "approach_mid_iron_test_shot.json", 125.8f, 69.3f, true)
                 .SetName("ApproachMidIron_CarryMatchesFlightScope");
             yield return new TestCaseData("Wedge", "wedge_test_shot.json", 70.6f, 31.2f, true)

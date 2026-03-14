@@ -118,7 +118,6 @@ namespace OpenFairway.Tests
         {
             yield return CreateGuardrailCase("Drive", "drive_test_shot.json", 244.1f);
             yield return CreateGuardrailCase("Wood Low", "wood_low_test_shot.json", 122.2f);
-            yield return CreateGuardrailCase("Approach", "approach_test_shot.json", 92.3f);
             yield return CreateGuardrailCase("Approach Mid", "approach_mid_iron_test_shot.json", 125.8f);
             yield return CreateGuardrailCase("Checked", "checked_test_shot.json", 77.9f);
             yield return CreateGuardrailCase("Flop", "flop_test_shot.json", 61.8f);

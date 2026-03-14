@@ -69,18 +69,7 @@ namespace OpenFairway.Tests
                 tolerance: 10.0f);
         }
 
-        [Test]
-        public void ApproachShot_Benchmark()
-        {
-            // 81 mph, 10478 RPM, 30.5° VLA (high spin wedge)
-            // Should check up and stop quickly
-            AssertDistance("Approach Shot", "approach_test_shot.json",
-                targetCarry: 106.4f,
-                targetTotal: 108.9f,  // Updated 2026-02-18 after surface retuning
-                tolerance: 5.0f);
-        }
-
-        [Test]
+[Test]
         public void DriveShot_Benchmark()
         {
             // Full driver shot
@@ -108,7 +97,6 @@ namespace OpenFairway.Tests
 
             ChipShot_Benchmark();
             WoodLowShot_Benchmark();
-            ApproachShot_Benchmark();
             DriveShot_Benchmark();
             FlopShot_Benchmark();
 

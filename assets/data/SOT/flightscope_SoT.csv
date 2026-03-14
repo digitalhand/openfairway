@@ -1,7 +1,6 @@
 shot_name,filename,speed_mph,vla_deg,hla_deg,total_spin_rpm,spin_axis_deg,backspin_rpm,sidespin_rpm,carry_yd,total_yd,rollout_yd,apex_ft
 5iron,5iron.json,102.10,17.40,1.50,5391.0,12.30,5266.0,1151.0,138.1,142.2,0.0,59.6
 approach_mid_iron_test_shot,approach_mid_iron_test_shot.json,93.90,22.90,-2.60,5375.0,2.00,5375.0,0.0,125.8,128.5,0.0,69.3
-approach_test_shot,approach_test_shot.json,81.05,30.50,1.35,10489.8,5.74,10454.8,699.3,92.2,91.5,0.0,72.2
 bump_and_run,bump_and_run.json,58.27,15.57,-0.85,1850.1,2.31,1700.4,75.7,43.8,62,0.0,10.1
 bump_and_run_slow,bump_and_run_slow.json,30.27,15.57,-0.85,1850.1,2.31,1700.4,75.7,0.0,0.0,0.0,0.0
 bump_test_shot,bump_test_shot.json,78.27,5.57,-0.85,1850.1,2.31,1700.4,75.7,39,74,0.0,3.1
