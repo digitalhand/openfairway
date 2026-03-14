@@ -66,6 +66,7 @@ public partial class GolfBall : CharacterBody3D // Player
     public Vector3 ShotStartPos { get; set; } = Vector3.Zero;
     public Vector3 ShotDirection { get; set; } = new Vector3(1.0f, 0.0f, 0.0f);  // Normalized horizontal direction
     public float AimYawOffsetDeg { get; set; } = 0.0f;  // Camera/world rotation offset applied at launch
+    public float LaunchSpeedMph { get; private set; } = 0.0f;
     public float LaunchAngleDeg { get; private set; } = 0.0f;
     public float LaunchSpinRpm { get; set; } = 0.0f;  // Stored for bounce calculations
     public float RolloutImpactSpinRpm { get; set; } = 0.0f;  // Spin when first landing (for friction calculation)
@@ -287,7 +288,9 @@ public partial class GolfBall : CharacterBody3D // Player
             FloorNormal,
             rolloutImpactSpin: RolloutImpactSpinRpm,
             ballProfile: BallProfile,
-            initialLaunchAngleDeg: LaunchAngleDeg
+            initialLaunchAngleDeg: LaunchAngleDeg,
+            launchSpeedMph: LaunchSpeedMph,
+            launchSpinRpm: LaunchSpinRpm
         ).ToPhysicsParams();
     }
 
@@ -517,6 +520,7 @@ public partial class GolfBall : CharacterBody3D // Player
         Omega = Vector3.Zero;
         _substepAccumulator = 0.0f;
         AimYawOffsetDeg = 0.0f;
+        LaunchSpeedMph = 0.0f;
         LaunchSpinRpm = 0.0f;
         RolloutImpactSpinRpm = 0.0f;
         RefreshLieSurfaceFromGroundProbe();
@@ -554,6 +558,11 @@ public partial class GolfBall : CharacterBody3D // Player
         float totalSpin = (float)spinData["total"];
         float spinAxis = (float)spinData["axis"];
 
+        // Log regime override once per shot
+        RegimeScaleOverride regimeScale = BallProfile.ResolveScaleOverride(speedMph, vlaDeg, totalSpin, out string regimeKey, out string matchedOverrideKey);
+        if (!string.IsNullOrEmpty(matchedOverrideKey))
+            PhysicsLogger.Info($"[Regime] {regimeKey} matched={matchedOverrideKey} drag={regimeScale.DragScaleMultiplier:F3} lift={regimeScale.LiftScaleMultiplier:F3}");
+
         // Build launch vectors from monitor data
         var launch = _shotSetup.BuildLaunchVectors(speedMph, vlaDeg, hlaDeg, totalSpin, spinAxis);
         Vector3 launchVelocity = (Vector3)launch["velocity"];
@@ -588,6 +597,7 @@ public partial class GolfBall : CharacterBody3D // Player
         Omega = launchOmega;
         ShotStartPos = Position;
         ShotDirection = launchDirection;
+        LaunchSpeedMph = speedMph;
         LaunchAngleDeg = vlaDeg;
         LaunchSpinRpm = totalSpin;
 

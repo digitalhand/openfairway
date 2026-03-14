@@ -51,6 +51,19 @@ public partial class PhysicsAdapter : RefCounted
     }
 
     /// <summary>
+    /// Carry-only simulation with a full BallPhysicsProfile override, including
+    /// launch-regime scale overrides.
+    /// </summary>
+    public Dictionary SimulateCarryOnlyWithProfile(Dictionary shot, BallPhysicsProfile profile)
+    {
+        var saved = _ballProfile;
+        _ballProfile = profile ?? new BallPhysicsProfile();
+        var result = SimulateCarryOnlyInternal(shot, null);
+        _ballProfile = saved;
+        return result;
+    }
+
+    /// <summary>
     /// Simulate a shot from JSON data on a specific surface and floor normal.
     /// Useful for regression checks such as green/slope-specific rollout behavior.
     /// </summary>
@@ -71,6 +84,9 @@ public partial class PhysicsAdapter : RefCounted
         float sidespin = (float)spinData["sidespin"];
         float totalSpin = (float)spinData["total"];
         float spinAxis = (float)spinData["axis"];
+        RegimeScaleOverride regimeScale = _ballProfile.ResolveScaleOverride(speedMph, vla, totalSpin, out string regimeKey, out string matchedOverrideKey);
+        if (!string.IsNullOrEmpty(matchedOverrideKey))
+            PhysicsLogger.Info($"[Regime] {regimeKey} matched={matchedOverrideKey} drag={regimeScale.DragScaleMultiplier:F3} lift={regimeScale.LiftScaleMultiplier:F3}");
 
         var launch = _shotSetup.BuildLaunchVectorsFromComponents(speedMph, vla, hla, backspin, sidespin);
         Vector3 velocity = (Vector3)launch["velocity"];
@@ -78,7 +94,7 @@ public partial class PhysicsAdapter : RefCounted
         Vector3 shotDir = (Vector3)launch["shot_direction"];
 
         Vector3 contactNormal = floorNormal.LengthSquared() > 0.000001f ? floorNormal.Normalized() : Vector3.Up;
-        var parameters = CreateParams(contactNormal, surface, vla);
+        var parameters = CreateParams(contactNormal, surface, vla, speedMph, totalSpin);
 
         Vector3 pos = new Vector3(0.0f, START_HEIGHT, 0.0f);
         PhysicsEnums.BallState state = PhysicsEnums.BallState.Flight;
@@ -223,6 +239,8 @@ public partial class PhysicsAdapter : RefCounted
             { "initial_cd", initialAirSample.DragCoefficient },
             { "initial_cl", initialAirSample.LiftCoefficient },
             { "peak_cl", peakCl },
+            { "launch_regime_key", regimeKey },
+            { "matched_regime_override_key", matchedOverrideKey },
             { "surface", surface.ToString() },
             { "first_impact_spinback", firstImpactSpinback },
             { "first_impact_tangent_in_mps", firstImpactTangentIn },
@@ -272,13 +290,36 @@ public partial class PhysicsAdapter : RefCounted
         Vector3 omega = (Vector3)launch["omega"];
         Vector3 shotDir = (Vector3)launch["shot_direction"];
 
-        FlightProfile fp = flightProfile ?? _ballProfile.ResolvedFlight;
+        string regimeKey = ShotRegimeKey.Build(speedMph, vla, totalSpin);
+        string matchedOverrideKey = string.Empty;
+        float dragScale = 1.0f;
+        float liftScale = 1.0f;
+        FlightProfile fp;
+        if (flightProfile != null)
+        {
+            fp = flightProfile;
+        }
+        else
+        {
+            RegimeScaleOverride regimeScale = _ballProfile.ResolveScaleOverride(
+                speedMph,
+                vla,
+                totalSpin,
+                out regimeKey,
+                out matchedOverrideKey
+            );
+            if (!string.IsNullOrEmpty(matchedOverrideKey))
+                PhysicsLogger.Info($"[Regime] {regimeKey} matched={matchedOverrideKey} drag={regimeScale.DragScaleMultiplier:F3} lift={regimeScale.LiftScaleMultiplier:F3}");
+            dragScale = _ballProfile.DragScaleMultiplier * regimeScale.DragScaleMultiplier;
+            liftScale = _ballProfile.LiftScaleMultiplier * regimeScale.LiftScaleMultiplier;
+            fp = _ballProfile.ResolvedFlight;
+        }
 
         float airDensity = _aero.GetAirDensity(DEFAULT_ALT_FT, DEFAULT_TEMP_F, PhysicsEnums.Units.Imperial);
         float airViscosity = _aero.GetDynamicViscosity(DEFAULT_TEMP_F, PhysicsEnums.Units.Imperial);
 
         FlightAerodynamicsSample initialAirSample = BallPhysics.SampleFlightAerodynamics(
-            velocity, omega, airDensity, airViscosity, 1.0f, 1.0f, vla, fp
+            velocity, omega, airDensity, airViscosity, dragScale, liftScale, vla, fp
         );
 
         Vector3 pos = new Vector3(0.0f, START_HEIGHT, 0.0f);
@@ -294,7 +335,7 @@ public partial class PhysicsAdapter : RefCounted
         for (int i = 0; i < steps; i++)
         {
             FlightAerodynamicsSample airSample = BallPhysics.SampleFlightAerodynamics(
-                velocity, omega, airDensity, airViscosity, 1.0f, 1.0f, vla, fp
+                velocity, omega, airDensity, airViscosity, dragScale, liftScale, vla, fp
             );
             if (airSample.HasAerodynamics)
             {
@@ -363,11 +404,18 @@ public partial class PhysicsAdapter : RefCounted
             { "initial_cd", initialAirSample.DragCoefficient },
             { "initial_cl", initialAirSample.LiftCoefficient },
             { "peak_cl", peakCl },
+            { "launch_regime_key", regimeKey },
+            { "matched_regime_override_key", matchedOverrideKey },
             { "flight_profile_name", fp.Name }
         };
     }
 
-    private PhysicsParams CreateParams(Vector3 floorNormal, PhysicsEnums.SurfaceType surface, float initialLaunchAngleDeg)
+    private PhysicsParams CreateParams(
+        Vector3 floorNormal,
+        PhysicsEnums.SurfaceType surface,
+        float initialLaunchAngleDeg,
+        float launchSpeedMph,
+        float launchSpinRpm)
     {
         float airDensity = _aero.GetAirDensity(DEFAULT_ALT_FT, DEFAULT_TEMP_F, PhysicsEnums.Units.Imperial);
         float airViscosity = _aero.GetDynamicViscosity(DEFAULT_TEMP_F, PhysicsEnums.Units.Imperial);
@@ -381,7 +429,9 @@ public partial class PhysicsAdapter : RefCounted
             floorNormal,
             rolloutImpactSpin: 0.0f,
             ballProfile: _ballProfile,
-            initialLaunchAngleDeg: initialLaunchAngleDeg
+            initialLaunchAngleDeg: initialLaunchAngleDeg,
+            launchSpeedMph: launchSpeedMph,
+            launchSpinRpm: launchSpinRpm
         ).ToPhysicsParams();
     }
 }

@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://c05ojmpw46mf0"
+
+[deps]
+
+files=["res://assets/data/shot_session_4/flightscope.filename.translation", "res://assets/data/shot_session_4/flightscope.speed.translation", "res://assets/data/shot_session_4/flightscope.vla.translation", "res://assets/data/shot_session_4/flightscope.hla.translation", "res://assets/data/shot_session_4/flightscope.total.translation", "res://assets/data/shot_session_4/flightscope.spin.translation", "res://assets/data/shot_session_4/flightscope.backspin.translation", "res://assets/data/shot_session_4/flightscope.sidespin.translation", "res://assets/data/shot_session_4/flightscope.carry.translation", "res://assets/data/shot_session_4/flightscope.total.translation", "res://assets/data/shot_session_4/flightscope.rollout.translation", "res://assets/data/shot_session_4/flightscope.apex.translation"]
+
+source_file="res://assets/data/shot_session_4/flightscope.csv"
+dest_files=["res://assets/data/shot_session_4/flightscope.filename.translation", "res://assets/data/shot_session_4/flightscope.speed.translation", "res://assets/data/shot_session_4/flightscope.vla.translation", "res://assets/data/shot_session_4/flightscope.hla.translation", "res://assets/data/shot_session_4/flightscope.total.translation", "res://assets/data/shot_session_4/flightscope.spin.translation", "res://assets/data/shot_session_4/flightscope.backspin.translation", "res://assets/data/shot_session_4/flightscope.sidespin.translation", "res://assets/data/shot_session_4/flightscope.carry.translation", "res://assets/data/shot_session_4/flightscope.total.translation", "res://assets/data/shot_session_4/flightscope.rollout.translation", "res://assets/data/shot_session_4/flightscope.apex.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

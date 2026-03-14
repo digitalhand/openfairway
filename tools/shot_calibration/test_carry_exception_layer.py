@@ -155,7 +155,7 @@ class CarryExceptionLayerTests(unittest.TestCase):
                 "long_max_abs_yd": 6.0,
             },
             "offset_yd_by_regime": {
-                "I-S1-V2-P2": -1.0,
+                "I-S1a-V2-P2": -1.0,
                 "D-S4-V1-P1": 6.0,
             },
         }
@@ -191,7 +191,7 @@ class CarryExceptionLayerTests(unittest.TestCase):
                 "long_max_abs_yd": 6.0,
             },
             "offset_yd_by_regime": {
-                "I-S1-V1-P1": -1.0,
+                "I-S1b-V1-P1": -1.0,
             },
             "offset_yd_by_shot_name": {
                 "s3_shot_5i_11": -3.2,

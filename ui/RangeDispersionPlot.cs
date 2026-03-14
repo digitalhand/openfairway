@@ -44,6 +44,8 @@ public partial class RangeDispersionPlot : Control
 
     private readonly List<RangeDispersionShot> _shots = new();
     private bool _clubOverlayEnabled = true;
+    private readonly HashSet<string> _visibleClubs = new(StringComparer.OrdinalIgnoreCase);
+    private bool _hasClubVisibilityFilter;
 
     private sealed class ClubOverlay
     {
@@ -97,6 +99,24 @@ public partial class RangeDispersionPlot : Control
         QueueRedraw();
     }
 
+    public void SetVisibleClubs(IReadOnlyCollection<string> clubLabels)
+    {
+        _visibleClubs.Clear();
+        _hasClubVisibilityFilter = clubLabels != null;
+
+        if (clubLabels != null)
+        {
+            foreach (string clubLabel in clubLabels)
+            {
+                string normalized = RangeClubCatalog.NormalizeLabel(clubLabel);
+                if (!string.IsNullOrWhiteSpace(normalized))
+                    _visibleClubs.Add(normalized);
+            }
+        }
+
+        QueueRedraw();
+    }
+
     public static Color ResolveClubColor(string clubLabel)
     {
         string normalized = RangeClubCatalog.NormalizeLabel(clubLabel);
@@ -128,15 +148,24 @@ public partial class RangeDispersionPlot : Control
             return;
         }
 
+        if (!HasVisibleShots())
+        {
+            DrawCenteredLabel("All clubs hidden.", plotRect);
+            return;
+        }
+
         List<ClubOverlay> overlays = _clubOverlayEnabled
             ? BuildClubOverlays(plotRect)
             : new List<ClubOverlay>();
 
         foreach (ClubOverlay overlay in overlays)
-            DrawClubEllipse(overlay);
+            DrawClubEllipse(plotRect, overlay);
 
         foreach (RangeDispersionShot shot in _shots)
         {
+            if (!IsClubVisible(shot.ClubLabel))
+                continue;
+
             Vector2 point = MapShotToPlot(plotRect, shot, FixedXAbsMaxYards, FixedYMinYards, FixedYMaxYards);
             Color pointColor = ResolveClubColor(shot.ClubLabel);
             DrawCircle(point, 4.0f, pointColor);
@@ -288,6 +317,9 @@ public partial class RangeDispersionPlot : Control
                 continue;
 
             string clubLabel = RangeClubCatalog.NormalizeLabel(shot.ClubLabel);
+            if (!IsClubVisible(clubLabel))
+                continue;
+
             if (!groups.TryGetValue(clubLabel, out List<RangeDispersionShot> clubShots))
             {
                 clubShots = new List<RangeDispersionShot>();
@@ -330,7 +362,7 @@ public partial class RangeDispersionPlot : Control
         return overlays;
     }
 
-    private void DrawClubEllipse(ClubOverlay overlay)
+    private void DrawClubEllipse(Rect2 plotRect, ClubOverlay overlay)
     {
         List<Vector2> points = BuildEllipsePolyline(overlay.Center, overlay.MajorAxis, overlay.MajorRadius, overlay.MinorRadius);
         if (points.Count < 2)
@@ -339,8 +371,11 @@ public partial class RangeDispersionPlot : Control
         Color stroke = new Color(overlay.Color.R, overlay.Color.G, overlay.Color.B, 0.82f);
         for (int i = 0; i < points.Count - 1; i++)
         {
-            DrawLine(points[i], points[i + 1], EllipseShadowColor, 3.6f, antialiased: true);
-            DrawLine(points[i], points[i + 1], stroke, 2.4f, antialiased: true);
+            if (!TryClipLineToRect(plotRect, points[i], points[i + 1], out Vector2 clippedFrom, out Vector2 clippedTo))
+                continue;
+
+            DrawLine(clippedFrom, clippedTo, EllipseShadowColor, 3.6f, antialiased: true);
+            DrawLine(clippedFrom, clippedTo, stroke, 2.4f, antialiased: true);
         }
     }
 
@@ -565,5 +600,80 @@ public partial class RangeDispersionPlot : Control
     private static bool IsFinite(float value)
     {
         return !float.IsNaN(value) && !float.IsInfinity(value);
+    }
+
+    private bool HasVisibleShots()
+    {
+        foreach (RangeDispersionShot shot in _shots)
+        {
+            if (shot != null && IsClubVisible(shot.ClubLabel))
+                return true;
+        }
+
+        return false;
+    }
+
+    private bool IsClubVisible(string clubLabel)
+    {
+        if (!_hasClubVisibilityFilter)
+            return true;
+
+        string normalized = RangeClubCatalog.NormalizeLabel(clubLabel);
+        return _visibleClubs.Contains(normalized);
+    }
+
+    private static bool TryClipLineToRect(
+        Rect2 rect,
+        Vector2 from,
+        Vector2 to,
+        out Vector2 clippedFrom,
+        out Vector2 clippedTo)
+    {
+        clippedFrom = from;
+        clippedTo = to;
+
+        float t0 = 0.0f;
+        float t1 = 1.0f;
+        Vector2 delta = to - from;
+
+        if (!ClipTest(-delta.X, from.X - rect.Position.X, ref t0, ref t1))
+            return false;
+        if (!ClipTest(delta.X, rect.End.X - from.X, ref t0, ref t1))
+            return false;
+        if (!ClipTest(-delta.Y, from.Y - rect.Position.Y, ref t0, ref t1))
+            return false;
+        if (!ClipTest(delta.Y, rect.End.Y - from.Y, ref t0, ref t1))
+            return false;
+
+        clippedFrom = from + (delta * t0);
+        clippedTo = from + (delta * t1);
+        return true;
+    }
+
+    private static bool ClipTest(float p, float q, ref float t0, ref float t1)
+    {
+        const float epsilon = 0.0001f;
+        if (Mathf.Abs(p) <= epsilon)
+            return q >= 0.0f;
+
+        float ratio = q / p;
+        if (p < 0.0f)
+        {
+            if (ratio > t1)
+                return false;
+
+            if (ratio > t0)
+                t0 = ratio;
+        }
+        else
+        {
+            if (ratio < t0)
+                return false;
+
+            if (ratio < t1)
+                t1 = ratio;
+        }
+
+        return true;
     }
 }

@@ -8,6 +8,7 @@ Realistic golf ball physics engine for Godot 4.5+ C# projects. Usable from both 
 - [Quick Start (GDScript)](#quick-start-gdscript)
 - [Runtime Architecture](#runtime-architecture)
 - [Calibration Tooling Note](#calibration-tooling-note)
+- [Regime Tuning Workflow](#regime-tuning-workflow)
 - [Game Integration: Ball and Surface Ownership](#game-integration-ball-and-surface-ownership)
 - [Surface Authoring](#surface-authoring)
 - [API Reference - GDScript Usage](#api-reference---gdscript-usage)
@@ -111,15 +112,145 @@ Source: [`assets/diagrams/physics-runtime-components.puml`](assets/diagrams/phys
 
 ## Calibration Tooling Note
 
-Carry calibration for source-of-truth comparison is handled by tooling in `tools/shot_calibration/`, including a bounded carry exception layer profile at `assets/data/calibration/carry_exception_profile.json`.
+Carry calibration for source-of-truth comparison is handled by tooling in `tools/shot_calibration/`, including an optional bounded carry exception layer profile at `assets/data/calibration/carry_exception_profile.json`.
 
-That layer is part of the calibration compare/analyze pipeline (`compare_csv.py` and `calibrate.py`). It does not change the addon runtime equations or in-game flight integration path in `addons/openfairway/physics/`.
+That layer is part of the calibration compare/analyze pipeline (`compare_csv.py` and `calibrate.py`) and is disabled by default unless explicitly enabled with `--carry-exceptions`. It does not change the addon runtime equations or in-game flight integration path in `addons/openfairway/physics/`.
 
 For calibration commands and regime/window configuration details, see:
 
 - `tools/shot_calibration/README.md`
 - `assets/data/calibration/calibration_profile.json`
 - `assets/data/calibration/carry_exception_profile.json`
+
+## Regime Tuning Workflow
+
+Use this workflow when the goal is to improve addon physics against FlightScope reference data without launching gameplay scenes.
+
+### What actually improves shots
+
+Only two things move the measured carry numbers:
+
+1. Changes to addon physics code under `addons/openfairway/physics/`
+2. Changes to `BallPhysicsProfile` input, including `RegimeScaleOverrides` in `assets/data/calibration/calibration_profile.json`
+
+`compare_csv.py` and `calibrate.py analyze` do not simulate shots. They only score the most recent headless physics export.
+
+### RegimeScaleOverrides
+
+`BallPhysicsProfile` now supports regime-keyed scale overrides:
+
+```json
+{
+  "RegimeScaleOverrides": {
+    "I-S1a-V3-P2": {
+      "DragScaleMultiplier": 0.95,
+      "LiftScaleMultiplier": 1.05
+    },
+    "D-S3-V1-P2": {
+      "DragScaleMultiplier": 1.02,
+      "LiftScaleMultiplier": 0.99
+    }
+  }
+}
+```
+
+The regime key format is:
+
+```text
+<family>-<speed_bin>-<launch_bin>-<spin_bin>
+```
+
+Families:
+
+- `C`: chip / very low speed (`speed < 60 mph`)
+- `D`: driver-wood style (`speed > 110 mph` and `launch < 18 deg`)
+- `W`: very high loft (`launch > 30 deg`)
+- `I`: everything else, usually irons / wedges / approaches
+
+Bins:
+
+- Speed: `S0`, `S1a` (60-72 mph), `S1b` (72-85 mph), `S2`, `S3`, `S4`
+- Launch: `V0`, `V1`, `V2`, `V3`, `V4`
+- Spin: `P0`, `P1`, `P2`, `P3`, `P4`
+
+Resolution order is most-specific to least-specific:
+
+1. `I-S1a-V3-P2`
+2. `I-S1a-V3`
+3. `I-S1a`
+4. `I`
+
+Default regime overrides are baked into `BallPhysicsProfile.BuildDefaultRegimeOverrides()` (22 keys as of iteration 072). The `calibration_profile.json` is optional and only needed for experimental overrides during tuning.
+
+Prefer specific regime keys (e.g. `D-S4-V1-P0`) over broad catch-alls (e.g. `D-S4-V1`) when sub-bins have opposite carry directions. Removing the `D-S4-V1` catch-all and replacing it with `D-S4-V1-P0`, `D-S4-V1-P1`, `D-S4-V1-P2` was necessary because P0 shots were short while P1/P2 were long.
+
+### What to change first
+
+For carry tuning:
+
+- Shot is too short: decrease `DragScaleMultiplier`, increase `LiftScaleMultiplier`
+- Shot is too long: increase `DragScaleMultiplier`, decrease `LiftScaleMultiplier`
+
+Use small steps:
+
+- Drag: `0.01`
+- Lift: `0.005` to `0.01`
+
+Do not start with global multipliers if the misses are clustered in short-shot bins. Use regime overrides first so short-shot tuning does not reopen driver and wood behavior.
+
+### Target windows
+
+Use these carry targets when reviewing reports:
+
+- `<115 yd`: primary target `+-1 yd`, stretch target `+-0.5 yd`
+- `115-150 yd`: `+-3 yd`
+- `150-180 yd`: `+-7 yd`
+- `>200 yd` drivers: keep within `+-15 yd`
+
+If a regime has mixed signs, do not keep pushing it. Split the regime more narrowly or leave the remainder to the residual carry regime layer.
+
+### Required iteration loop
+
+1. Update source defaults in `BallPhysicsProfile.cs` (or optionally `assets/data/calibration/calibration_profile.json` for experimental overrides)
+2. Re-export physics headlessly
+3. Re-run analysis against the same FlightScope corpus
+4. Compare the new critical-carry report against the prior baseline
+
+Example:
+
+```bash
+godot --headless --path . --script tools/shot_calibration/export_physics_csv.gd -- \
+  '--profile=assets/data/calibration/calibration_profile.json' \
+  '--dirs=res://assets/data|,res://assets/data/shot_session_2|s2,res://assets/data/shot_session_3|s3,res://assets/data/shot_session_4|s4' \
+  '--output=assets/data/calibration/physics.csv'
+
+python tools/shot_calibration/calibrate.py analyze \
+  --show 129 \
+  --critical-baseline assets/data/openfairway_critical_carry_20260314_0146.csv
+```
+
+### How to judge an iteration
+
+Accept a regime change only if:
+
+- Physics-only `% within +-3 yd` improves or stays stable
+- `<115 yd` `% within +-1 yd` improves
+- The critical baseline shows more improved shots than regressed shots
+- Long-shot windows stay inside guardrails
+
+Read the generated summary in this order:
+
+1. `physics_only.within_3yd_pct`
+2. `short_shot_priority.actual_within_1yd_pct`
+3. `short_shot_priority.actual_within_0.5yd_pct`
+4. `critical_baseline.improved` vs `critical_baseline.regressed`
+5. `residual_regime_candidates`
+
+### When to use the residual regime layer
+
+The residual carry regime layer is for the remaining outliers after physics-only tuning captures the main shot families.
+
+Use it only after the base physics path has already improved the broad regime. The runtime fallback should stay regime-based, not shot-name based.
 
 ## Game Integration: Ball and Surface Ownership
 

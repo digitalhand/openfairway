@@ -1,0 +1,554 @@
+{
+  "iteration": 4,
+  "timestamp": "2026-03-14T01:45:23.698357",
+  "profile_overrides": {
+    "DragScaleMultiplier": 1.01,
+    "Flight": {
+      "CdMin": 0.223,
+      "HighLaunchDragVlaStartDeg": 24.5,
+      "HighLaunchDragVlaFullDeg": 31.5,
+      "HighLaunchDragBoostMax": 1.24,
+      "SpinDragProgressiveCapSrStart": 0.33,
+      "SpinDragProgressiveCapSrEnd": 0.5,
+      "SpinDragProgressiveCapBoostMax": 0.25,
+      "HighReMidSpinGain": 16.0,
+      "MidSpinClBoostSrStart": 0.17,
+      "MidSpinClBoostSrEnd": 0.31,
+      "MidSpinClBoostMax": 0.5
+    }
+  },
+  "summary": {
+    "pass": 11,
+    "moderate": 15,
+    "severe": 35,
+    "no_reference": 8
+  },
+  "per_shot": {
+    "shot_3w_18": {
+      "diff_carry_yd": null,
+      "diff_total_yd": null,
+      "diff_apex_ft": null,
+      "status": "pass",
+      "error_pattern": null
+    },
+    "shot_3w_19": {
+      "diff_carry_yd": -0.6,
+      "diff_total_yd": 16.0,
+      "diff_apex_ft": 0.1,
+      "status": "severe",
+      "error_pattern": "ROLLOUT_TOO_LONG"
+    },
+    "shot_3w_20": {
+      "diff_carry_yd": null,
+      "diff_total_yd": null,
+      "diff_apex_ft": null,
+      "status": "pass",
+      "error_pattern": null
+    },
+    "shot_3w_21": {
+      "diff_carry_yd": 0.6,
+      "diff_total_yd": 15.9,
+      "diff_apex_ft": 0.3,
+      "status": "severe",
+      "error_pattern": "ROLLOUT_TOO_LONG"
+    },
+    "shot_3w_22": {
+      "diff_carry_yd": 2.6,
+      "diff_total_yd": 19.6,
+      "diff_apex_ft": 0.5,
+      "status": "severe",
+      "error_pattern": "ROLLOUT_TOO_LONG"
+    },
+    "shot_3w_23": {
+      "diff_carry_yd": 0.1,
+      "diff_total_yd": -23.3,
+      "diff_apex_ft": -1.3,
+      "status": "severe",
+      "error_pattern": "ROLLOUT_TOO_SHORT"
+    },
+    "shot_3w_24": {
+      "diff_carry_yd": 6.9,
+      "diff_total_yd": 28.4,
+      "diff_apex_ft": 1.8,
+      "status": "severe",
+      "error_pattern": "CARRY_AND_ROLLOUT_LONG"
+    },
+    "shot_5i_10": {
+      "diff_carry_yd": 2.5,
+      "diff_total_yd": -7.6,
+      "diff_apex_ft": 5.8,
+      "status": "moderate",
+      "error_pattern": "ROLLOUT_TOO_SHORT"
+    },
+    "shot_5i_11": {
+      "diff_carry_yd": -3.7,
+      "diff_total_yd": -17.6,
+      "diff_apex_ft": -1.3,
+      "status": "severe",
+      "error_pattern": "CARRY_AND_ROLLOUT_SHORT"
+    },
+    "shot_5i_12": {
+      "diff_carry_yd": 1.1,
+      "diff_total_yd": -23.5,
+      "diff_apex_ft": 1.1,
+      "status": "severe",
+      "error_pattern": "ROLLOUT_TOO_SHORT"
+    },
+    "shot_5i_13": {
+      "diff_carry_yd": 2.3,
+      "diff_total_yd": 10.1,
+      "diff_apex_ft": 0.6,
+      "status": "severe",
+      "error_pattern": "ROLLOUT_TOO_LONG"
+    },
+    "shot_5i_14": {
+      "diff_carry_yd": null,
+      "diff_total_yd": null,
+      "diff_apex_ft": null,
+      "status": "pass",
+      "error_pattern": null
+    },
+    "shot_5i_15": {
+      "diff_carry_yd": -4.6,
+      "diff_total_yd": 14.5,
+      "diff_apex_ft": -1.1,
+      "status": "severe",
+      "error_pattern": "CARRY_TOO_SHORT"
+    },
+    "shot_5i_16": {
+      "diff_carry_yd": 0.9,
+      "diff_total_yd": -21.0,
+      "diff_apex_ft": -0.2,
+      "status": "severe",
+      "error_pattern": "ROLLOUT_TOO_SHORT"
+    },
+    "shot_5i_17": {
+      "diff_carry_yd": -2.2,
+      "diff_total_yd": -1.7,
+      "diff_apex_ft": -0.3,
+      "status": "pass",
+      "error_pattern": null
+    },
+    "shot_6i_35": {
+      "diff_carry_yd": -5.5,
+      "diff_total_yd": -17.0,
+      "diff_apex_ft": -3.4,
+      "status": "severe",
+      "error_pattern": "CARRY_AND_ROLLOUT_SHORT"
+    },
+    "shot_6i_36": {
+      "diff_carry_yd": 1.7,
+      "diff_total_yd": -21.1,
+      "diff_apex_ft": 0.6,
+      "status": "severe",
+      "error_pattern": "ROLLOUT_TOO_SHORT"
+    },
+    "shot_6i_37": {
+      "diff_carry_yd": -3.7,
+      "diff_total_yd": 11.9,
+      "diff_apex_ft": -0.9,
+      "status": "severe",
+      "error_pattern": "CARRY_TOO_SHORT"
+    },
+    "shot_6i_38": {
+      "diff_carry_yd": -3.6,
+      "diff_total_yd": -21.7,
+      "diff_apex_ft": 0.1,
+      "status": "severe",
+      "error_pattern": "CARRY_AND_ROLLOUT_SHORT"
+    },
+    "shot_6i_39": {
+      "diff_carry_yd": -0.5,
+      "diff_total_yd": 6.4,
+      "diff_apex_ft": 0.0,
+      "status": "moderate",
+      "error_pattern": "ROLLOUT_TOO_LONG"
+    },
+    "shot_6i_40": {
+      "diff_carry_yd": -1.3,
+      "diff_total_yd": 7.7,
+      "diff_apex_ft": 0.1,
+      "status": "moderate",
+      "error_pattern": "ROLLOUT_TOO_LONG"
+    },
+    "shot_6i_41": {
+      "diff_carry_yd": -4.7,
+      "diff_total_yd": 12.9,
+      "diff_apex_ft": -1.0,
+      "status": "severe",
+      "error_pattern": "CARRY_TOO_SHORT"
+    },
+    "shot_6i_42": {
+      "diff_carry_yd": -1.4,
+      "diff_total_yd": -17.8,
+      "diff_apex_ft": 0.7,
+      "status": "severe",
+      "error_pattern": "ROLLOUT_TOO_SHORT"
+    },
+    "shot_6i_43": {
+      "diff_carry_yd": 5.6,
+      "diff_total_yd": -0.2,
+      "diff_apex_ft": 7.8,
+      "status": "moderate",
+      "error_pattern": "CARRY_TOO_LONG"
+    },
+    "shot_6i_44": {
+      "diff_carry_yd": -1.8,
+      "diff_total_yd": -28.0,
+      "diff_apex_ft": -1.4,
+      "status": "severe",
+      "error_pattern": "ROLLOUT_TOO_SHORT"
+    },
+    "shot_6i_45": {
+      "diff_carry_yd": 3.0,
+      "diff_total_yd": 20.4,
+      "diff_apex_ft": 0.5,
+      "status": "severe",
+      "error_pattern": "ROLLOUT_TOO_LONG"
+    },
+    "shot_6i_46": {
+      "diff_carry_yd": 3.1,
+      "diff_total_yd": -4.2,
+      "diff_apex_ft": -1.7,
+      "status": "moderate",
+      "error_pattern": "CARRY_TOO_LONG"
+    },
+    "shot_6i_47": {
+      "diff_carry_yd": 6.1,
+      "diff_total_yd": 8.3,
+      "diff_apex_ft": 11.4,
+      "status": "moderate",
+      "error_pattern": "CARRY_AND_ROLLOUT_LONG"
+    },
+    "shot_6i_48": {
+      "diff_carry_yd": 5.3,
+      "diff_total_yd": 8.8,
+      "diff_apex_ft": 13.8,
+      "status": "moderate",
+      "error_pattern": "CARRY_AND_ROLLOUT_LONG"
+    },
+    "shot_6i_49": {
+      "diff_carry_yd": -2.5,
+      "diff_total_yd": 6.9,
+      "diff_apex_ft": -0.3,
+      "status": "moderate",
+      "error_pattern": "ROLLOUT_TOO_LONG"
+    },
+    "shot_6i_50": {
+      "diff_carry_yd": -0.9,
+      "diff_total_yd": -12.5,
+      "diff_apex_ft": 3.8,
+      "status": "severe",
+      "error_pattern": "ROLLOUT_TOO_SHORT"
+    },
+    "shot_7i_25": {
+      "diff_carry_yd": -0.9,
+      "diff_total_yd": -18.4,
+      "diff_apex_ft": 0.9,
+      "status": "severe",
+      "error_pattern": "ROLLOUT_TOO_SHORT"
+    },
+    "shot_7i_26": {
+      "diff_carry_yd": 1.5,
+      "diff_total_yd": -22.1,
+      "diff_apex_ft": 1.1,
+      "status": "severe",
+      "error_pattern": "ROLLOUT_TOO_SHORT"
+    },
+    "shot_7i_27": {
+      "diff_carry_yd": 1.2,
+      "diff_total_yd": 4.7,
+      "diff_apex_ft": 7.7,
+      "status": "pass",
+      "error_pattern": null
+    },
+    "shot_7i_28": {
+      "diff_carry_yd": 0.5,
+      "diff_total_yd": 1.5,
+      "diff_apex_ft": 8.1,
+      "status": "pass",
+      "error_pattern": null
+    },
+    "shot_7i_29": {
+      "diff_carry_yd": 0.1,
+      "diff_total_yd": -6.6,
+      "diff_apex_ft": -3.6,
+      "status": "moderate",
+      "error_pattern": "ROLLOUT_TOO_SHORT"
+    },
+    "shot_7i_30": {
+      "diff_carry_yd": -0.7,
+      "diff_total_yd": 1.0,
+      "diff_apex_ft": 5.3,
+      "status": "pass",
+      "error_pattern": null
+    },
+    "shot_7i_31": {
+      "diff_carry_yd": -5.2,
+      "diff_total_yd": -14.7,
+      "diff_apex_ft": -4.2,
+      "status": "severe",
+      "error_pattern": "CARRY_AND_ROLLOUT_SHORT"
+    },
+    "shot_7i_32": {
+      "diff_carry_yd": -2.4,
+      "diff_total_yd": -2.8,
+      "diff_apex_ft": 3.0,
+      "status": "pass",
+      "error_pattern": null
+    },
+    "shot_7i_33": {
+      "diff_carry_yd": -2.2,
+      "diff_total_yd": -1.9,
+      "diff_apex_ft": 4.5,
+      "status": "pass",
+      "error_pattern": null
+    },
+    "shot_7i_34": {
+      "diff_carry_yd": 3.6,
+      "diff_total_yd": 2.0,
+      "diff_apex_ft": 3.0,
+      "status": "moderate",
+      "error_pattern": "CARRY_TOO_LONG"
+    },
+    "shot_9i_1": {
+      "diff_carry_yd": -1.9,
+      "diff_total_yd": -13.0,
+      "diff_apex_ft": 1.2,
+      "status": "severe",
+      "error_pattern": "ROLLOUT_TOO_SHORT"
+    },
+    "shot_9i_2": {
+      "diff_carry_yd": -8.2,
+      "diff_total_yd": -9.2,
+      "diff_apex_ft": -3.1,
+      "status": "severe",
+      "error_pattern": "CARRY_AND_ROLLOUT_SHORT"
+    },
+    "shot_9i_3": {
+      "diff_carry_yd": -1.9,
+      "diff_total_yd": 1.4,
+      "diff_apex_ft": -5.4,
+      "status": "pass",
+      "error_pattern": null
+    },
+    "shot_9i_4": {
+      "diff_carry_yd": null,
+      "diff_total_yd": null,
+      "diff_apex_ft": null,
+      "status": "pass",
+      "error_pattern": null
+    },
+    "shot_9i_5": {
+      "diff_carry_yd": -3.0,
+      "diff_total_yd": -5.9,
+      "diff_apex_ft": -5.5,
+      "status": "moderate",
+      "error_pattern": "ROLLOUT_TOO_SHORT"
+    },
+    "shot_9i_6": {
+      "diff_carry_yd": null,
+      "diff_total_yd": null,
+      "diff_apex_ft": null,
+      "status": "pass",
+      "error_pattern": null
+    },
+    "shot_9i_7": {
+      "diff_carry_yd": 0.6,
+      "diff_total_yd": 1.1,
+      "diff_apex_ft": -4.3,
+      "status": "pass",
+      "error_pattern": null
+    },
+    "shot_9i_8": {
+      "diff_carry_yd": -2.3,
+      "diff_total_yd": 4.7,
+      "diff_apex_ft": -1.8,
+      "status": "pass",
+      "error_pattern": null
+    },
+    "shot_9i_9": {
+      "diff_carry_yd": -1.8,
+      "diff_total_yd": 2.3,
+      "diff_apex_ft": -6.3,
+      "status": "pass",
+      "error_pattern": null
+    },
+    "shot_driver_51": {
+      "diff_carry_yd": 10.4,
+      "diff_total_yd": 28.4,
+      "diff_apex_ft": 0.0,
+      "status": "severe",
+      "error_pattern": "CARRY_AND_ROLLOUT_LONG"
+    },
+    "shot_driver_52": {
+      "diff_carry_yd": 8.2,
+      "diff_total_yd": 23.9,
+      "diff_apex_ft": -2.0,
+      "status": "severe",
+      "error_pattern": "CARRY_AND_ROLLOUT_LONG"
+    },
+    "shot_driver_53": {
+      "diff_carry_yd": 4.5,
+      "diff_total_yd": 15.7,
+      "diff_apex_ft": -4.5,
+      "status": "severe",
+      "error_pattern": "CARRY_AND_ROLLOUT_LONG"
+    },
+    "shot_driver_54": {
+      "diff_carry_yd": 4.6,
+      "diff_total_yd": -0.7,
+      "diff_apex_ft": -2.5,
+      "status": "moderate",
+      "error_pattern": "CARRY_TOO_LONG"
+    },
+    "shot_driver_55": {
+      "diff_carry_yd": 2.0,
+      "diff_total_yd": 21.7,
+      "diff_apex_ft": 0.4,
+      "status": "severe",
+      "error_pattern": "ROLLOUT_TOO_LONG"
+    },
+    "shot_driver_56": {
+      "diff_carry_yd": 3.7,
+      "diff_total_yd": 19.6,
+      "diff_apex_ft": 9.4,
+      "status": "severe",
+      "error_pattern": "CARRY_AND_ROLLOUT_LONG"
+    },
+    "shot_driver_57": {
+      "diff_carry_yd": -5.8,
+      "diff_total_yd": -20.4,
+      "diff_apex_ft": -3.7,
+      "status": "severe",
+      "error_pattern": "CARRY_AND_ROLLOUT_SHORT"
+    },
+    "shot_driver_58": {
+      "diff_carry_yd": 17.0,
+      "diff_total_yd": 34.0,
+      "diff_apex_ft": -5.4,
+      "status": "severe",
+      "error_pattern": "CARRY_AND_ROLLOUT_LONG"
+    },
+    "shot_driver_59": {
+      "diff_carry_yd": -1.6,
+      "diff_total_yd": 14.4,
+      "diff_apex_ft": -4.2,
+      "status": "severe",
+      "error_pattern": "ROLLOUT_TOO_LONG"
+    },
+    "shot_driver_60": {
+      "diff_carry_yd": -0.6,
+      "diff_total_yd": -15.4,
+      "diff_apex_ft": -2.5,
+      "status": "severe",
+      "error_pattern": "ROLLOUT_TOO_SHORT"
+    },
+    "shot_pw_61": {
+      "diff_carry_yd": null,
+      "diff_total_yd": null,
+      "diff_apex_ft": null,
+      "status": "pass",
+      "error_pattern": null
+    },
+    "shot_pw_62": {
+      "diff_carry_yd": null,
+      "diff_total_yd": null,
+      "diff_apex_ft": null,
+      "status": "pass",
+      "error_pattern": null
+    },
+    "shot_pw_63": {
+      "diff_carry_yd": null,
+      "diff_total_yd": null,
+      "diff_apex_ft": null,
+      "status": "pass",
+      "error_pattern": null
+    },
+    "shot_pw_64": {
+      "diff_carry_yd": -4.7,
+      "diff_total_yd": 9.1,
+      "diff_apex_ft": -3.8,
+      "status": "moderate",
+      "error_pattern": "CARRY_TOO_SHORT"
+    },
+    "shot_pw_65": {
+      "diff_carry_yd": -0.6,
+      "diff_total_yd": 4.2,
+      "diff_apex_ft": -4.0,
+      "status": "pass",
+      "error_pattern": null
+    },
+    "shot_pw_66": {
+      "diff_carry_yd": -3.0,
+      "diff_total_yd": 10.8,
+      "diff_apex_ft": -3.9,
+      "status": "severe",
+      "error_pattern": "ROLLOUT_TOO_LONG"
+    },
+    "shot_pw_67": {
+      "diff_carry_yd": -0.4,
+      "diff_total_yd": 5.2,
+      "diff_apex_ft": -4.1,
+      "status": "moderate",
+      "error_pattern": "ROLLOUT_TOO_LONG"
+    },
+    "shot_pw_68": {
+      "diff_carry_yd": 2.9,
+      "diff_total_yd": 6.1,
+      "diff_apex_ft": -6.4,
+      "status": "moderate",
+      "error_pattern": "ROLLOUT_TOO_LONG"
+    },
+    "shot_pw_69": {
+      "diff_carry_yd": -3.2,
+      "diff_total_yd": 11.6,
+      "diff_apex_ft": -3.9,
+      "status": "severe",
+      "error_pattern": "CARRY_TOO_SHORT"
+    }
+  },
+  "regressions": [
+    {
+      "shot": "shot_6i_43",
+      "was": "pass",
+      "now": "moderate",
+      "prev_total_diff": -0.2,
+      "curr_total_diff": -0.2
+    },
+    {
+      "shot": "shot_7i_34",
+      "was": "pass",
+      "now": "moderate",
+      "prev_total_diff": 2.0,
+      "curr_total_diff": 2.0
+    },
+    {
+      "shot": "shot_driver_54",
+      "was": "pass",
+      "now": "moderate",
+      "prev_total_diff": -0.7,
+      "curr_total_diff": -0.7
+    }
+  ],
+  "conflicts": [
+    "Bounce.FlightTangentialRetentionBase",
+    "Bounce.CorBaseA",
+    "Rollout.LowSpinMultiplierMax",
+    "Rollout.LowSpinThreshold",
+    "Rollout.FrictionBlendSpeed",
+    "KineticFrictionMultiplier",
+    "RollingFrictionMultiplier",
+    "Bounce.RolloutLowSpinRetention",
+    "Bounce.FlightSpinFactorMin",
+    "Bounce.FlightSpinFactorDivisor",
+    "Rollout.MidSpinMultiplierMax",
+    "Rollout.HighSpinMultiplierMax",
+    "Bounce.RolloutHighSpinRetention",
+    "Flight.ClMaxBase",
+    "Flight.CdMin",
+    "Flight.HighLaunchDragBoostMax",
+    "DragScaleMultiplier",
+    "LiftScaleMultiplier"
+  ]
+}

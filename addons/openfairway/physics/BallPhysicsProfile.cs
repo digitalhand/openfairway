@@ -7,13 +7,22 @@ using System.Text.Json;
 /// </summary>
 public sealed class BallPhysicsProfile
 {
-    public float DragScaleMultiplier { get; set; } = 1.0f;
+    private static readonly HashSet<string> RegimeOverrideKnownKeys = new()
+    {
+        "DragScaleMultiplier", "LiftScaleMultiplier",
+        "KineticFrictionMultiplier", "RollingFrictionMultiplier",
+        "GrassViscosityMultiplier", "CriticalAngleOffsetRadians",
+        "SpinbackThetaBoostMultiplier",
+    };
+
+    public float DragScaleMultiplier { get; set; } = 1.01f;
     public float LiftScaleMultiplier { get; set; } = 1.0f;
     public float KineticFrictionMultiplier { get; set; } = 1.0f;
     public float RollingFrictionMultiplier { get; set; } = 1.0f;
     public float GrassViscosityMultiplier { get; set; } = 1.0f;
     public float CriticalAngleOffsetRadians { get; set; } = 0.0f;
     public float SpinbackThetaBoostMultiplier { get; set; } = 1.0f;
+    public Dictionary<string, RegimeScaleOverride> RegimeScaleOverrides { get; set; } = BuildDefaultRegimeOverrides();
 
     public FlightProfile Flight { get; set; }
     public BounceProfile Bounce { get; set; }
@@ -29,6 +38,7 @@ public sealed class BallPhysicsProfile
         "KineticFrictionMultiplier", "RollingFrictionMultiplier",
         "GrassViscosityMultiplier", "CriticalAngleOffsetRadians",
         "SpinbackThetaBoostMultiplier",
+        "RegimeScaleOverrides",
         "Flight", "Bounce", "Rollout",
     };
 
@@ -60,6 +70,14 @@ public sealed class BallPhysicsProfile
             profile.CriticalAngleOffsetRadians = v.GetSingle();
         if (root.TryGetProperty("SpinbackThetaBoostMultiplier", out v))
             profile.SpinbackThetaBoostMultiplier = v.GetSingle();
+        if (root.TryGetProperty("RegimeScaleOverrides", out var regimeEl) && regimeEl.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var prop in regimeEl.EnumerateObject())
+            {
+                WarnUnknownKeys(prop.Value, RegimeOverrideKnownKeys, $"RegimeScaleOverride[{prop.Name}]");
+                profile.RegimeScaleOverrides[prop.Name] = ParseRegimeScaleOverride(prop.Value);
+            }
+        }
 
         if (root.TryGetProperty("Flight", out var flightEl))
         {
@@ -74,6 +92,84 @@ public sealed class BallPhysicsProfile
             profile.Rollout = ParseRolloutProfile(rolloutEl);
 
         return profile;
+    }
+
+    public RegimeScaleOverride ResolveScaleOverride(
+        float speedMph,
+        float launchAngleDeg,
+        float totalSpinRpm,
+        out string regimeKey,
+        out string matchedOverrideKey)
+    {
+        regimeKey = ShotRegimeKey.Build(speedMph, launchAngleDeg, totalSpinRpm);
+        matchedOverrideKey = string.Empty;
+
+        if (RegimeScaleOverrides == null || RegimeScaleOverrides.Count == 0)
+            return RegimeScaleOverride.Neutral;
+
+        foreach (string candidate in ShotRegimeKey.BuildLookupKeys(speedMph, launchAngleDeg, totalSpinRpm))
+        {
+            if (RegimeScaleOverrides.TryGetValue(candidate, out var matched))
+            {
+                matchedOverrideKey = candidate;
+                return matched;
+            }
+        }
+
+        return RegimeScaleOverride.Neutral;
+    }
+
+    /// <summary>
+    /// Calibrated regime-specific scale overrides derived from FlightScope
+    /// reference data. These correct systematic carry biases per launch regime
+    /// (e.g. chip shots under-carry at low Re, driver shots over-carry at high Re).
+    /// </summary>
+    private static Dictionary<string, RegimeScaleOverride> BuildDefaultRegimeOverrides()
+    {
+        return new Dictionary<string, RegimeScaleOverride>
+        {
+            // Chip shots (speed < 60 mph): systematic under-carry at low Reynolds
+            ["C-S0"] = new() { DragScaleMultiplier = 0.70f, LiftScaleMultiplier = 1.20f },
+            ["C-S0-V1-P0"] = new() { DragScaleMultiplier = 0.55f, LiftScaleMultiplier = 1.15f },
+            ["C-S0-V4-P3"] = new() { DragScaleMultiplier = 0.65f, LiftScaleMultiplier = 1.25f },
+
+            // Slow iron S1a (60-72 mph): larger systematic under-carry, more aggressive corrections
+            ["I-S1a-V0-P1"] = new() { DragScaleMultiplier = 0.94f, LiftScaleMultiplier = 1.04f },
+            ["I-S1a-V2-P1"] = new() { DragScaleMultiplier = 0.80f, LiftScaleMultiplier = 1.14f },
+            ["I-S1a-V2-P2"] = new() { DragScaleMultiplier = 0.82f, LiftScaleMultiplier = 1.13f },
+            ["I-S1a-V2-P3"] = new() { DragScaleMultiplier = 0.82f, LiftScaleMultiplier = 1.12f },
+            ["I-S1a-V3-P2"] = new() { DragScaleMultiplier = 0.79f, LiftScaleMultiplier = 1.14f },
+            ["I-S1a-V3-P3"] = new() { DragScaleMultiplier = 0.94f, LiftScaleMultiplier = 1.04f },
+            ["I-S1a-V1-P2"] = new() { DragScaleMultiplier = 0.92f, LiftScaleMultiplier = 1.05f },
+
+            // Mid iron S1b (72-85 mph): smaller corrections
+            ["I-S1b-V0-P0"] = new() { DragScaleMultiplier = 0.97f, LiftScaleMultiplier = 1.02f },
+            ["I-S1b-V2-P2"] = new() { DragScaleMultiplier = 0.94f, LiftScaleMultiplier = 1.03f },
+            ["I-S1b-V2-P3"] = new() { DragScaleMultiplier = 0.97f, LiftScaleMultiplier = 1.01f },
+            ["I-S1b-V3-P2"] = new() { DragScaleMultiplier = 0.88f, LiftScaleMultiplier = 1.06f },
+            ["I-S1b-V3-P3"] = new() { DragScaleMultiplier = 0.97f, LiftScaleMultiplier = 1.02f },
+            ["I-S1b-V1-P2"] = new() { DragScaleMultiplier = 0.98f, LiftScaleMultiplier = 1.01f },
+
+            // Wedge lob (launch > 30 deg, 60-72 mph): under-carry
+            ["W-S1a-V3-P3"] = new() { DragScaleMultiplier = 0.83f, LiftScaleMultiplier = 1.10f },
+
+            // Fast iron with high spin: over-carry
+            ["I-S3-V2-P3"] = new() { DragScaleMultiplier = 1.08f, LiftScaleMultiplier = 0.96f },
+            ["I-S2-V2-P3"] = new() { DragScaleMultiplier = 1.04f },
+
+            // Mid-speed iron: all short
+            ["I-S2-V1-P1"] = new() { DragScaleMultiplier = 0.97f, LiftScaleMultiplier = 1.02f },
+
+            // Driver regime: slight over-carry
+            ["D-S3-V1"] = new() { DragScaleMultiplier = 1.04f, LiftScaleMultiplier = 0.99f },
+            ["D-S4-V0-P1"] = new() { DragScaleMultiplier = 1.03f, LiftScaleMultiplier = 0.98f },
+            ["D-S4-V1-P0"] = new() { DragScaleMultiplier = 0.98f, LiftScaleMultiplier = 1.02f },
+            ["D-S4-V1-P1"] = new() { DragScaleMultiplier = 1.04f },
+            ["D-S4-V1-P2"] = new() { DragScaleMultiplier = 1.04f },
+
+            // High-speed wedge (launch > 30 deg, 85-105 mph): over-carry
+            ["W-S2-V3-P4"] = new() { DragScaleMultiplier = 1.06f, LiftScaleMultiplier = 0.97f },
+        };
     }
 
     private static void WarnUnknownKeys(JsonElement element, HashSet<string> knownKeys, string context)
@@ -205,6 +301,21 @@ public sealed class BallPhysicsProfile
             FrictionBlendSpeed = TryFloat(el, "FrictionBlendSpeed", rp.FrictionBlendSpeed),
             Name = TryString(el, "Name", "JsonOverride"),
             Version = TryString(el, "Version", rp.Version),
+        };
+    }
+
+    private static RegimeScaleOverride ParseRegimeScaleOverride(JsonElement el)
+    {
+        var scaleOverride = new RegimeScaleOverride();
+        return new RegimeScaleOverride
+        {
+            DragScaleMultiplier = TryFloat(el, "DragScaleMultiplier", scaleOverride.DragScaleMultiplier),
+            LiftScaleMultiplier = TryFloat(el, "LiftScaleMultiplier", scaleOverride.LiftScaleMultiplier),
+            KineticFrictionMultiplier = TryFloat(el, "KineticFrictionMultiplier", scaleOverride.KineticFrictionMultiplier),
+            RollingFrictionMultiplier = TryFloat(el, "RollingFrictionMultiplier", scaleOverride.RollingFrictionMultiplier),
+            GrassViscosityMultiplier = TryFloat(el, "GrassViscosityMultiplier", scaleOverride.GrassViscosityMultiplier),
+            CriticalAngleOffsetRadians = TryFloat(el, "CriticalAngleOffsetRadians", scaleOverride.CriticalAngleOffsetRadians),
+            SpinbackThetaBoostMultiplier = TryFloat(el, "SpinbackThetaBoostMultiplier", scaleOverride.SpinbackThetaBoostMultiplier),
         };
     }
 
