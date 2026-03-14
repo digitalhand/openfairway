@@ -37,8 +37,8 @@ python tools/shot_calibration/calibrate.py run
 # One session only (outputs stay in that session's directory)
 python tools/shot_calibration/calibrate.py run --session assets/data/shot_session_3
 
-# Disable carry exception layer (pure physics baseline)
-python tools/shot_calibration/calibrate.py run --no-carry-exceptions
+# Optional: explicitly enable carry exception layer (diagnostic-only)
+python tools/shot_calibration/calibrate.py run --carry-exceptions assets/data/calibration/carry_exception_profile.json
 ```
 
 ### Analyze (compare + diagnose + accuracy reports)
@@ -58,6 +58,8 @@ python tools/shot_calibration/calibrate.py analyze --session assets/data/shot_se
 # Compare with an explicit carry exception profile
 python tools/shot_calibration/calibrate.py analyze --carry-exceptions assets/data/calibration/carry_exception_profile.json
 ```
+
+`run` and `analyze` default to raw physics comparison (no carry exception layer) unless you explicitly pass `--carry-exceptions`.
 
 The `analyze` command:
 1. Compares `physics.csv` vs `flightscope.csv` → `shot_diff_analysis.csv`
@@ -117,9 +119,9 @@ Profile overrides are JSON files loaded at runtime — no C# rebuild needed betw
 
 For calibration-only analysis, `compare_csv.py` can apply a bounded, regime-based carry correction layer after raw physics output.
 
-- Default profile path: `assets/data/calibration/carry_exception_profile.json`
-- Auto-loaded by `compare_csv.py` and `calibrate.py` when present
-- Disable with `--no-carry-exceptions`
+- Default mode: disabled (raw physics only)
+- Enable explicitly with `--carry-exceptions assets/data/calibration/carry_exception_profile.json`
+- Disable explicitly with `--no-carry-exceptions`
 
 The layer supports:
 
@@ -357,7 +359,7 @@ When different failing shots need opposite adjustments to the same parameter, it
 | `export_physics_json.gd` | Simulate all shots, write JSON | Godot |
 | `physics_export_data.gd` | Shared helper for shot discovery | (not run directly) |
 | `export_flightscope_csv.py` | Export FlightScope reference as CSV | Python |
-| `compare_csv.py` | Diff physics vs FlightScope (+ optional carry exception layer) → `shot_diff_analysis.csv` | Python |
+| `compare_csv.py` | Diff physics vs FlightScope (raw by default; optional carry exception layer when explicitly enabled) → `shot_diff_analysis.csv` | Python |
 | `calibration_analyzer.py` | Generate diagnostic report from diff CSV | Python |
 | `generate_profile.py` | Build profile override JSON from diagnostics | Python |
 | `flightscope_scraper.py` | Scrape FlightScope trajectory optimizer | Python + Chrome/Brave |

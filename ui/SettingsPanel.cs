@@ -54,6 +54,9 @@ public partial class SettingsPanel : CanvasLayer
     private Label _shotRecordingHelper;
     private FileDialog _shotRecordingFileDialog;
     private TabContainer _tabs;
+    private ScrollContainer _playerTabScroll;
+    private ScrollContainer _displayTabScroll;
+    private ScrollContainer _gameTabScroll;
     private GridContainer _panelsGrid;
     private Label _panelsEmptyLabel;
     private PanelContainer _panelCardTemplate;
@@ -82,28 +85,31 @@ public partial class SettingsPanel : CanvasLayer
         _rootControl = GetNode<Control>("Root");
         _panelShadow = GetNode<PanelContainer>("Root/PanelShadow");
         _panel = GetNode<PanelContainer>("Root/Panel");
-        _playerNameInput = GetNode<LineEdit>("Root/Panel/Margin/Content/Tabs/Player/PlayerCard/PlayerCardMargin/PlayerCardRow/PlayerNameInput");
-        _rangeDefaultClubCard = GetNode<PanelContainer>("Root/Panel/Margin/Content/Tabs/Player/RangeDefaultClubCard");
-        _rangeDefaultClubOption = GetNode<OptionButton>("Root/Panel/Margin/Content/Tabs/Player/RangeDefaultClubCard/RangeDefaultClubMargin/RangeDefaultClubRow/RangeDefaultClubOption");
-        _testShotsCheck = GetNode<CheckBox>("Root/Panel/Margin/Content/Tabs/Player/PlayerTestShotsCard/PlayerTestShotsMargin/PlayerTestShotsRow/TestShotsCheck");
-        _resolutionOption = GetNode<OptionButton>("Root/Panel/Margin/Content/Tabs/Display/DisplayResolutionCard/DisplayResolutionMargin/DisplayResolutionRow/ResolutionOption");
-        _fullscreenCheck = GetNode<CheckBox>("Root/Panel/Margin/Content/Tabs/Display/DisplayResolutionCard/DisplayResolutionMargin/DisplayResolutionRow/FullscreenCheck");
-        _cameraDistanceSlider = GetNode<HSlider>("Root/Panel/Margin/Content/Tabs/Game/CameraDistanceCard/CameraDistanceMargin/CameraDistanceContent/CameraDistanceRow/CameraDistanceSlider");
-        _cameraDistanceValue = GetNode<SpinBox>("Root/Panel/Margin/Content/Tabs/Game/CameraDistanceCard/CameraDistanceMargin/CameraDistanceContent/CameraDistanceRow/CameraDistanceValue");
-        _cameraDistanceHelper = GetNode<Label>("Root/Panel/Margin/Content/Tabs/Game/CameraDistanceCard/CameraDistanceMargin/CameraDistanceContent/CameraDistanceHelper");
-        _cameraDelaySlider = GetNode<HSlider>("Root/Panel/Margin/Content/Tabs/Game/CameraDelayCard/CameraDelayMargin/CameraDelayContent/CameraDelayRow/CameraDelaySlider");
-        _cameraDelayValue = GetNode<SpinBox>("Root/Panel/Margin/Content/Tabs/Game/CameraDelayCard/CameraDelayMargin/CameraDelayContent/CameraDelayRow/CameraDelayValue");
-        _cameraDelayHelper = GetNode<Label>("Root/Panel/Margin/Content/Tabs/Game/CameraDelayCard/CameraDelayMargin/CameraDelayContent/CameraDelayHelper");
-        _tracerHistoryCard = GetNode<PanelContainer>("Root/Panel/Margin/Content/Tabs/Game/TracerHistoryCard");
-        _tracerHistorySlider = GetNode<HSlider>("Root/Panel/Margin/Content/Tabs/Game/TracerHistoryCard/TracerHistoryMargin/TracerHistoryContent/TracerHistoryRow/TracerHistorySlider");
-        _tracerHistoryValue = GetNode<SpinBox>("Root/Panel/Margin/Content/Tabs/Game/TracerHistoryCard/TracerHistoryMargin/TracerHistoryContent/TracerHistoryRow/TracerHistoryValue");
-        _tracerHistoryHelper = GetNode<Label>("Root/Panel/Margin/Content/Tabs/Game/TracerHistoryCard/TracerHistoryMargin/TracerHistoryContent/TracerHistoryHelper");
-        _tcpPortValue = GetNode<SpinBox>("Root/Panel/Margin/Content/Tabs/Game/TcpPortCard/TcpPortMargin/TcpPortContent/TcpPortRow/TcpPortValue");
-        _shotRecordingCheck = GetNode<CheckBox>("Root/Panel/Margin/Content/Tabs/Game/ShotRecordingCard/ShotRecordingMargin/ShotRecordingContent/ShotRecordingRow/ShotRecordingCheck");
-        _shotRecordingPathInput = GetNode<LineEdit>("Root/Panel/Margin/Content/Tabs/Game/ShotRecordingCard/ShotRecordingMargin/ShotRecordingContent/ShotRecordingPathRow/ShotRecordingPathInput");
-        _shotRecordingBrowseButton = GetNode<Button>("Root/Panel/Margin/Content/Tabs/Game/ShotRecordingCard/ShotRecordingMargin/ShotRecordingContent/ShotRecordingPathRow/ShotRecordingBrowseButton");
-        _shotRecordingHelper = GetNode<Label>("Root/Panel/Margin/Content/Tabs/Game/ShotRecordingCard/ShotRecordingMargin/ShotRecordingContent/ShotRecordingHelper");
+        _playerNameInput = GetNode<LineEdit>("Root/Panel/Margin/Content/Tabs/Player/PlayerContent/PlayerCard/PlayerCardMargin/PlayerCardRow/PlayerNameInput");
+        _rangeDefaultClubCard = GetNode<PanelContainer>("Root/Panel/Margin/Content/Tabs/Player/PlayerContent/RangeDefaultClubCard");
+        _rangeDefaultClubOption = GetNode<OptionButton>("Root/Panel/Margin/Content/Tabs/Player/PlayerContent/RangeDefaultClubCard/RangeDefaultClubMargin/RangeDefaultClubRow/RangeDefaultClubOption");
+        _testShotsCheck = GetNode<CheckBox>("Root/Panel/Margin/Content/Tabs/Player/PlayerContent/PlayerTestShotsCard/PlayerTestShotsMargin/PlayerTestShotsRow/TestShotsCheck");
+        _resolutionOption = GetNode<OptionButton>("Root/Panel/Margin/Content/Tabs/Display/DisplayContent/DisplayResolutionCard/DisplayResolutionMargin/DisplayResolutionRow/ResolutionOption");
+        _fullscreenCheck = GetNode<CheckBox>("Root/Panel/Margin/Content/Tabs/Display/DisplayContent/DisplayResolutionCard/DisplayResolutionMargin/DisplayResolutionRow/FullscreenCheck");
+        _cameraDistanceSlider = GetNode<HSlider>("Root/Panel/Margin/Content/Tabs/Game/GameContent/CameraDistanceCard/CameraDistanceMargin/CameraDistanceContent/CameraDistanceRow/CameraDistanceSlider");
+        _cameraDistanceValue = GetNode<SpinBox>("Root/Panel/Margin/Content/Tabs/Game/GameContent/CameraDistanceCard/CameraDistanceMargin/CameraDistanceContent/CameraDistanceRow/CameraDistanceValue");
+        _cameraDistanceHelper = GetNode<Label>("Root/Panel/Margin/Content/Tabs/Game/GameContent/CameraDistanceCard/CameraDistanceMargin/CameraDistanceContent/CameraDistanceHelper");
+        _cameraDelaySlider = GetNode<HSlider>("Root/Panel/Margin/Content/Tabs/Game/GameContent/CameraDelayCard/CameraDelayMargin/CameraDelayContent/CameraDelayRow/CameraDelaySlider");
+        _cameraDelayValue = GetNode<SpinBox>("Root/Panel/Margin/Content/Tabs/Game/GameContent/CameraDelayCard/CameraDelayMargin/CameraDelayContent/CameraDelayRow/CameraDelayValue");
+        _cameraDelayHelper = GetNode<Label>("Root/Panel/Margin/Content/Tabs/Game/GameContent/CameraDelayCard/CameraDelayMargin/CameraDelayContent/CameraDelayHelper");
+        _tracerHistoryCard = GetNode<PanelContainer>("Root/Panel/Margin/Content/Tabs/Game/GameContent/TracerHistoryCard");
+        _tracerHistorySlider = GetNode<HSlider>("Root/Panel/Margin/Content/Tabs/Game/GameContent/TracerHistoryCard/TracerHistoryMargin/TracerHistoryContent/TracerHistoryRow/TracerHistorySlider");
+        _tracerHistoryValue = GetNode<SpinBox>("Root/Panel/Margin/Content/Tabs/Game/GameContent/TracerHistoryCard/TracerHistoryMargin/TracerHistoryContent/TracerHistoryRow/TracerHistoryValue");
+        _tracerHistoryHelper = GetNode<Label>("Root/Panel/Margin/Content/Tabs/Game/GameContent/TracerHistoryCard/TracerHistoryMargin/TracerHistoryContent/TracerHistoryHelper");
+        _tcpPortValue = GetNode<SpinBox>("Root/Panel/Margin/Content/Tabs/Game/GameContent/TcpPortCard/TcpPortMargin/TcpPortContent/TcpPortRow/TcpPortValue");
+        _shotRecordingCheck = GetNode<CheckBox>("Root/Panel/Margin/Content/Tabs/Game/GameContent/ShotRecordingCard/ShotRecordingMargin/ShotRecordingContent/ShotRecordingRow/ShotRecordingCheck");
+        _shotRecordingPathInput = GetNode<LineEdit>("Root/Panel/Margin/Content/Tabs/Game/GameContent/ShotRecordingCard/ShotRecordingMargin/ShotRecordingContent/ShotRecordingPathRow/ShotRecordingPathInput");
+        _shotRecordingBrowseButton = GetNode<Button>("Root/Panel/Margin/Content/Tabs/Game/GameContent/ShotRecordingCard/ShotRecordingMargin/ShotRecordingContent/ShotRecordingPathRow/ShotRecordingBrowseButton");
+        _shotRecordingHelper = GetNode<Label>("Root/Panel/Margin/Content/Tabs/Game/GameContent/ShotRecordingCard/ShotRecordingMargin/ShotRecordingContent/ShotRecordingHelper");
         _tabs = GetNode<TabContainer>("Root/Panel/Margin/Content/Tabs");
+        _playerTabScroll = GetNode<ScrollContainer>("Root/Panel/Margin/Content/Tabs/Player");
+        _displayTabScroll = GetNode<ScrollContainer>("Root/Panel/Margin/Content/Tabs/Display");
+        _gameTabScroll = GetNode<ScrollContainer>("Root/Panel/Margin/Content/Tabs/Game");
         _panelsGrid = GetNode<GridContainer>("Root/Panel/Margin/Content/Tabs/Panels/PanelsGridScroll/PanelsGrid");
         _panelsEmptyLabel = GetNode<Label>("Root/Panel/Margin/Content/Tabs/Panels/PanelsEmptyLabel");
         _panelCardTemplate = GetNode<PanelContainer>("Root/Panel/Margin/Content/Tabs/Panels/PanelCardTemplate");
@@ -673,9 +679,27 @@ public partial class SettingsPanel : CanvasLayer
 
         int tabIndex = Mathf.Clamp((int)tab, 0, _tabs.GetTabCount() - 1);
         _tabs.CurrentTab = tabIndex;
+        ResetTabScroll((SettingsTab)tabIndex);
 
         if ((SettingsTab)tabIndex == SettingsTab.Panels)
             SyncPanelsGridFromPanelState();
+    }
+
+    private void ResetTabScroll(SettingsTab tab)
+    {
+        ScrollContainer scroll = tab switch
+        {
+            SettingsTab.Player => _playerTabScroll,
+            SettingsTab.Display => _displayTabScroll,
+            SettingsTab.Game => _gameTabScroll,
+            _ => null
+        };
+
+        if (scroll == null)
+            return;
+
+        scroll.ScrollVertical = 0;
+        scroll.ScrollHorizontal = 0;
     }
 
     private void RebuildPanelsGrid()

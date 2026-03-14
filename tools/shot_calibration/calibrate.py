@@ -6,7 +6,7 @@ Main entry point for the tune-simulate-compare loop.
 Usage:
     python tools/shot_calibration/calibrate.py run
     python tools/shot_calibration/calibrate.py run --profile assets/data/calibration/calibration_profile.json
-    python tools/shot_calibration/calibrate.py run --no-carry-exceptions
+    python tools/shot_calibration/calibrate.py run --carry-exceptions assets/data/calibration/carry_exception_profile.json
     python tools/shot_calibration/calibrate.py analyze
     python tools/shot_calibration/calibrate.py analyze --session assets/data/shot_session_3
     python tools/shot_calibration/calibrate.py analyze --carry-exceptions assets/data/calibration/carry_exception_profile.json
@@ -35,7 +35,6 @@ FLIGHTSCOPE_CSV = os.path.join(CALIBRATION_DIR, "flightscope.csv")
 SOT_CSV = os.path.join(DATA_DIR, "SOT", "flightscope_SoT.csv")
 DIFF_CSV = os.path.join(CALIBRATION_DIR, "shot_diff_analysis.csv")
 DEFAULT_PROFILE = os.path.join(CALIBRATION_DIR, "calibration_profile.json")
-DEFAULT_CARRY_EXCEPTION_PROFILE = os.path.join(CALIBRATION_DIR, "carry_exception_profile.json")
 
 sys.path.insert(0, SCRIPT_DIR)
 from calibration_analyzer import load_diff_csv, analyze, format_report
@@ -175,16 +174,13 @@ def run_command(cmd, description, cwd=None):
 
 
 def resolve_carry_exception_profile(args):
-    """Resolve optional carry-exception profile path from CLI args/default."""
+    """Resolve optional carry-exception profile path from CLI args only."""
     if getattr(args, "no_carry_exceptions", False):
         return None
 
     explicit = getattr(args, "carry_exceptions", None)
     if explicit:
         return os.path.normpath(os.path.join(PROJECT_ROOT, explicit)) if not os.path.isabs(explicit) else os.path.normpath(explicit)
-
-    if os.path.exists(DEFAULT_CARRY_EXCEPTION_PROFILE):
-        return DEFAULT_CARRY_EXCEPTION_PROFILE
 
     return None
 
@@ -524,10 +520,121 @@ def _compute_accuracy_stats(diffs, thresholds):
     }
 
 
-def _generate_accuracy_reports(diff_csv, output_dir, top_n=20):
+def _safe_float(value):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _get_numeric(row, primary_key, fallback_key=None):
+    value = _safe_float(row.get(primary_key))
+    if value is not None or fallback_key is None:
+        return value
+    return _safe_float(row.get(fallback_key))
+
+
+def _percentage(count, total):
+    if total <= 0:
+        return 0.0
+    return round(count / total * 100, 1)
+
+
+def _window_target_abs_yd(carry_yd):
+    if carry_yd is None:
+        return 3.0
+    if carry_yd < 115.0:
+        return 1.0
+    if carry_yd <= 150.0:
+        return 3.0
+    if carry_yd <= 180.0:
+        return 6.0
+    if carry_yd <= 200.0:
+        return 10.0
+    return 15.0
+
+
+def _resolve_critical_baseline(args, output_dir):
+    explicit = getattr(args, "critical_baseline", None)
+    if explicit:
+        return os.path.normpath(os.path.join(PROJECT_ROOT, explicit)) if not os.path.isabs(explicit) else os.path.normpath(explicit)
+
+    candidates = sorted(
+        os.path.join(output_dir, name)
+        for name in os.listdir(output_dir)
+        if name.startswith("openfairway_critical_carry_") and name.endswith(".csv")
+    )
+    return candidates[-1] if candidates else None
+
+
+def _summarize_baseline_comparison(ref_rows, baseline_path):
+    if not baseline_path or not os.path.exists(baseline_path):
+        return None
+
+    current_by_name = {row["shot_name"]: row for row in ref_rows if row.get("shot_name")}
+    with open(baseline_path, "r") as f:
+        baseline_rows = [row for row in csv.DictReader(f) if row.get("shot_name")]
+
+    improved = 0
+    regressed = 0
+    unchanged = 0
+    within_target_now = 0
+    missing = []
+    remaining = []
+
+    for baseline_row in baseline_rows:
+        shot_name = baseline_row["shot_name"]
+        current_row = current_by_name.get(shot_name)
+        if current_row is None:
+            missing.append(shot_name)
+            continue
+
+        prev_abs = abs(_get_numeric(baseline_row, "diff_carry_raw_yd", "diff_carry_yd") or 0.0)
+        curr_abs = abs(_get_numeric(current_row, "diff_carry_raw_yd", "diff_carry_yd") or 0.0)
+        carry_yd = _get_numeric(current_row, "flightscope_carry_yd")
+        if carry_yd is None:
+            carry_yd = _get_numeric(baseline_row, "flightscope_carry_yd")
+        target_abs = _window_target_abs_yd(carry_yd)
+
+        if curr_abs < prev_abs - 0.05:
+            improved += 1
+        elif curr_abs > prev_abs + 0.05:
+            regressed += 1
+        else:
+            unchanged += 1
+
+        if curr_abs <= target_abs:
+            within_target_now += 1
+
+        remaining.append({
+            "shot_name": shot_name,
+            "current_abs_yd": round(curr_abs, 1),
+            "baseline_abs_yd": round(prev_abs, 1),
+            "target_abs_yd": round(target_abs, 1),
+            "carry_window": current_row.get("carry_window") or baseline_row.get("carry_window") or "",
+        })
+
+    remaining.sort(key=lambda row: row["current_abs_yd"], reverse=True)
+
+    tracked = len(baseline_rows) - len(missing)
+    return {
+        "path": baseline_path,
+        "shots": len(baseline_rows),
+        "tracked_shots": tracked,
+        "missing_shots": missing,
+        "improved": improved,
+        "regressed": regressed,
+        "unchanged": unchanged,
+        "within_target_now": within_target_now,
+        "within_target_now_pct": _percentage(within_target_now, tracked),
+        "top_remaining_outliers": remaining[:10],
+    }
+
+
+def _generate_accuracy_reports(diff_csv, output_dir, top_n=20, critical_baseline=None):
     """Read shot_diff_analysis.csv and generate accuracy report files.
 
-    Returns list of paths written.
+    Returns tuple of (list_of_paths_written, full_summary_dict).
     """
     with open(diff_csv, "r") as f:
         reader = csv.DictReader(f)
@@ -540,15 +647,12 @@ def _generate_accuracy_reports(diff_csv, output_dir, top_n=20):
         or float(r.get("flightscope_total_yd", 0) or 0) > 0
     ]
 
-    carry_diffs = [float(r["diff_carry_yd"]) for r in ref_rows if r.get("diff_carry_yd")]
+    carry_diffs = [_get_numeric(r, "diff_carry_yd") for r in ref_rows]
+    carry_diffs = [d for d in carry_diffs if d is not None]
+    carry_raw_diffs = [_get_numeric(r, "diff_carry_raw_yd", "diff_carry_yd") for r in ref_rows]
+    carry_raw_diffs = [d for d in carry_raw_diffs if d is not None]
     total_diffs = [float(r["diff_total_yd"]) for r in ref_rows if r.get("diff_total_yd")]
     apex_diffs = [float(r["diff_apex_ft"]) for r in ref_rows if r.get("diff_apex_ft")]
-
-    def _safe_float(value):
-        try:
-            return float(value)
-        except (TypeError, ValueError):
-            return None
 
     short_rows = [
         r for r in ref_rows
@@ -593,25 +697,67 @@ def _generate_accuracy_reports(diff_csv, output_dir, top_n=20):
     apex_accuracy = {f"{k}_ft": v for k, v in apex_stats.items() if k != "within_pct"}
     apex_accuracy["within_pct_ft"] = apex_stats.get("within_pct", {})
 
-    short_carry_diffs = [float(r["diff_carry_yd"]) for r in short_rows if r.get("diff_carry_yd")]
+    short_carry_diffs = [_get_numeric(r, "diff_carry_yd") for r in short_rows]
+    short_carry_diffs = [d for d in short_carry_diffs if d is not None]
     short_stats = _compute_accuracy_stats(short_carry_diffs, [0.5, 1, 2, 3])
     short_accuracy = {f"{k}_yd": v for k, v in short_stats.items() if k != "within_pct"}
     short_accuracy["within_pct_yd"] = short_stats.get("within_pct", {})
 
-    mid_115_150_diffs = [float(r["diff_carry_yd"]) for r in mid_115_150_rows if r.get("diff_carry_yd")]
+    mid_115_150_diffs = [_get_numeric(r, "diff_carry_yd") for r in mid_115_150_rows]
+    mid_115_150_diffs = [d for d in mid_115_150_diffs if d is not None]
     mid_115_150_stats = _compute_accuracy_stats(mid_115_150_diffs, [1, 2, 3, 5])
     mid_115_150_accuracy = {f"{k}_yd": v for k, v in mid_115_150_stats.items() if k != "within_pct"}
     mid_115_150_accuracy["within_pct_yd"] = mid_115_150_stats.get("within_pct", {})
 
-    mid_150_180_diffs = [float(r["diff_carry_yd"]) for r in mid_150_180_rows if r.get("diff_carry_yd")]
+    mid_150_180_diffs = [_get_numeric(r, "diff_carry_yd") for r in mid_150_180_rows]
+    mid_150_180_diffs = [d for d in mid_150_180_diffs if d is not None]
     mid_150_180_stats = _compute_accuracy_stats(mid_150_180_diffs, [3, 5, 6, 7, 10])
     mid_150_180_accuracy = {f"{k}_yd": v for k, v in mid_150_180_stats.items() if k != "within_pct"}
     mid_150_180_accuracy["within_pct_yd"] = mid_150_180_stats.get("within_pct", {})
 
-    long_carry_diffs = [float(r["diff_carry_yd"]) for r in long_rows if r.get("diff_carry_yd")]
-    long_stats = _compute_accuracy_stats(long_carry_diffs, [3, 5, 7, 10])
+    long_carry_diffs = [_get_numeric(r, "diff_carry_yd") for r in long_rows]
+    long_carry_diffs = [d for d in long_carry_diffs if d is not None]
+    long_stats = _compute_accuracy_stats(long_carry_diffs, [3, 5, 7, 10, 15])
     long_accuracy = {f"{k}_yd": v for k, v in long_stats.items() if k != "within_pct"}
     long_accuracy["within_pct_yd"] = long_stats.get("within_pct", {})
+
+    short_raw_diffs = [_get_numeric(r, "diff_carry_raw_yd", "diff_carry_yd") for r in short_rows]
+    short_raw_diffs = [d for d in short_raw_diffs if d is not None]
+    short_raw_stats = _compute_accuracy_stats(short_raw_diffs, [0.5, 1, 2, 3])
+    short_physics_accuracy = {f"{k}_yd": v for k, v in short_raw_stats.items() if k != "within_pct"}
+    short_physics_accuracy["within_pct_yd"] = short_raw_stats.get("within_pct", {})
+
+    mid_115_150_raw_diffs = [_get_numeric(r, "diff_carry_raw_yd", "diff_carry_yd") for r in mid_115_150_rows]
+    mid_115_150_raw_diffs = [d for d in mid_115_150_raw_diffs if d is not None]
+    mid_115_150_raw_stats = _compute_accuracy_stats(mid_115_150_raw_diffs, [1, 2, 3, 5])
+    mid_115_150_physics = {f"{k}_yd": v for k, v in mid_115_150_raw_stats.items() if k != "within_pct"}
+    mid_115_150_physics["within_pct_yd"] = mid_115_150_raw_stats.get("within_pct", {})
+
+    mid_150_180_raw_diffs = [_get_numeric(r, "diff_carry_raw_yd", "diff_carry_yd") for r in mid_150_180_rows]
+    mid_150_180_raw_diffs = [d for d in mid_150_180_raw_diffs if d is not None]
+    mid_150_180_raw_stats = _compute_accuracy_stats(mid_150_180_raw_diffs, [3, 5, 6, 7, 10])
+    mid_150_180_physics = {f"{k}_yd": v for k, v in mid_150_180_raw_stats.items() if k != "within_pct"}
+    mid_150_180_physics["within_pct_yd"] = mid_150_180_raw_stats.get("within_pct", {})
+
+    long_raw_diffs = [_get_numeric(r, "diff_carry_raw_yd", "diff_carry_yd") for r in long_rows]
+    long_raw_diffs = [d for d in long_raw_diffs if d is not None]
+    long_raw_stats = _compute_accuracy_stats(long_raw_diffs, [3, 5, 7, 10, 15])
+    long_physics_accuracy = {f"{k}_yd": v for k, v in long_raw_stats.items() if k != "within_pct"}
+    long_physics_accuracy["within_pct_yd"] = long_raw_stats.get("within_pct", {})
+
+    physics_within_3 = sum(1 for d in carry_raw_diffs if abs(d) <= 3.0)
+    residual_candidates = []
+    short_residual = 0
+    for row in ref_rows:
+        raw_diff = _get_numeric(row, "diff_carry_raw_yd", "diff_carry_yd")
+        carry_yd = _safe_float(row.get("flightscope_carry_yd"))
+        if raw_diff is None:
+            continue
+        target_abs = _window_target_abs_yd(carry_yd)
+        if abs(raw_diff) > target_abs:
+            residual_candidates.append(row)
+            if carry_yd is not None and carry_yd < 115.0:
+                short_residual += 1
 
     full_summary = {
         "timestamp": datetime.datetime.now().strftime("%Y-%m-%dT%H:%M"),
@@ -638,17 +784,64 @@ def _generate_accuracy_reports(diff_csv, output_dir, top_n=20):
         "carry_accuracy": carry_accuracy,
         "total_accuracy": total_accuracy,
         "apex_accuracy": apex_accuracy,
+        "physics_only_priority_gates": {
+            "short_carry_lt_115yd": {
+                "shots": len(short_rows),
+                "carry_accuracy": short_physics_accuracy,
+            },
+            "carry_115_150yd": {
+                "shots": len(mid_115_150_rows),
+                "carry_accuracy": mid_115_150_physics,
+            },
+            "carry_150_180yd": {
+                "shots": len(mid_150_180_rows),
+                "carry_accuracy": mid_150_180_physics,
+            },
+            "long_carry_gt_200yd": {
+                "shots": len(long_rows),
+                "carry_accuracy": long_physics_accuracy,
+            },
+        },
+        "objectives": {
+            "physics_only": {
+                "shots": len(carry_raw_diffs),
+                "within_3yd_pct": _percentage(physics_within_3, len(carry_raw_diffs)),
+                "residual_outliers_gt_window_target": len(residual_candidates),
+            },
+            "short_shot_priority": {
+                "shots": len(short_rows),
+                "goal_within_1yd_pct": 80.0,
+                "actual_within_1yd_pct": short_raw_stats.get("within_pct", {}).get("1", 0.0),
+                "actual_within_0.5yd_pct": short_raw_stats.get("within_pct", {}).get("0.5", 0.0),
+                "actual_within_3yd_pct": short_raw_stats.get("within_pct", {}).get("3", 0.0),
+            },
+            "residual_regime_candidates": {
+                "count": len(residual_candidates),
+                "short_count": short_residual,
+                "by_window": {
+                    "<115": sum(1 for row in residual_candidates if _safe_float(row.get("flightscope_carry_yd")) is not None and _safe_float(row.get("flightscope_carry_yd")) < 115.0),
+                    "115-150": sum(1 for row in residual_candidates if _safe_float(row.get("flightscope_carry_yd")) is not None and 115.0 < _safe_float(row.get("flightscope_carry_yd")) <= 150.0),
+                    "150-180": sum(1 for row in residual_candidates if _safe_float(row.get("flightscope_carry_yd")) is not None and 150.0 < _safe_float(row.get("flightscope_carry_yd")) <= 180.0),
+                    "180-200": sum(1 for row in residual_candidates if _safe_float(row.get("flightscope_carry_yd")) is not None and 180.0 < _safe_float(row.get("flightscope_carry_yd")) <= 200.0),
+                    ">200": sum(1 for row in residual_candidates if _safe_float(row.get("flightscope_carry_yd")) is not None and _safe_float(row.get("flightscope_carry_yd")) > 200.0),
+                },
+            },
+        },
     }
+    baseline_summary = _summarize_baseline_comparison(ref_rows, critical_baseline)
+    if baseline_summary is not None:
+        full_summary["critical_baseline"] = baseline_summary
+
     full_path = os.path.join(output_dir, f"openfairway_accuracy_summary_{timestamp}.json")
     with open(full_path, "w") as f:
         json.dump(full_summary, f, indent=2)
         f.write("\n")
     written.append(full_path)
 
-    # --- 2. Critical carry CSV (top 20 by |diff_carry_yd|) ---
+    # --- 2. Critical carry CSV (top N by |raw diff_carry_yd|) ---
     sorted_by_carry = sorted(
         ref_rows,
-        key=lambda r: abs(float(r.get("diff_carry_yd", 0) or 0)),
+        key=lambda r: abs(_get_numeric(r, "diff_carry_raw_yd", "diff_carry_yd") or 0.0),
         reverse=True,
     )[:top_n]
     carry_csv_path = os.path.join(output_dir, f"openfairway_critical_carry_{timestamp}.csv")
@@ -678,7 +871,7 @@ def _generate_accuracy_reports(diff_csv, output_dir, top_n=20):
             writer.writerows(sorted_by_overall)
     written.append(overall_csv_path)
 
-    return written
+    return written, full_summary
 
 
 def cmd_analyze(args):
@@ -783,9 +976,40 @@ def cmd_analyze(args):
 
     # Step 4: Generate accuracy reports
     print("\n--- Generating accuracy reports ---")
-    report_paths = _generate_accuracy_reports(diff_csv, report_output_dir, top_n=args.show)
+    critical_baseline = _resolve_critical_baseline(args, report_output_dir)
+    if critical_baseline:
+        print(f"  Critical baseline: {critical_baseline}")
+    report_paths, report_summary = _generate_accuracy_reports(
+        diff_csv,
+        report_output_dir,
+        top_n=args.show,
+        critical_baseline=critical_baseline,
+    )
     for p in report_paths:
         print(f"  {p}")
+
+    objectives = report_summary.get("objectives", {})
+    physics_only = objectives.get("physics_only", {})
+    short_priority = objectives.get("short_shot_priority", {})
+    print(
+        "  Physics-only within ±3 yd: "
+        f"{physics_only.get('within_3yd_pct', 0.0):.1f}%"
+    )
+    print(
+        "  Short shots <115 yd within ±1 yd: "
+        f"{short_priority.get('actual_within_1yd_pct', 0.0):.1f}%"
+    )
+    print(
+        "  Short shots <115 yd within ±0.5 yd: "
+        f"{short_priority.get('actual_within_0.5yd_pct', 0.0):.1f}%"
+    )
+
+    baseline_summary = report_summary.get("critical_baseline")
+    if baseline_summary:
+        print(
+            "  Baseline critical shots improved/regressed: "
+            f"{baseline_summary.get('improved', 0)}/{baseline_summary.get('regressed', 0)}"
+        )
 
     # Step 5: Save iteration snapshot
     os.makedirs(history_dir, exist_ok=True)
@@ -926,7 +1150,7 @@ def parse_args():
     run_parser.add_argument("--export-flightscope", action="store_true", help="Run export_flightscope_csv.py instead of using SoT CSV")
     run_parser.add_argument("--session", default=None, help="Session directory path (all outputs go into session dir)")
     run_parser.add_argument("--no-sessions", action="store_true", help="Exclude session directories (standard shots only)")
-    run_parser.add_argument("--carry-exceptions", default=None, help="Path to carry exception profile JSON")
+    run_parser.add_argument("--carry-exceptions", default=None, help="Path to carry exception profile JSON (explicit opt-in; default disabled)")
     run_parser.add_argument("--no-carry-exceptions", action="store_true", help="Disable carry exception profile")
 
     analyze_parser = subparsers.add_parser("analyze", help="Post-scrape analysis: compare, diagnose, generate accuracy reports")
@@ -934,7 +1158,8 @@ def parse_args():
     analyze_parser.add_argument("--no-sessions", action="store_true", help="Exclude session directories (standard shots only)")
     analyze_parser.add_argument("--flightscope-export", action="store_true", help="Re-export FlightScope CSV before comparing")
     analyze_parser.add_argument("--show", type=int, default=20, help="Number of worst shots to include in critical CSVs (default: 20)")
-    analyze_parser.add_argument("--carry-exceptions", default=None, help="Path to carry exception profile JSON")
+    analyze_parser.add_argument("--critical-baseline", default=None, help="Optional prior critical-carry CSV to compare against (defaults to latest existing report in assets/data)")
+    analyze_parser.add_argument("--carry-exceptions", default=None, help="Path to carry exception profile JSON (explicit opt-in; default disabled)")
     analyze_parser.add_argument("--no-carry-exceptions", action="store_true", help="Disable carry exception profile")
 
     subparsers.add_parser("status", help="Show last iteration summary")

@@ -301,10 +301,10 @@ Use the benchmark script for broad flight/rollout trend checking and the Garmin 
 Use the calibration tooling under [`tools/shot_calibration/README.md`](/home/jesher/Code/Github/digitalhand/openfairway/tools/shot_calibration/README.md) for carry-focused analysis and iteration against source-of-truth data.
 
 - Physics parameter tuning profile: `assets/data/calibration/calibration_profile.json`
-- Calibration carry exception profile (regime + window targets): `assets/data/calibration/carry_exception_profile.json`
+- Calibration carry exception profile (diagnostic-only, explicit opt-in): `assets/data/calibration/carry_exception_profile.json`
 - Critical carry report output: `assets/data/openfairway_critical_carry_<timestamp>.csv`
 
-The carry exception layer is calibration analysis tooling. It is applied in the compare/analyze pipeline and does not modify core runtime equations in `addons/openfairway/physics/`.
+The carry exception layer is calibration analysis tooling and is disabled by default. It only applies when explicitly enabled via `--carry-exceptions`, and does not modify core runtime equations in `addons/openfairway/physics/`.
 
 ## Known Feature Gaps
 

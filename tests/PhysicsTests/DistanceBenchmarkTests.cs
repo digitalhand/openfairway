@@ -69,7 +69,7 @@ namespace OpenFairway.Tests
                 tolerance: 10.0f);
         }
 
-[Test]
+        [Test]
         public void DriveShot_Benchmark()
         {
             // Full driver shot

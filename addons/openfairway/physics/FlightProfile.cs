@@ -41,7 +41,7 @@ public sealed class FlightProfile
     public float LowReCdFloor { get; init; } = 0.38f;
     public float LowReBlendStart { get; init; } = 30000.0f;
     public float CdAt50k { get; init; } = 0.4632f;
-    public float CdMin { get; init; } = 0.22f;
+    public float CdMin { get; init; } = 0.223f;
 
     // --- Lift caps ---
     public float ClMaxBase { get; init; } = 0.268f;
@@ -65,7 +65,7 @@ public sealed class FlightProfile
 
     // --- High-Re lift ---
     public float HighReStart { get; init; } = 75000.0f;
-    public float HighReMidSpinGain { get; init; } = 13.8f;
+    public float HighReMidSpinGain { get; init; } = 16.0f;
     public float HighReSpinGain { get; init; } = 16.0f;
     public float HighReGainReductionStart { get; init; } = 0.10f;
     public float HighReGainReductionEnd { get; init; } = 0.18f;
@@ -96,17 +96,17 @@ public sealed class FlightProfile
     // --- Progressive spin drag cap boost (increased form drag at high SR) ---
     public float SpinDragProgressiveCapSrStart { get; init; } = 0.33f;
     public float SpinDragProgressiveCapSrEnd { get; init; } = 0.50f;
-    public float SpinDragProgressiveCapBoostMax { get; init; } = 0.0f;
+    public float SpinDragProgressiveCapBoostMax { get; init; } = 0.25f;
 
     // --- Mid-spin Cl boost (bell-shaped lift recovery for mid-iron SR regime) ---
-    public float MidSpinClBoostSrStart { get; init; } = 0.10f;
-    public float MidSpinClBoostSrEnd { get; init; } = 0.35f;
-    public float MidSpinClBoostMax { get; init; } = 0.0f;
+    public float MidSpinClBoostSrStart { get; init; } = 0.17f;
+    public float MidSpinClBoostSrEnd { get; init; } = 0.31f;
+    public float MidSpinClBoostMax { get; init; } = 0.50f;
 
     // --- High-launch drag boost ---
-    public float HighLaunchDragBoostMax { get; init; } = 1.18f;
-    public float HighLaunchDragVlaStartDeg { get; init; } = 33.0f;
-    public float HighLaunchDragVlaFullDeg { get; init; } = 40.0f;
+    public float HighLaunchDragBoostMax { get; init; } = 1.24f;
+    public float HighLaunchDragVlaStartDeg { get; init; } = 24.5f;
+    public float HighLaunchDragVlaFullDeg { get; init; } = 31.5f;
     public float HighLaunchDragSrStart { get; init; } = 0.50f;
     public float HighLaunchDragSrEnd { get; init; } = 0.70f;
 

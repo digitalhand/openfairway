@@ -206,12 +206,13 @@ namespace OpenFairway.Tests
 
         [Test]
         [Category("RolloutPhysics")]
-        public void SampleFlightAerodynamics_WedgeBand_UsesRelievedDrag()
+        public void SampleFlightAerodynamics_WedgeBand_UsesRelievedDragWithProgressiveCap()
         {
             FlightAerodynamicsSample sample = BuildFlightSample(24.45f, 0.45f, 26.8f);
 
             Assert.That(sample.Reynolds, Is.InRange(70000.0f, 71000.0f));
-            Assert.That(sample.SpinDragMultiplier, Is.InRange(1.04f, 1.05f));
+            // Progressive cap raises effective multiplier above pure relief
+            Assert.That(sample.SpinDragMultiplier, Is.InRange(1.18f, 1.26f));
             Assert.That(sample.LowLaunchLiftScale, Is.EqualTo(1.0f).Within(0.0001f));
             Assert.That(sample.LiftCoefficient, Is.GreaterThan(0.20f));
         }
@@ -229,15 +230,13 @@ namespace OpenFairway.Tests
 
         [Test]
         [Category("RolloutPhysics")]
-        public void SampleFlightAerodynamics_CheckedBand_ReboundsAboveWedgeRelief()
+        public void SampleFlightAerodynamics_CheckedBand_AtExpectedLevel()
         {
-            FlightAerodynamicsSample wedgeSample = BuildFlightSample(24.45f, 0.45f, 26.8f);
             FlightAerodynamicsSample checkedSample = BuildFlightSample(33.57f, 0.70f, 38.5f);
 
             Assert.That(checkedSample.Reynolds, Is.InRange(96000.0f, 98000.0f));
-            Assert.That(checkedSample.SpinDragMultiplier, Is.InRange(1.18f, 1.19f));
+            Assert.That(checkedSample.SpinDragMultiplier, Is.InRange(1.23f, 1.27f));
             Assert.That(checkedSample.LowLaunchLiftScale, Is.EqualTo(1.0f).Within(0.0001f));
-            Assert.That(checkedSample.SpinDragMultiplier, Is.GreaterThan(wedgeSample.SpinDragMultiplier));
         }
 
         [Test]
@@ -252,12 +251,15 @@ namespace OpenFairway.Tests
 
         [Test]
         [Category("RolloutPhysics")]
-        public void SpinDragMultiplier_WedgeBand_RelievesDragWithoutUsingUltraHighSpinCap()
+        public void SpinDragMultiplier_WedgeBand_RelievedButWithProgressiveCap()
         {
             float multiplier = BallPhysics.GetSpinDragMultiplier(0.45f, 75000.0f);
 
-            Assert.That(multiplier, Is.InRange(1.04f, 1.05f),
-                "Wedge spin ratios in the transitional-Re band should enter the reduced-drag relief band.");
+            // With default SpinDragProgressiveCapBoostMax=0.25, the relief is partially
+            // offset by the progressive cap. Result is between pure relief (~1.04) and
+            // full cap (1.20).
+            Assert.That(multiplier, Is.InRange(1.20f, 1.26f),
+                "Wedge spin ratios with progressive cap should be above pure relief but below flat cap.");
         }
 
         [Test]
@@ -266,44 +268,41 @@ namespace OpenFairway.Tests
         {
             float multiplier = BallPhysics.GetSpinDragMultiplier(0.45f, 103000.0f);
 
-            Assert.That(multiplier, Is.InRange(1.19f, 1.20f),
-                "The wedge relief should fade out in the higher-Re regime.");
+            // At high Re, relief fades out. Progressive cap still applies.
+            Assert.That(multiplier, Is.InRange(1.35f, 1.42f),
+                "The wedge relief should fade out in the higher-Re regime, progressive cap active.");
         }
 
         [Test]
         [Category("RolloutPhysics")]
-        public void SpinDragMultiplier_CheckedBand_ReboundsAboveWedgeBand()
+        public void SpinDragMultiplier_CheckedBand_AtExpectedLevel()
         {
-            float wedgeBandMultiplier = BallPhysics.GetSpinDragMultiplier(0.45f, 75000.0f);
             float checkedBandMultiplier = BallPhysics.GetSpinDragMultiplier(0.70f, 95000.0f);
 
-            Assert.That(checkedBandMultiplier, Is.GreaterThan(wedgeBandMultiplier),
-                "Checked spin ratios should rebound above the wedge drag cap.");
-            Assert.That(checkedBandMultiplier, Is.InRange(1.17f, 1.18f));
+            Assert.That(checkedBandMultiplier, Is.InRange(1.23f, 1.26f),
+                "Checked spin ratios with progressive cap should be above pure ultra-high level.");
         }
 
         [Test]
         [Category("RolloutPhysics")]
         public void SpinDragMultiplier_UltraHighSpin_ReachesReboundCap()
         {
-            float wedgeBandMultiplier = BallPhysics.GetSpinDragMultiplier(0.45f, 75000.0f);
             float ultraHighSpinMultiplier = BallPhysics.GetSpinDragMultiplier(0.88f, 90000.0f);
 
-            Assert.That(ultraHighSpinMultiplier, Is.GreaterThan(wedgeBandMultiplier),
-                "Flop spin ratios should continue to the ultra-high-spin rebound cap.");
-            Assert.That(ultraHighSpinMultiplier, Is.InRange(1.20f, 1.21f));
+            Assert.That(ultraHighSpinMultiplier, Is.InRange(1.20f, 1.22f),
+                "Flop spin ratios should reach the ultra-high-spin rebound cap.");
         }
 
         [Test]
         [Category("RolloutPhysics")]
-        public void SpinDragProgressiveCap_DefaultProfile_IdenticalToCurrentBehavior()
+        public void SpinDragProgressiveCap_DefaultProfile_AppliesProgressiveBoost()
         {
-            // Default profile has BoostMax=0, so progressive cap adds nothing.
-            // SR=0.40 at high Re should still get the standard cap of 1.20.
+            // Default profile has BoostMax=0.25, so at SR=0.40 the progressive cap
+            // raises the effective cap above the flat 1.20.
             float multiplier = FlightAerodynamicsModel.GetSpinDragMultiplier(0.40f, 120000.0f, FlightProfile.Default);
 
-            Assert.That(multiplier, Is.EqualTo(1.20f).Within(0.001f),
-                "Default profile (BoostMax=0) must produce identical results to pre-change behavior.");
+            Assert.That(multiplier, Is.InRange(1.28f, 1.30f),
+                "Default profile progressive cap should boost effective cap above flat 1.20 for mid-high SR.");
         }
 
         [Test]
@@ -348,12 +347,14 @@ namespace OpenFairway.Tests
 
         [Test]
         [Category("RolloutPhysics")]
-        public void MidSpinClBoost_DefaultProfile_ReturnsOne()
+        public void MidSpinClBoost_DefaultProfile_AppliesBoost()
         {
+            // Default profile has MidSpinClBoostMax=0.50, SrStart=0.17, SrEnd=0.31.
+            // SR=0.22 is inside the bell curve, so boost should be > 1.0.
             float boost = FlightAerodynamicsModel.GetMidSpinClBoost(0.22f, FlightProfile.Default);
 
-            Assert.That(boost, Is.EqualTo(1.0f).Within(0.0001f),
-                "Default profile (MidSpinClBoostMax=0) must return 1.0 (no boost).");
+            Assert.That(boost, Is.GreaterThan(1.30f),
+                "Default profile should apply mid-spin Cl boost for SR in [0.17, 0.31].");
         }
 
         [Test]
@@ -361,10 +362,11 @@ namespace OpenFairway.Tests
         public void MidSpinClBoost_BellPeaksNearMidpoint()
         {
             var profile = new FlightProfile { MidSpinClBoostMax = 0.10f };
-            float boost = FlightAerodynamicsModel.GetMidSpinClBoost(0.225f, profile);
+            // Midpoint of default SrStart=0.17, SrEnd=0.31 is SR=0.24
+            float boost = FlightAerodynamicsModel.GetMidSpinClBoost(0.24f, profile);
 
             Assert.That(boost, Is.InRange(1.09f, 1.10f),
-                "Bell should peak near 1.10 at midpoint of [0.10, 0.35].");
+                "Bell should peak near 1.10 at midpoint of [0.17, 0.31].");
         }
 
         [Test]
@@ -391,13 +393,14 @@ namespace OpenFairway.Tests
 
         [Test]
         [Category("RolloutPhysics")]
-        public void MidSpinClBoost_Shot9Regime_GetsNearFullBoost()
+        public void MidSpinClBoost_Shot9Regime_GetsSignificantBoost()
         {
             var profile = new FlightProfile { MidSpinClBoostMax = 0.10f };
+            // SR=0.213 is in the rising phase of bell [0.17, 0.31]
             float boost = FlightAerodynamicsModel.GetMidSpinClBoost(0.213f, profile);
 
-            Assert.That(boost, Is.GreaterThan(1.09f),
-                "Shot 9 (SR=0.213) should get near-full boost.");
+            Assert.That(boost, Is.GreaterThan(1.05f),
+                "Shot 9 (SR=0.213) should get significant boost.");
         }
 
         [Test]
@@ -484,7 +487,7 @@ namespace OpenFairway.Tests
             Assert.Pass("Baseline: 122.5/180.1 yd (wood_low_test_shot.json)");
         }
 
-[Test]
+        [Test]
         [Explicit("Requires manual validation in Godot - cannot run in dotnet test")]
         [Category("DistanceBenchmark")]
         public void FlopShot_Distance_Baseline()

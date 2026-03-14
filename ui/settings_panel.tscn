@@ -336,26 +336,33 @@ theme_override_colors/font_unselected_color = Color(0.82, 0.88, 0.94, 0.92)
 theme_override_colors/font_hovered_color = Color(0.96, 0.98, 1, 1)
 theme_override_font_sizes/font_size = 20
 
-[node name="Player" type="VBoxContainer" parent="Root/Panel/Margin/Content/Tabs"]
+[node name="Player" type="ScrollContainer" parent="Root/Panel/Margin/Content/Tabs"]
 layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 1
+
+[node name="PlayerContent" type="VBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Player"]
+layout_mode = 2
+size_flags_horizontal = 3
 theme_override_constants/separation = 14
 
-[node name="PlayerCard" type="PanelContainer" parent="Root/Panel/Margin/Content/Tabs/Player"]
+[node name="PlayerCard" type="PanelContainer" parent="Root/Panel/Margin/Content/Tabs/Player/PlayerContent"]
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_card")
 
-[node name="PlayerCardMargin" type="MarginContainer" parent="Root/Panel/Margin/Content/Tabs/Player/PlayerCard"]
+[node name="PlayerCardMargin" type="MarginContainer" parent="Root/Panel/Margin/Content/Tabs/Player/PlayerContent/PlayerCard"]
 layout_mode = 2
 theme_override_constants/margin_left = 16
 theme_override_constants/margin_top = 14
 theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 14
 
-[node name="PlayerCardRow" type="HBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Player/PlayerCard/PlayerCardMargin"]
+[node name="PlayerCardRow" type="HBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Player/PlayerContent/PlayerCard/PlayerCardMargin"]
 layout_mode = 2
 theme_override_constants/separation = 16
 
-[node name="PlayerNameLabel" type="Label" parent="Root/Panel/Margin/Content/Tabs/Player/PlayerCard/PlayerCardMargin/PlayerCardRow"]
+[node name="PlayerNameLabel" type="Label" parent="Root/Panel/Margin/Content/Tabs/Player/PlayerContent/PlayerCard/PlayerCardMargin/PlayerCardRow"]
 custom_minimum_size = Vector2(210, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.91, 0.95, 1, 1)
@@ -363,7 +370,7 @@ theme_override_font_sizes/font_size = 20
 text = "Player Name"
 vertical_alignment = 1
 
-[node name="PlayerNameInput" type="LineEdit" parent="Root/Panel/Margin/Content/Tabs/Player/PlayerCard/PlayerCardMargin/PlayerCardRow"]
+[node name="PlayerNameInput" type="LineEdit" parent="Root/Panel/Margin/Content/Tabs/Player/PlayerContent/PlayerCard/PlayerCardMargin/PlayerCardRow"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_styles/normal = SubResource("StyleBoxFlat_field")
@@ -375,23 +382,23 @@ theme_override_colors/font_placeholder_color = Color(0.82, 0.88, 0.94, 0.6)
 theme_override_font_sizes/font_size = 18
 placeholder_text = "Enter player name"
 
-[node name="RangeDefaultClubCard" type="PanelContainer" parent="Root/Panel/Margin/Content/Tabs/Player"]
+[node name="RangeDefaultClubCard" type="PanelContainer" parent="Root/Panel/Margin/Content/Tabs/Player/PlayerContent"]
 visible = false
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_card")
 
-[node name="RangeDefaultClubMargin" type="MarginContainer" parent="Root/Panel/Margin/Content/Tabs/Player/RangeDefaultClubCard"]
+[node name="RangeDefaultClubMargin" type="MarginContainer" parent="Root/Panel/Margin/Content/Tabs/Player/PlayerContent/RangeDefaultClubCard"]
 layout_mode = 2
 theme_override_constants/margin_left = 16
 theme_override_constants/margin_top = 14
 theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 14
 
-[node name="RangeDefaultClubRow" type="HBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Player/RangeDefaultClubCard/RangeDefaultClubMargin"]
+[node name="RangeDefaultClubRow" type="HBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Player/PlayerContent/RangeDefaultClubCard/RangeDefaultClubMargin"]
 layout_mode = 2
 theme_override_constants/separation = 16
 
-[node name="RangeDefaultClubLabel" type="Label" parent="Root/Panel/Margin/Content/Tabs/Player/RangeDefaultClubCard/RangeDefaultClubMargin/RangeDefaultClubRow"]
+[node name="RangeDefaultClubLabel" type="Label" parent="Root/Panel/Margin/Content/Tabs/Player/PlayerContent/RangeDefaultClubCard/RangeDefaultClubMargin/RangeDefaultClubRow"]
 custom_minimum_size = Vector2(210, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.91, 0.95, 1, 1)
@@ -399,7 +406,7 @@ theme_override_font_sizes/font_size = 20
 text = "Default Club (Range)"
 vertical_alignment = 1
 
-[node name="RangeDefaultClubOption" type="OptionButton" parent="Root/Panel/Margin/Content/Tabs/Player/RangeDefaultClubCard/RangeDefaultClubMargin/RangeDefaultClubRow"]
+[node name="RangeDefaultClubOption" type="OptionButton" parent="Root/Panel/Margin/Content/Tabs/Player/PlayerContent/RangeDefaultClubCard/RangeDefaultClubMargin/RangeDefaultClubRow"]
 custom_minimum_size = Vector2(220, 0)
 layout_mode = 2
 theme_override_styles/normal = SubResource("StyleBoxFlat_field")
@@ -414,26 +421,26 @@ theme_override_colors/font_focus_color = Color(0.96, 0.98, 1, 1)
 theme_override_colors/font_disabled_color = Color(0.96, 0.98, 1, 0.6)
 theme_override_font_sizes/font_size = 18
 
-[node name="RangeDefaultClubSpacer" type="Control" parent="Root/Panel/Margin/Content/Tabs/Player/RangeDefaultClubCard/RangeDefaultClubMargin/RangeDefaultClubRow"]
+[node name="RangeDefaultClubSpacer" type="Control" parent="Root/Panel/Margin/Content/Tabs/Player/PlayerContent/RangeDefaultClubCard/RangeDefaultClubMargin/RangeDefaultClubRow"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="PlayerTestShotsCard" type="PanelContainer" parent="Root/Panel/Margin/Content/Tabs/Player"]
+[node name="PlayerTestShotsCard" type="PanelContainer" parent="Root/Panel/Margin/Content/Tabs/Player/PlayerContent"]
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_card")
 
-[node name="PlayerTestShotsMargin" type="MarginContainer" parent="Root/Panel/Margin/Content/Tabs/Player/PlayerTestShotsCard"]
+[node name="PlayerTestShotsMargin" type="MarginContainer" parent="Root/Panel/Margin/Content/Tabs/Player/PlayerContent/PlayerTestShotsCard"]
 layout_mode = 2
 theme_override_constants/margin_left = 16
 theme_override_constants/margin_top = 14
 theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 14
 
-[node name="PlayerTestShotsRow" type="HBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Player/PlayerTestShotsCard/PlayerTestShotsMargin"]
+[node name="PlayerTestShotsRow" type="HBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Player/PlayerContent/PlayerTestShotsCard/PlayerTestShotsMargin"]
 layout_mode = 2
 theme_override_constants/separation = 16
 
-[node name="TestShotsLabel" type="Label" parent="Root/Panel/Margin/Content/Tabs/Player/PlayerTestShotsCard/PlayerTestShotsMargin/PlayerTestShotsRow"]
+[node name="TestShotsLabel" type="Label" parent="Root/Panel/Margin/Content/Tabs/Player/PlayerContent/PlayerTestShotsCard/PlayerTestShotsMargin/PlayerTestShotsRow"]
 custom_minimum_size = Vector2(210, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.91, 0.95, 1, 1)
@@ -441,36 +448,43 @@ theme_override_font_sizes/font_size = 20
 text = "Enable Test Shots"
 vertical_alignment = 1
 
-[node name="TestShotsCheck" type="CheckBox" parent="Root/Panel/Margin/Content/Tabs/Player/PlayerTestShotsCard/PlayerTestShotsMargin/PlayerTestShotsRow"]
+[node name="TestShotsCheck" type="CheckBox" parent="Root/Panel/Margin/Content/Tabs/Player/PlayerContent/PlayerTestShotsCard/PlayerTestShotsMargin/PlayerTestShotsRow"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.91, 0.95, 1, 1)
 theme_override_font_sizes/font_size = 20
 text = "Enabled"
 
-[node name="PlayerTestShotsSpacer" type="Control" parent="Root/Panel/Margin/Content/Tabs/Player/PlayerTestShotsCard/PlayerTestShotsMargin/PlayerTestShotsRow"]
+[node name="PlayerTestShotsSpacer" type="Control" parent="Root/Panel/Margin/Content/Tabs/Player/PlayerContent/PlayerTestShotsCard/PlayerTestShotsMargin/PlayerTestShotsRow"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="Display" type="VBoxContainer" parent="Root/Panel/Margin/Content/Tabs"]
+[node name="Display" type="ScrollContainer" parent="Root/Panel/Margin/Content/Tabs"]
 layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 1
+
+[node name="DisplayContent" type="VBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Display"]
+layout_mode = 2
+size_flags_horizontal = 3
 theme_override_constants/separation = 14
 
-[node name="DisplayResolutionCard" type="PanelContainer" parent="Root/Panel/Margin/Content/Tabs/Display"]
+[node name="DisplayResolutionCard" type="PanelContainer" parent="Root/Panel/Margin/Content/Tabs/Display/DisplayContent"]
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_card")
 
-[node name="DisplayResolutionMargin" type="MarginContainer" parent="Root/Panel/Margin/Content/Tabs/Display/DisplayResolutionCard"]
+[node name="DisplayResolutionMargin" type="MarginContainer" parent="Root/Panel/Margin/Content/Tabs/Display/DisplayContent/DisplayResolutionCard"]
 layout_mode = 2
 theme_override_constants/margin_left = 16
 theme_override_constants/margin_top = 14
 theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 14
 
-[node name="DisplayResolutionRow" type="HBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Display/DisplayResolutionCard/DisplayResolutionMargin"]
+[node name="DisplayResolutionRow" type="HBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Display/DisplayContent/DisplayResolutionCard/DisplayResolutionMargin"]
 layout_mode = 2
 theme_override_constants/separation = 16
 
-[node name="ResolutionLabel" type="Label" parent="Root/Panel/Margin/Content/Tabs/Display/DisplayResolutionCard/DisplayResolutionMargin/DisplayResolutionRow"]
+[node name="ResolutionLabel" type="Label" parent="Root/Panel/Margin/Content/Tabs/Display/DisplayContent/DisplayResolutionCard/DisplayResolutionMargin/DisplayResolutionRow"]
 custom_minimum_size = Vector2(210, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.91, 0.95, 1, 1)
@@ -478,7 +492,7 @@ theme_override_font_sizes/font_size = 20
 text = "Window Size"
 vertical_alignment = 1
 
-[node name="ResolutionOption" type="OptionButton" parent="Root/Panel/Margin/Content/Tabs/Display/DisplayResolutionCard/DisplayResolutionMargin/DisplayResolutionRow"]
+[node name="ResolutionOption" type="OptionButton" parent="Root/Panel/Margin/Content/Tabs/Display/DisplayContent/DisplayResolutionCard/DisplayResolutionMargin/DisplayResolutionRow"]
 custom_minimum_size = Vector2(340, 0)
 layout_mode = 2
 theme_override_styles/normal = SubResource("StyleBoxFlat_field")
@@ -493,42 +507,49 @@ theme_override_colors/font_focus_color = Color(0.96, 0.98, 1, 1)
 theme_override_colors/font_disabled_color = Color(0.96, 0.98, 1, 0.6)
 theme_override_font_sizes/font_size = 18
 
-[node name="FullscreenCheck" type="CheckBox" parent="Root/Panel/Margin/Content/Tabs/Display/DisplayResolutionCard/DisplayResolutionMargin/DisplayResolutionRow"]
+[node name="FullscreenCheck" type="CheckBox" parent="Root/Panel/Margin/Content/Tabs/Display/DisplayContent/DisplayResolutionCard/DisplayResolutionMargin/DisplayResolutionRow"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.91, 0.95, 1, 1)
 theme_override_font_sizes/font_size = 20
 text = "Fullscreen"
 
-[node name="Game" type="VBoxContainer" parent="Root/Panel/Margin/Content/Tabs"]
+[node name="Game" type="ScrollContainer" parent="Root/Panel/Margin/Content/Tabs"]
 layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 1
+
+[node name="GameContent" type="VBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Game"]
+layout_mode = 2
+size_flags_horizontal = 3
 theme_override_constants/separation = 14
 
-[node name="CameraDistanceCard" type="PanelContainer" parent="Root/Panel/Margin/Content/Tabs/Game"]
+[node name="CameraDistanceCard" type="PanelContainer" parent="Root/Panel/Margin/Content/Tabs/Game/GameContent"]
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_card")
 
-[node name="CameraDistanceMargin" type="MarginContainer" parent="Root/Panel/Margin/Content/Tabs/Game/CameraDistanceCard"]
+[node name="CameraDistanceMargin" type="MarginContainer" parent="Root/Panel/Margin/Content/Tabs/Game/GameContent/CameraDistanceCard"]
 layout_mode = 2
 theme_override_constants/margin_left = 16
 theme_override_constants/margin_top = 14
 theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 14
 
-[node name="CameraDistanceContent" type="VBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Game/CameraDistanceCard/CameraDistanceMargin"]
+[node name="CameraDistanceContent" type="VBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Game/GameContent/CameraDistanceCard/CameraDistanceMargin"]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="CameraDistanceLabel" type="Label" parent="Root/Panel/Margin/Content/Tabs/Game/CameraDistanceCard/CameraDistanceMargin/CameraDistanceContent"]
+[node name="CameraDistanceLabel" type="Label" parent="Root/Panel/Margin/Content/Tabs/Game/GameContent/CameraDistanceCard/CameraDistanceMargin/CameraDistanceContent"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.91, 0.95, 1, 1)
 theme_override_font_sizes/font_size = 20
 text = "Camera Distance (ft)"
 
-[node name="CameraDistanceRow" type="HBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Game/CameraDistanceCard/CameraDistanceMargin/CameraDistanceContent"]
+[node name="CameraDistanceRow" type="HBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Game/GameContent/CameraDistanceCard/CameraDistanceMargin/CameraDistanceContent"]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="CameraDistanceSlider" type="HSlider" parent="Root/Panel/Margin/Content/Tabs/Game/CameraDistanceCard/CameraDistanceMargin/CameraDistanceContent/CameraDistanceRow"]
+[node name="CameraDistanceSlider" type="HSlider" parent="Root/Panel/Margin/Content/Tabs/Game/GameContent/CameraDistanceCard/CameraDistanceMargin/CameraDistanceContent/CameraDistanceRow"]
 custom_minimum_size = Vector2(460, 0)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -536,7 +557,7 @@ min_value = 3.28
 max_value = 26.25
 step = 0.1
 
-[node name="CameraDistanceValue" type="SpinBox" parent="Root/Panel/Margin/Content/Tabs/Game/CameraDistanceCard/CameraDistanceMargin/CameraDistanceContent/CameraDistanceRow"]
+[node name="CameraDistanceValue" type="SpinBox" parent="Root/Panel/Margin/Content/Tabs/Game/GameContent/CameraDistanceCard/CameraDistanceMargin/CameraDistanceContent/CameraDistanceRow"]
 custom_minimum_size = Vector2(110, 0)
 layout_mode = 2
 min_value = 3.28
@@ -544,123 +565,123 @@ max_value = 26.25
 step = 0.1
 alignment = 1
 
-[node name="CameraDistanceHelper" type="Label" parent="Root/Panel/Margin/Content/Tabs/Game/CameraDistanceCard/CameraDistanceMargin/CameraDistanceContent"]
+[node name="CameraDistanceHelper" type="Label" parent="Root/Panel/Margin/Content/Tabs/Game/GameContent/CameraDistanceCard/CameraDistanceMargin/CameraDistanceContent"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.72, 0.8, 0.88, 0.96)
 theme_override_font_sizes/font_size = 15
 text = "Distance from ball: 0 ft"
 
-[node name="CameraDelayCard" type="PanelContainer" parent="Root/Panel/Margin/Content/Tabs/Game"]
+[node name="CameraDelayCard" type="PanelContainer" parent="Root/Panel/Margin/Content/Tabs/Game/GameContent"]
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_card")
 
-[node name="CameraDelayMargin" type="MarginContainer" parent="Root/Panel/Margin/Content/Tabs/Game/CameraDelayCard"]
+[node name="CameraDelayMargin" type="MarginContainer" parent="Root/Panel/Margin/Content/Tabs/Game/GameContent/CameraDelayCard"]
 layout_mode = 2
 theme_override_constants/margin_left = 16
 theme_override_constants/margin_top = 14
 theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 14
 
-[node name="CameraDelayContent" type="VBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Game/CameraDelayCard/CameraDelayMargin"]
+[node name="CameraDelayContent" type="VBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Game/GameContent/CameraDelayCard/CameraDelayMargin"]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="CameraDelayLabel" type="Label" parent="Root/Panel/Margin/Content/Tabs/Game/CameraDelayCard/CameraDelayMargin/CameraDelayContent"]
+[node name="CameraDelayLabel" type="Label" parent="Root/Panel/Margin/Content/Tabs/Game/GameContent/CameraDelayCard/CameraDelayMargin/CameraDelayContent"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.91, 0.95, 1, 1)
 theme_override_font_sizes/font_size = 20
 text = "Camera Follow Delay (seconds)"
 
-[node name="CameraDelayRow" type="HBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Game/CameraDelayCard/CameraDelayMargin/CameraDelayContent"]
+[node name="CameraDelayRow" type="HBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Game/GameContent/CameraDelayCard/CameraDelayMargin/CameraDelayContent"]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="CameraDelaySlider" type="HSlider" parent="Root/Panel/Margin/Content/Tabs/Game/CameraDelayCard/CameraDelayMargin/CameraDelayContent/CameraDelayRow"]
+[node name="CameraDelaySlider" type="HSlider" parent="Root/Panel/Margin/Content/Tabs/Game/GameContent/CameraDelayCard/CameraDelayMargin/CameraDelayContent/CameraDelayRow"]
 custom_minimum_size = Vector2(460, 0)
 layout_mode = 2
 size_flags_horizontal = 3
 max_value = 5.0
 step = 0.05
 
-[node name="CameraDelayValue" type="SpinBox" parent="Root/Panel/Margin/Content/Tabs/Game/CameraDelayCard/CameraDelayMargin/CameraDelayContent/CameraDelayRow"]
+[node name="CameraDelayValue" type="SpinBox" parent="Root/Panel/Margin/Content/Tabs/Game/GameContent/CameraDelayCard/CameraDelayMargin/CameraDelayContent/CameraDelayRow"]
 custom_minimum_size = Vector2(110, 0)
 layout_mode = 2
 max_value = 5.0
 step = 0.05
 alignment = 1
 
-[node name="CameraDelayHelper" type="Label" parent="Root/Panel/Margin/Content/Tabs/Game/CameraDelayCard/CameraDelayMargin/CameraDelayContent"]
+[node name="CameraDelayHelper" type="Label" parent="Root/Panel/Margin/Content/Tabs/Game/GameContent/CameraDelayCard/CameraDelayMargin/CameraDelayContent"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.72, 0.8, 0.88, 0.96)
 theme_override_font_sizes/font_size = 15
 text = "Follow starts after 0.00 seconds"
 
-[node name="TracerHistoryCard" type="PanelContainer" parent="Root/Panel/Margin/Content/Tabs/Game"]
+[node name="TracerHistoryCard" type="PanelContainer" parent="Root/Panel/Margin/Content/Tabs/Game/GameContent"]
 visible = false
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_card")
 
-[node name="TracerHistoryMargin" type="MarginContainer" parent="Root/Panel/Margin/Content/Tabs/Game/TracerHistoryCard"]
+[node name="TracerHistoryMargin" type="MarginContainer" parent="Root/Panel/Margin/Content/Tabs/Game/GameContent/TracerHistoryCard"]
 layout_mode = 2
 theme_override_constants/margin_left = 16
 theme_override_constants/margin_top = 14
 theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 14
 
-[node name="TracerHistoryContent" type="VBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Game/TracerHistoryCard/TracerHistoryMargin"]
+[node name="TracerHistoryContent" type="VBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Game/GameContent/TracerHistoryCard/TracerHistoryMargin"]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="TracerHistoryLabel" type="Label" parent="Root/Panel/Margin/Content/Tabs/Game/TracerHistoryCard/TracerHistoryMargin/TracerHistoryContent"]
+[node name="TracerHistoryLabel" type="Label" parent="Root/Panel/Margin/Content/Tabs/Game/GameContent/TracerHistoryCard/TracerHistoryMargin/TracerHistoryContent"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.91, 0.95, 1, 1)
 theme_override_font_sizes/font_size = 20
 text = "Tracer History Count"
 
-[node name="TracerHistoryRow" type="HBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Game/TracerHistoryCard/TracerHistoryMargin/TracerHistoryContent"]
+[node name="TracerHistoryRow" type="HBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Game/GameContent/TracerHistoryCard/TracerHistoryMargin/TracerHistoryContent"]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="TracerHistorySlider" type="HSlider" parent="Root/Panel/Margin/Content/Tabs/Game/TracerHistoryCard/TracerHistoryMargin/TracerHistoryContent/TracerHistoryRow"]
+[node name="TracerHistorySlider" type="HSlider" parent="Root/Panel/Margin/Content/Tabs/Game/GameContent/TracerHistoryCard/TracerHistoryMargin/TracerHistoryContent/TracerHistoryRow"]
 custom_minimum_size = Vector2(460, 0)
 layout_mode = 2
 size_flags_horizontal = 3
 max_value = 5.0
 step = 1.0
 
-[node name="TracerHistoryValue" type="SpinBox" parent="Root/Panel/Margin/Content/Tabs/Game/TracerHistoryCard/TracerHistoryMargin/TracerHistoryContent/TracerHistoryRow"]
+[node name="TracerHistoryValue" type="SpinBox" parent="Root/Panel/Margin/Content/Tabs/Game/GameContent/TracerHistoryCard/TracerHistoryMargin/TracerHistoryContent/TracerHistoryRow"]
 custom_minimum_size = Vector2(110, 0)
 layout_mode = 2
 max_value = 5.0
 step = 1.0
 alignment = 1
 
-[node name="TracerHistoryHelper" type="Label" parent="Root/Panel/Margin/Content/Tabs/Game/TracerHistoryCard/TracerHistoryMargin/TracerHistoryContent"]
+[node name="TracerHistoryHelper" type="Label" parent="Root/Panel/Margin/Content/Tabs/Game/GameContent/TracerHistoryCard/TracerHistoryMargin/TracerHistoryContent"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.72, 0.8, 0.88, 0.96)
 theme_override_font_sizes/font_size = 15
 text = "Retains the latest 2 tracers in Range."
 
-[node name="TcpPortCard" type="PanelContainer" parent="Root/Panel/Margin/Content/Tabs/Game"]
+[node name="TcpPortCard" type="PanelContainer" parent="Root/Panel/Margin/Content/Tabs/Game/GameContent"]
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_card")
 
-[node name="TcpPortMargin" type="MarginContainer" parent="Root/Panel/Margin/Content/Tabs/Game/TcpPortCard"]
+[node name="TcpPortMargin" type="MarginContainer" parent="Root/Panel/Margin/Content/Tabs/Game/GameContent/TcpPortCard"]
 layout_mode = 2
 theme_override_constants/margin_left = 16
 theme_override_constants/margin_top = 14
 theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 14
 
-[node name="TcpPortContent" type="VBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Game/TcpPortCard/TcpPortMargin"]
+[node name="TcpPortContent" type="VBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Game/GameContent/TcpPortCard/TcpPortMargin"]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="TcpPortRow" type="HBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Game/TcpPortCard/TcpPortMargin/TcpPortContent"]
+[node name="TcpPortRow" type="HBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Game/GameContent/TcpPortCard/TcpPortMargin/TcpPortContent"]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="TcpPortLabel" type="Label" parent="Root/Panel/Margin/Content/Tabs/Game/TcpPortCard/TcpPortMargin/TcpPortContent/TcpPortRow"]
+[node name="TcpPortLabel" type="Label" parent="Root/Panel/Margin/Content/Tabs/Game/GameContent/TcpPortCard/TcpPortMargin/TcpPortContent/TcpPortRow"]
 custom_minimum_size = Vector2(210, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.91, 0.95, 1, 1)
@@ -668,7 +689,7 @@ theme_override_font_sizes/font_size = 20
 text = "TCP Port"
 vertical_alignment = 1
 
-[node name="TcpPortValue" type="SpinBox" parent="Root/Panel/Margin/Content/Tabs/Game/TcpPortCard/TcpPortMargin/TcpPortContent/TcpPortRow"]
+[node name="TcpPortValue" type="SpinBox" parent="Root/Panel/Margin/Content/Tabs/Game/GameContent/TcpPortCard/TcpPortMargin/TcpPortContent/TcpPortRow"]
 custom_minimum_size = Vector2(180, 0)
 layout_mode = 2
 theme_override_styles/normal = SubResource("StyleBoxFlat_field")
@@ -682,36 +703,36 @@ max_value = 65535.0
 step = 1.0
 alignment = 1
 
-[node name="TcpPortSpacer" type="Control" parent="Root/Panel/Margin/Content/Tabs/Game/TcpPortCard/TcpPortMargin/TcpPortContent/TcpPortRow"]
+[node name="TcpPortSpacer" type="Control" parent="Root/Panel/Margin/Content/Tabs/Game/GameContent/TcpPortCard/TcpPortMargin/TcpPortContent/TcpPortRow"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="TcpPortHelper" type="Label" parent="Root/Panel/Margin/Content/Tabs/Game/TcpPortCard/TcpPortMargin/TcpPortContent"]
+[node name="TcpPortHelper" type="Label" parent="Root/Panel/Margin/Content/Tabs/Game/GameContent/TcpPortCard/TcpPortMargin/TcpPortContent"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.72, 0.8, 0.88, 0.96)
 theme_override_font_sizes/font_size = 15
 text = "Launch monitor TCP listening port."
 
-[node name="ShotRecordingCard" type="PanelContainer" parent="Root/Panel/Margin/Content/Tabs/Game"]
+[node name="ShotRecordingCard" type="PanelContainer" parent="Root/Panel/Margin/Content/Tabs/Game/GameContent"]
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_card")
 
-[node name="ShotRecordingMargin" type="MarginContainer" parent="Root/Panel/Margin/Content/Tabs/Game/ShotRecordingCard"]
+[node name="ShotRecordingMargin" type="MarginContainer" parent="Root/Panel/Margin/Content/Tabs/Game/GameContent/ShotRecordingCard"]
 layout_mode = 2
 theme_override_constants/margin_left = 16
 theme_override_constants/margin_top = 14
 theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 14
 
-[node name="ShotRecordingContent" type="VBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Game/ShotRecordingCard/ShotRecordingMargin"]
+[node name="ShotRecordingContent" type="VBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Game/GameContent/ShotRecordingCard/ShotRecordingMargin"]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="ShotRecordingRow" type="HBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Game/ShotRecordingCard/ShotRecordingMargin/ShotRecordingContent"]
+[node name="ShotRecordingRow" type="HBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Game/GameContent/ShotRecordingCard/ShotRecordingMargin/ShotRecordingContent"]
 layout_mode = 2
 theme_override_constants/separation = 16
 
-[node name="ShotRecordingLabel" type="Label" parent="Root/Panel/Margin/Content/Tabs/Game/ShotRecordingCard/ShotRecordingMargin/ShotRecordingContent/ShotRecordingRow"]
+[node name="ShotRecordingLabel" type="Label" parent="Root/Panel/Margin/Content/Tabs/Game/GameContent/ShotRecordingCard/ShotRecordingMargin/ShotRecordingContent/ShotRecordingRow"]
 custom_minimum_size = Vector2(210, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.91, 0.95, 1, 1)
@@ -719,21 +740,21 @@ theme_override_font_sizes/font_size = 20
 text = "Shot Recording"
 vertical_alignment = 1
 
-[node name="ShotRecordingCheck" type="CheckBox" parent="Root/Panel/Margin/Content/Tabs/Game/ShotRecordingCard/ShotRecordingMargin/ShotRecordingContent/ShotRecordingRow"]
+[node name="ShotRecordingCheck" type="CheckBox" parent="Root/Panel/Margin/Content/Tabs/Game/GameContent/ShotRecordingCard/ShotRecordingMargin/ShotRecordingContent/ShotRecordingRow"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.91, 0.95, 1, 1)
 theme_override_font_sizes/font_size = 20
 text = "Enabled"
 
-[node name="ShotRecordingSpacer" type="Control" parent="Root/Panel/Margin/Content/Tabs/Game/ShotRecordingCard/ShotRecordingMargin/ShotRecordingContent/ShotRecordingRow"]
+[node name="ShotRecordingSpacer" type="Control" parent="Root/Panel/Margin/Content/Tabs/Game/GameContent/ShotRecordingCard/ShotRecordingMargin/ShotRecordingContent/ShotRecordingRow"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="ShotRecordingPathRow" type="HBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Game/ShotRecordingCard/ShotRecordingMargin/ShotRecordingContent"]
+[node name="ShotRecordingPathRow" type="HBoxContainer" parent="Root/Panel/Margin/Content/Tabs/Game/GameContent/ShotRecordingCard/ShotRecordingMargin/ShotRecordingContent"]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="ShotRecordingPathLabel" type="Label" parent="Root/Panel/Margin/Content/Tabs/Game/ShotRecordingCard/ShotRecordingMargin/ShotRecordingContent/ShotRecordingPathRow"]
+[node name="ShotRecordingPathLabel" type="Label" parent="Root/Panel/Margin/Content/Tabs/Game/GameContent/ShotRecordingCard/ShotRecordingMargin/ShotRecordingContent/ShotRecordingPathRow"]
 custom_minimum_size = Vector2(210, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.91, 0.95, 1, 1)
@@ -741,7 +762,7 @@ theme_override_font_sizes/font_size = 20
 text = "Save Path"
 vertical_alignment = 1
 
-[node name="ShotRecordingPathInput" type="LineEdit" parent="Root/Panel/Margin/Content/Tabs/Game/ShotRecordingCard/ShotRecordingMargin/ShotRecordingContent/ShotRecordingPathRow"]
+[node name="ShotRecordingPathInput" type="LineEdit" parent="Root/Panel/Margin/Content/Tabs/Game/GameContent/ShotRecordingCard/ShotRecordingMargin/ShotRecordingContent/ShotRecordingPathRow"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_styles/normal = SubResource("StyleBoxFlat_field")
@@ -754,7 +775,7 @@ theme_override_font_sizes/font_size = 18
 placeholder_text = "Select directory..."
 editable = false
 
-[node name="ShotRecordingBrowseButton" type="Button" parent="Root/Panel/Margin/Content/Tabs/Game/ShotRecordingCard/ShotRecordingMargin/ShotRecordingContent/ShotRecordingPathRow"]
+[node name="ShotRecordingBrowseButton" type="Button" parent="Root/Panel/Margin/Content/Tabs/Game/GameContent/ShotRecordingCard/ShotRecordingMargin/ShotRecordingContent/ShotRecordingPathRow"]
 layout_mode = 2
 theme_override_styles/normal = SubResource("StyleBoxFlat_button_secondary")
 theme_override_styles/hover = SubResource("StyleBoxFlat_button_secondary_hover")
@@ -768,7 +789,7 @@ theme_override_colors/font_focus_color = Color(0.96, 0.98, 1, 1)
 theme_override_font_sizes/font_size = 18
 text = "Browse"
 
-[node name="ShotRecordingHelper" type="Label" parent="Root/Panel/Margin/Content/Tabs/Game/ShotRecordingCard/ShotRecordingMargin/ShotRecordingContent"]
+[node name="ShotRecordingHelper" type="Label" parent="Root/Panel/Margin/Content/Tabs/Game/GameContent/ShotRecordingCard/ShotRecordingMargin/ShotRecordingContent"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.72, 0.8, 0.88, 0.96)
 theme_override_font_sizes/font_size = 15

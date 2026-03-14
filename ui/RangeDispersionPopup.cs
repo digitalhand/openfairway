@@ -33,10 +33,13 @@ public partial class RangeDispersionPopup : CanvasLayer
     private ItemList _compareRightLegend;
 
     private readonly List<RangeDispersionSession> _sessions = new();
+    private readonly Dictionary<string, HashSet<string>> _singleViewDisabledClubsBySession =
+        new(System.StringComparer.OrdinalIgnoreCase);
     private bool _isRangeMode;
     private bool _isCompareMode;
     private bool _isSyncingSelectors;
     private string _activeSessionFileName = string.Empty;
+    private string _singleViewLegendSessionKey = string.Empty;
     private RangeDispersionSession _activeDraftSession;
 
     public override void _Ready()
@@ -74,6 +77,7 @@ public partial class RangeDispersionPopup : CanvasLayer
         _sessionOption.ItemSelected += OnSessionSelected;
         _compareLeftOption.ItemSelected += OnCompareOptionChanged;
         _compareRightOption.ItemSelected += OnCompareOptionChanged;
+        _singleLegend.GuiInput += OnSingleLegendGuiInput;
 
         _titleLabel.Text = "Shot Dispersion";
         Visible = false;
@@ -101,6 +105,8 @@ public partial class RangeDispersionPopup : CanvasLayer
             _compareLeftOption.ItemSelected -= OnCompareOptionChanged;
         if (_compareRightOption != null)
             _compareRightOption.ItemSelected -= OnCompareOptionChanged;
+        if (_singleLegend != null)
+            _singleLegend.GuiInput -= OnSingleLegendGuiInput;
     }
 
     public override void _UnhandledInput(InputEvent @event)
@@ -281,6 +287,7 @@ public partial class RangeDispersionPopup : CanvasLayer
         _sessions.AddRange(loaded);
 
         SortSessionsNewestFirst();
+        PruneSingleViewLegendState();
         if (!IsDraftActive() && !HasSession(_activeSessionFileName))
             _activeSessionFileName = _sessions.Count > 0 ? _sessions[0].FileName : string.Empty;
 
@@ -369,6 +376,35 @@ public partial class RangeDispersionPopup : CanvasLayer
             RefreshSingleView();
     }
 
+    private void OnSingleLegendGuiInput(InputEvent @event)
+    {
+        if (_isCompareMode || !Visible || _singleLegend == null)
+            return;
+
+        if (@event is not InputEventMouseButton mouseEvent)
+            return;
+
+        if (!mouseEvent.Pressed || mouseEvent.ButtonIndex != MouseButton.Left)
+            return;
+
+        int itemIndex = _singleLegend.GetItemAtPosition(_singleLegend.GetLocalMousePosition(), false);
+        if (itemIndex < 0)
+            return;
+
+        string clubLabel = GetLegendClubLabel(_singleLegend, itemIndex);
+        if (string.IsNullOrWhiteSpace(clubLabel))
+            return;
+
+        if (!_singleViewDisabledClubsBySession.TryGetValue(_singleViewLegendSessionKey, out HashSet<string> disabledClubs))
+            return;
+
+        if (!disabledClubs.Add(clubLabel))
+            disabledClubs.Remove(clubLabel);
+
+        RefreshSingleView();
+        GetViewport().SetInputAsHandled();
+    }
+
     private void RefreshSingleView()
     {
         RangeDispersionSession session = IsDraftActive()
@@ -378,16 +414,23 @@ public partial class RangeDispersionPopup : CanvasLayer
         {
             _singleSummaryLabel.Text = "No dispersion sessions found.";
             _singleSummaryLabel.Visible = true;
+            _singleViewLegendSessionKey = string.Empty;
+            _singlePlot.SetVisibleClubs(null);
             _singlePlot.SetShots(null);
             PopulateLegend(_singleLegend, null);
             return;
         }
 
+        string sessionKey = BuildSingleViewSessionKey(session, IsDraftActive());
+        HashSet<string> disabledClubs = GetOrCreateDisabledClubs(sessionKey, session.Shots);
+        _singleViewLegendSessionKey = sessionKey;
+
         _singleSummaryLabel.Text = string.Empty;
         _singleSummaryLabel.Visible = false;
         _singlePlot.SetClubOverlayEnabled(true);
+        _singlePlot.SetVisibleClubs(BuildVisibleClubs(session.Shots, disabledClubs));
         _singlePlot.SetShots(session.Shots);
-        PopulateLegend(_singleLegend, session.Shots);
+        PopulateLegend(_singleLegend, session.Shots, disabledClubs, interactive: true);
     }
 
     private void RefreshCompareView()
@@ -413,13 +456,19 @@ public partial class RangeDispersionPopup : CanvasLayer
 
         _compareLeftPlot.SetClubOverlayEnabled(false);
         _compareRightPlot.SetClubOverlayEnabled(false);
+        _compareLeftPlot.SetVisibleClubs(null);
+        _compareRightPlot.SetVisibleClubs(null);
         _compareLeftPlot.SetShots(leftSession?.Shots);
         _compareRightPlot.SetShots(rightSession?.Shots);
         PopulateLegend(_compareLeftLegend, leftSession?.Shots);
         PopulateLegend(_compareRightLegend, rightSession?.Shots);
     }
 
-    private static void PopulateLegend(ItemList legend, IReadOnlyList<RangeDispersionShot> shots)
+    private static void PopulateLegend(
+        ItemList legend,
+        IReadOnlyList<RangeDispersionShot> shots,
+        ISet<string> disabledClubs = null,
+        bool interactive = false)
     {
         if (legend == null)
             return;
@@ -440,8 +489,20 @@ public partial class RangeDispersionPopup : CanvasLayer
         foreach (IGrouping<string, RangeDispersionShot> group in groups)
         {
             int itemIndex = legend.ItemCount;
-            legend.AddItem($"{group.Key} ({group.Count()})");
-            legend.SetItemCustomFgColor(itemIndex, RangeDispersionPlot.ResolveClubColor(group.Key));
+            bool isDisabled = disabledClubs != null && disabledClubs.Contains(group.Key);
+            string label = $"{group.Key} ({group.Count()})";
+            if (interactive && isDisabled)
+                label += " (off)";
+
+            legend.AddItem(label);
+            legend.SetItemMetadata(itemIndex, group.Key);
+
+            Color baseColor = RangeDispersionPlot.ResolveClubColor(group.Key);
+            Color finalColor = isDisabled
+                ? baseColor.Lerp(new Color(0.68f, 0.72f, 0.80f, 0.82f), 0.72f)
+                : baseColor;
+
+            legend.SetItemCustomFgColor(itemIndex, finalColor);
         }
     }
 
@@ -455,6 +516,101 @@ public partial class RangeDispersionPopup : CanvasLayer
         }
 
         return int.MaxValue;
+    }
+
+    private static string BuildSingleViewSessionKey(RangeDispersionSession session, bool isDraft)
+    {
+        if (isDraft)
+            return DraftSessionMetadata;
+
+        return session?.FileName ?? string.Empty;
+    }
+
+    private HashSet<string> GetOrCreateDisabledClubs(string sessionKey, IReadOnlyList<RangeDispersionShot> shots)
+    {
+        if (!_singleViewDisabledClubsBySession.TryGetValue(sessionKey, out HashSet<string> disabledClubs))
+        {
+            disabledClubs = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
+            _singleViewDisabledClubsBySession[sessionKey] = disabledClubs;
+        }
+
+        HashSet<string> clubsInSession = CollectSessionClubs(shots);
+        disabledClubs.RemoveWhere(club => !clubsInSession.Contains(club));
+        return disabledClubs;
+    }
+
+    private static HashSet<string> BuildVisibleClubs(
+        IReadOnlyList<RangeDispersionShot> shots,
+        HashSet<string> disabledClubs)
+    {
+        var visibleClubs = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
+        if (shots == null || shots.Count == 0)
+            return visibleClubs;
+
+        foreach (RangeDispersionShot shot in shots)
+        {
+            if (shot == null)
+                continue;
+
+            string clubLabel = RangeClubCatalog.NormalizeLabel(shot.ClubLabel);
+            if (disabledClubs.Contains(clubLabel))
+                continue;
+
+            visibleClubs.Add(clubLabel);
+        }
+
+        return visibleClubs;
+    }
+
+    private static HashSet<string> CollectSessionClubs(IReadOnlyList<RangeDispersionShot> shots)
+    {
+        var clubs = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
+        if (shots == null)
+            return clubs;
+
+        foreach (RangeDispersionShot shot in shots)
+        {
+            if (shot == null)
+                continue;
+
+            clubs.Add(RangeClubCatalog.NormalizeLabel(shot.ClubLabel));
+        }
+
+        return clubs;
+    }
+
+    private static string GetLegendClubLabel(ItemList legend, int itemIndex)
+    {
+        if (legend == null || itemIndex < 0 || itemIndex >= legend.ItemCount)
+            return string.Empty;
+
+        Variant metadata = legend.GetItemMetadata(itemIndex);
+        string clubLabel = metadata.VariantType == Variant.Type.String
+            ? (string)metadata
+            : metadata.ToString();
+
+        return RangeClubCatalog.NormalizeLabel(clubLabel);
+    }
+
+    private void PruneSingleViewLegendState()
+    {
+        var activeSessionKeys = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase)
+        {
+            DraftSessionMetadata
+        };
+
+        foreach (RangeDispersionSession session in _sessions)
+        {
+            if (!string.IsNullOrWhiteSpace(session?.FileName))
+                activeSessionKeys.Add(session.FileName);
+        }
+
+        string[] staleKeys = _singleViewDisabledClubsBySession.Keys
+            .Where(key => !activeSessionKeys.Contains(key))
+            .ToArray();
+
+        foreach (string staleKey in staleKeys)
+            _singleViewDisabledClubsBySession.Remove(staleKey);
     }
 
     private void ReplaceOrAddSession(RangeDispersionSession updatedSession)

@@ -12,15 +12,12 @@ import csv
 import os
 import sys
 
-from carry_exception_layer import apply_carry_exceptions, load_profile
+from carry_exception_layer import apply_carry_exceptions, build_regime_key, load_profile
 
 
 SCRIPT_DIR = os.path.dirname(__file__)
 DEFAULT_OUTPUT_PATH = os.path.normpath(
     os.path.join(SCRIPT_DIR, "..", "..", "assets", "data", "calibration", "shot_diff_analysis.csv")
-)
-DEFAULT_CARRY_EXCEPTION_PROFILE = os.path.normpath(
-    os.path.join(SCRIPT_DIR, "..", "..", "assets", "data", "calibration", "carry_exception_profile.json")
 )
 
 CARRY_PASS = 3.0
@@ -35,6 +32,8 @@ OUTPUT_FIELDS = [
     "hla_deg",
     "total_spin_rpm",
     "spin_axis_deg",
+    "launch_regime_key",
+    "carry_window",
     "physics_carry_yd",
     "flightscope_carry_yd",
     "diff_carry_yd",
@@ -123,6 +122,21 @@ def classify_status(diff_carry, diff_total):
     return "pass"
 
 
+def classify_carry_window(carry_yd):
+    """Bucket carry distance into the same priority windows used by analysis."""
+    if carry_yd is None:
+        return ""
+    if carry_yd < 115.0:
+        return "<115"
+    if carry_yd <= 150.0:
+        return "115-150"
+    if carry_yd <= 180.0:
+        return "150-180"
+    if carry_yd <= 200.0:
+        return "180-200"
+    return ">200"
+
+
 def build_row(shot_name, physics_row, flightscope_row):
     speed = choose_input_value(
         physics_row.get("speed_mph"),
@@ -144,6 +158,7 @@ def build_row(shot_name, physics_row, flightscope_row):
         physics_row.get("spin_axis_deg"),
         flightscope_row.get("spin_axis_deg"),
     )
+    regime_key = build_regime_key(speed, vla, spin)
 
     p_carry = parse_metric(physics_row.get("carry_yd"))
     f_carry = parse_metric(flightscope_row.get("carry_yd"))
@@ -168,6 +183,8 @@ def build_row(shot_name, physics_row, flightscope_row):
         "hla_deg": fmt_decimal(hla, 1),
         "total_spin_rpm": fmt_decimal(spin, 0),
         "spin_axis_deg": fmt_decimal(spin_axis, 1),
+        "launch_regime_key": regime_key,
+        "carry_window": classify_carry_window(f_carry),
         "physics_carry_yd": fmt_decimal(p_carry, 1),
         "flightscope_carry_yd": fmt_decimal(f_carry, 1),
         "diff_carry_yd": fmt_decimal(diff_carry, 1),
@@ -214,12 +231,12 @@ def parse_args():
     parser.add_argument(
         "--carry-exceptions",
         default=None,
-        help="Optional path to carry exception profile JSON",
+        help="Optional path to carry exception profile JSON (explicit opt-in; default is disabled)",
     )
     parser.add_argument(
         "--no-carry-exceptions",
         action="store_true",
-        help="Disable carry exception profile loading (even if default profile exists)",
+        help="Disable carry exception profile loading",
     )
     return parser.parse_args()
 
@@ -232,12 +249,7 @@ def main():
     all_shots = sorted(set(physics.keys()) | set(flightscope.keys()))
     rows = [build_row(shot, physics.get(shot, {}), flightscope.get(shot, {})) for shot in all_shots]
 
-    carry_profile_path = None
-    if not args.no_carry_exceptions:
-        if args.carry_exceptions:
-            carry_profile_path = os.path.normpath(args.carry_exceptions)
-        elif os.path.exists(DEFAULT_CARRY_EXCEPTION_PROFILE):
-            carry_profile_path = DEFAULT_CARRY_EXCEPTION_PROFILE
+    carry_profile_path = None if args.no_carry_exceptions else (os.path.normpath(args.carry_exceptions) if args.carry_exceptions else None)
 
     applied = 0
     if carry_profile_path:

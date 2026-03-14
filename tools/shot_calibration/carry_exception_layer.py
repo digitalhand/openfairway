@@ -72,8 +72,10 @@ def build_regime_key(speed_mph, vla_deg, total_spin_rpm):
 
     if speed_mph < 60.0:
         speed_bin = "S0"
+    elif speed_mph < 72.0:
+        speed_bin = "S1a"
     elif speed_mph < 85.0:
-        speed_bin = "S1"
+        speed_bin = "S1b"
     elif speed_mph < 105.0:
         speed_bin = "S2"
     elif speed_mph < 120.0:

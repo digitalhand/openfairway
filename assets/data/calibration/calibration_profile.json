@@ -1,16 +1,2 @@
 {
-  "DragScaleMultiplier": 1.01,
-  "Flight": {
-    "CdMin": 0.223,
-    "HighLaunchDragVlaStartDeg": 24.5,
-    "HighLaunchDragVlaFullDeg": 31.5,
-    "HighLaunchDragBoostMax": 1.24,
-    "SpinDragProgressiveCapSrStart": 0.33,
-    "SpinDragProgressiveCapSrEnd": 0.50,
-    "SpinDragProgressiveCapBoostMax": 0.25,
-    "HighReMidSpinGain": 16.0,
-    "MidSpinClBoostSrStart": 0.17,
-    "MidSpinClBoostSrEnd": 0.31,
-    "MidSpinClBoostMax": 0.50
-  }
 }
