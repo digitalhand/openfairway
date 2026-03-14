@@ -1,0 +1,232 @@
+{
+  "iteration": 14,
+  "timestamp": "2026-03-13T23:09:50.064794",
+  "profile_overrides": {
+    "DragScaleMultiplier": 1.01,
+    "Flight": {
+      "CdMin": 0.223,
+      "HighLaunchDragVlaStartDeg": 24.5,
+      "HighLaunchDragVlaFullDeg": 31.5,
+      "HighLaunchDragBoostMax": 1.24,
+      "SpinDragProgressiveCapSrStart": 0.33,
+      "SpinDragProgressiveCapSrEnd": 0.5,
+      "SpinDragProgressiveCapBoostMax": 0.25,
+      "HighReMidSpinGain": 16.0,
+      "MidSpinClBoostSrStart": 0.17,
+      "MidSpinClBoostSrEnd": 0.31,
+      "MidSpinClBoostMax": 0.5
+    }
+  },
+  "summary": {
+    "pass": 6,
+    "moderate": 4,
+    "severe": 8,
+    "no_reference": 9
+  },
+  "per_shot": {
+    "shot_1": {
+      "diff_carry_yd": null,
+      "diff_total_yd": null,
+      "diff_apex_ft": null,
+      "status": "pass",
+      "error_pattern": null
+    },
+    "shot_10": {
+      "diff_carry_yd": 3.4,
+      "diff_total_yd": 10.2,
+      "diff_apex_ft": -6.0,
+      "status": "severe",
+      "error_pattern": "CARRY_AND_ROLLOUT_LONG"
+    },
+    "shot_11": {
+      "diff_carry_yd": -2.6,
+      "diff_total_yd": 1.1,
+      "diff_apex_ft": -4.6,
+      "status": "pass",
+      "error_pattern": null
+    },
+    "shot_12": {
+      "diff_carry_yd": 4.5,
+      "diff_total_yd": 9.5,
+      "diff_apex_ft": -5.3,
+      "status": "moderate",
+      "error_pattern": "CARRY_AND_ROLLOUT_LONG"
+    },
+    "shot_13": {
+      "diff_carry_yd": 1.2,
+      "diff_total_yd": 3.2,
+      "diff_apex_ft": -6.1,
+      "status": "pass",
+      "error_pattern": null
+    },
+    "shot_14": {
+      "diff_carry_yd": -0.3,
+      "diff_total_yd": 1.7,
+      "diff_apex_ft": -6.1,
+      "status": "pass",
+      "error_pattern": null
+    },
+    "shot_15": {
+      "diff_carry_yd": -7.3,
+      "diff_total_yd": -12.7,
+      "diff_apex_ft": -2.0,
+      "status": "severe",
+      "error_pattern": "CARRY_AND_ROLLOUT_SHORT"
+    },
+    "shot_16": {
+      "diff_carry_yd": -0.3,
+      "diff_total_yd": 2.2,
+      "diff_apex_ft": -3.5,
+      "status": "pass",
+      "error_pattern": null
+    },
+    "shot_17": {
+      "diff_carry_yd": -1.4,
+      "diff_total_yd": 8.0,
+      "diff_apex_ft": -3.9,
+      "status": "moderate",
+      "error_pattern": "ROLLOUT_TOO_LONG"
+    },
+    "shot_18": {
+      "diff_carry_yd": -7.2,
+      "diff_total_yd": 14.0,
+      "diff_apex_ft": 2.6,
+      "status": "severe",
+      "error_pattern": "CARRY_TOO_SHORT"
+    },
+    "shot_19": {
+      "diff_carry_yd": -4.2,
+      "diff_total_yd": -6.1,
+      "diff_apex_ft": -1.2,
+      "status": "moderate",
+      "error_pattern": "CARRY_AND_ROLLOUT_SHORT"
+    },
+    "shot_2": {
+      "diff_carry_yd": null,
+      "diff_total_yd": null,
+      "diff_apex_ft": null,
+      "status": "pass",
+      "error_pattern": null
+    },
+    "shot_20": {
+      "diff_carry_yd": -1.2,
+      "diff_total_yd": 11.5,
+      "diff_apex_ft": -2.0,
+      "status": "severe",
+      "error_pattern": "ROLLOUT_TOO_LONG"
+    },
+    "shot_21": {
+      "diff_carry_yd": 4.9,
+      "diff_total_yd": 27.7,
+      "diff_apex_ft": 1.7,
+      "status": "severe",
+      "error_pattern": "CARRY_AND_ROLLOUT_LONG"
+    },
+    "shot_22": {
+      "diff_carry_yd": -1.8,
+      "diff_total_yd": 1.6,
+      "diff_apex_ft": -1.6,
+      "status": "pass",
+      "error_pattern": null
+    },
+    "shot_23": {
+      "diff_carry_yd": 3.5,
+      "diff_total_yd": -19.6,
+      "diff_apex_ft": 0.0,
+      "status": "severe",
+      "error_pattern": "CARRY_TOO_LONG"
+    },
+    "shot_24": {
+      "diff_carry_yd": -1.7,
+      "diff_total_yd": 3.4,
+      "diff_apex_ft": -1.9,
+      "status": "pass",
+      "error_pattern": null
+    },
+    "shot_25": {
+      "diff_carry_yd": null,
+      "diff_total_yd": null,
+      "diff_apex_ft": null,
+      "status": "pass",
+      "error_pattern": null
+    },
+    "shot_26": {
+      "diff_carry_yd": 1.7,
+      "diff_total_yd": 20.6,
+      "diff_apex_ft": 23.5,
+      "status": "severe",
+      "error_pattern": "ROLLOUT_TOO_LONG"
+    },
+    "shot_27": {
+      "diff_carry_yd": -4.4,
+      "diff_total_yd": 12.8,
+      "diff_apex_ft": 4.8,
+      "status": "severe",
+      "error_pattern": "CARRY_TOO_SHORT"
+    },
+    "shot_3": {
+      "diff_carry_yd": null,
+      "diff_total_yd": null,
+      "diff_apex_ft": null,
+      "status": "pass",
+      "error_pattern": null
+    },
+    "shot_4": {
+      "diff_carry_yd": null,
+      "diff_total_yd": null,
+      "diff_apex_ft": null,
+      "status": "pass",
+      "error_pattern": null
+    },
+    "shot_5": {
+      "diff_carry_yd": null,
+      "diff_total_yd": null,
+      "diff_apex_ft": null,
+      "status": "pass",
+      "error_pattern": null
+    },
+    "shot_6": {
+      "diff_carry_yd": null,
+      "diff_total_yd": null,
+      "diff_apex_ft": null,
+      "status": "pass",
+      "error_pattern": null
+    },
+    "shot_7": {
+      "diff_carry_yd": null,
+      "diff_total_yd": null,
+      "diff_apex_ft": null,
+      "status": "pass",
+      "error_pattern": null
+    },
+    "shot_8": {
+      "diff_carry_yd": null,
+      "diff_total_yd": null,
+      "diff_apex_ft": null,
+      "status": "pass",
+      "error_pattern": null
+    },
+    "shot_9": {
+      "diff_carry_yd": -3.3,
+      "diff_total_yd": 1.6,
+      "diff_apex_ft": 7.1,
+      "status": "moderate",
+      "error_pattern": "CARRY_TOO_SHORT"
+    }
+  },
+  "regressions": [
+    {
+      "shot": "shot_9",
+      "was": "pass",
+      "now": "moderate",
+      "prev_total_diff": 3.5,
+      "curr_total_diff": 1.6
+    }
+  ],
+  "conflicts": [
+    "Flight.ClMaxBase",
+    "Flight.CdMin",
+    "DragScaleMultiplier",
+    "LiftScaleMultiplier"
+  ]
+}

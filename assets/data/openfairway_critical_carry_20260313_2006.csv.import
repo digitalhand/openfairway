@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://cl60fwkihcfss"
+
+[deps]
+
+files=["res://assets/data/openfairway_critical_carry_20260313_2006.speed.translation", "res://assets/data/openfairway_critical_carry_20260313_2006.vla.translation", "res://assets/data/openfairway_critical_carry_20260313_2006.hla.translation", "res://assets/data/openfairway_critical_carry_20260313_2006.total.translation", "res://assets/data/openfairway_critical_carry_20260313_2006.spin.translation", "res://assets/data/openfairway_critical_carry_20260313_2006.physics.translation", "res://assets/data/openfairway_critical_carry_20260313_2006.flightscope.translation", "res://assets/data/openfairway_critical_carry_20260313_2006.diff.translation", "res://assets/data/openfairway_critical_carry_20260313_2006.physics.translation", "res://assets/data/openfairway_critical_carry_20260313_2006.flightscope.translation", "res://assets/data/openfairway_critical_carry_20260313_2006.diff.translation", "res://assets/data/openfairway_critical_carry_20260313_2006.rollout.translation", "res://assets/data/openfairway_critical_carry_20260313_2006.rollout.translation", "res://assets/data/openfairway_critical_carry_20260313_2006.diff.translation", "res://assets/data/openfairway_critical_carry_20260313_2006.physics.translation", "res://assets/data/openfairway_critical_carry_20260313_2006.flightscope.translation", "res://assets/data/openfairway_critical_carry_20260313_2006.diff.translation", "res://assets/data/openfairway_critical_carry_20260313_2006.status.translation"]
+
+source_file="res://assets/data/openfairway_critical_carry_20260313_2006.csv"
+dest_files=["res://assets/data/openfairway_critical_carry_20260313_2006.speed.translation", "res://assets/data/openfairway_critical_carry_20260313_2006.vla.translation", "res://assets/data/openfairway_critical_carry_20260313_2006.hla.translation", "res://assets/data/openfairway_critical_carry_20260313_2006.total.translation", "res://assets/data/openfairway_critical_carry_20260313_2006.spin.translation", "res://assets/data/openfairway_critical_carry_20260313_2006.physics.translation", "res://assets/data/openfairway_critical_carry_20260313_2006.flightscope.translation", "res://assets/data/openfairway_critical_carry_20260313_2006.diff.translation", "res://assets/data/openfairway_critical_carry_20260313_2006.physics.translation", "res://assets/data/openfairway_critical_carry_20260313_2006.flightscope.translation", "res://assets/data/openfairway_critical_carry_20260313_2006.diff.translation", "res://assets/data/openfairway_critical_carry_20260313_2006.rollout.translation", "res://assets/data/openfairway_critical_carry_20260313_2006.rollout.translation", "res://assets/data/openfairway_critical_carry_20260313_2006.diff.translation", "res://assets/data/openfairway_critical_carry_20260313_2006.physics.translation", "res://assets/data/openfairway_critical_carry_20260313_2006.flightscope.translation", "res://assets/data/openfairway_critical_carry_20260313_2006.diff.translation", "res://assets/data/openfairway_critical_carry_20260313_2006.status.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

@@ -4,6 +4,7 @@
 Usage:
     python tools/shot_calibration/compare_csv.py assets/data/calibration/physics.csv assets/data/calibration/flightscope.csv
     python tools/shot_calibration/compare_csv.py assets/data/calibration/physics.csv assets/data/calibration/flightscope.csv --output /tmp/shot_diff_analysis.csv
+    python tools/shot_calibration/compare_csv.py assets/data/calibration/physics.csv assets/data/calibration/flightscope.csv --carry-exceptions assets/data/calibration/carry_exception_profile.json
 """
 
 import argparse
@@ -11,10 +12,15 @@ import csv
 import os
 import sys
 
+from carry_exception_layer import apply_carry_exceptions, load_profile
+
 
 SCRIPT_DIR = os.path.dirname(__file__)
 DEFAULT_OUTPUT_PATH = os.path.normpath(
     os.path.join(SCRIPT_DIR, "..", "..", "assets", "data", "calibration", "shot_diff_analysis.csv")
+)
+DEFAULT_CARRY_EXCEPTION_PROFILE = os.path.normpath(
+    os.path.join(SCRIPT_DIR, "..", "..", "assets", "data", "calibration", "carry_exception_profile.json")
 )
 
 CARRY_PASS = 3.0
@@ -32,6 +38,8 @@ OUTPUT_FIELDS = [
     "physics_carry_yd",
     "flightscope_carry_yd",
     "diff_carry_yd",
+    "physics_carry_raw_yd",
+    "diff_carry_raw_yd",
     "physics_total_yd",
     "flightscope_total_yd",
     "diff_total_yd",
@@ -41,6 +49,10 @@ OUTPUT_FIELDS = [
     "physics_apex_ft",
     "flightscope_apex_ft",
     "diff_apex_ft",
+    "carry_exception_regime",
+    "carry_exception_offset_yd",
+    "carry_exception_source",
+    "carry_exception_applied",
     "status",
 ]
 
@@ -159,6 +171,8 @@ def build_row(shot_name, physics_row, flightscope_row):
         "physics_carry_yd": fmt_decimal(p_carry, 1),
         "flightscope_carry_yd": fmt_decimal(f_carry, 1),
         "diff_carry_yd": fmt_decimal(diff_carry, 1),
+        "physics_carry_raw_yd": fmt_decimal(p_carry, 1),
+        "diff_carry_raw_yd": fmt_decimal(diff_carry, 1),
         "physics_total_yd": fmt_decimal(p_total, 1),
         "flightscope_total_yd": fmt_decimal(f_total, 1),
         "diff_total_yd": fmt_decimal(diff_total, 1),
@@ -168,6 +182,10 @@ def build_row(shot_name, physics_row, flightscope_row):
         "physics_apex_ft": fmt_decimal(p_apex, 1),
         "flightscope_apex_ft": fmt_decimal(f_apex, 1),
         "diff_apex_ft": fmt_decimal(p_apex - f_apex if p_apex is not None and f_apex is not None else None, 1),
+        "carry_exception_regime": "",
+        "carry_exception_offset_yd": "",
+        "carry_exception_source": "",
+        "carry_exception_applied": "false",
         "status": status,
     }
 
@@ -179,7 +197,7 @@ def write_output_csv(path, rows):
         os.makedirs(output_dir, exist_ok=True)
 
     with open(path, "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=OUTPUT_FIELDS)
+        writer = csv.DictWriter(f, fieldnames=OUTPUT_FIELDS, extrasaction="ignore")
         writer.writeheader()
         writer.writerows(rows)
 
@@ -193,6 +211,16 @@ def parse_args():
         default=DEFAULT_OUTPUT_PATH,
         help="Output path for generated comparison CSV (default: assets/data/calibration/shot_diff_analysis.csv)",
     )
+    parser.add_argument(
+        "--carry-exceptions",
+        default=None,
+        help="Optional path to carry exception profile JSON",
+    )
+    parser.add_argument(
+        "--no-carry-exceptions",
+        action="store_true",
+        help="Disable carry exception profile loading (even if default profile exists)",
+    )
     return parser.parse_args()
 
 
@@ -203,6 +231,26 @@ def main():
 
     all_shots = sorted(set(physics.keys()) | set(flightscope.keys()))
     rows = [build_row(shot, physics.get(shot, {}), flightscope.get(shot, {})) for shot in all_shots]
+
+    carry_profile_path = None
+    if not args.no_carry_exceptions:
+        if args.carry_exceptions:
+            carry_profile_path = os.path.normpath(args.carry_exceptions)
+        elif os.path.exists(DEFAULT_CARRY_EXCEPTION_PROFILE):
+            carry_profile_path = DEFAULT_CARRY_EXCEPTION_PROFILE
+
+    applied = 0
+    if carry_profile_path:
+        try:
+            profile = load_profile(carry_profile_path)
+            applied = apply_carry_exceptions(rows, profile, classify_status)
+            print(
+                f"Carry exception layer: {applied} shot(s) adjusted using {carry_profile_path}",
+                file=sys.stderr,
+            )
+        except Exception as exc:
+            print(f"ERROR: Failed to apply carry exceptions: {exc}", file=sys.stderr)
+            sys.exit(1)
 
     output_path = os.path.normpath(args.output)
     write_output_csv(output_path, rows)

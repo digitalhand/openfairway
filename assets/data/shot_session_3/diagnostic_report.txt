@@ -1,0 +1,751 @@
+======================================================================
+CALIBRATION DIAGNOSTIC REPORT
+======================================================================
+
+  Pass:         12
+  Moderate:     13
+  Severe:       36
+  No reference: 8
+
+----------------------------------------------------------------------
+SEVERE SHOTS (|total_diff| > 10 yd or |carry_diff| > 7 yd)
+----------------------------------------------------------------------
+
+  shot_3w_19:
+    Status:  SEVERE
+    Pattern: ROLLOUT_TOO_LONG — Carry close, total overshoots — rollout is too long
+    Regimes: low-launch, driver-wood
+    Diffs:   carry=-0.1, total=+16.7, rollout=+16.8, apex=+0.1ft
+    Suggested knobs:
+      -> Bounce.FlightTangentialRetentionBase: decrease by 0.03 (range 0.4-0.75)
+      -> Bounce.CorBaseA: decrease by 0.02 (range 0.3-0.6)
+      -> Rollout.LowSpinMultiplierMax: increase by 0.05 (range 0.8-1.5)
+      -> Rollout.LowSpinThreshold: decrease by 100.0 (range 1000.0-2500.0)
+      -> Rollout.FrictionBlendSpeed: decrease by 1.0 (range 8.0-25.0)
+
+  shot_3w_21:
+    Status:  SEVERE
+    Pattern: ROLLOUT_TOO_LONG — Carry close, total overshoots — rollout is too long
+    Regimes: low-launch, driver-wood
+    Diffs:   carry=+1.1, total=+16.6, rollout=+15.5, apex=+0.3ft
+    Suggested knobs:
+      -> Bounce.FlightTangentialRetentionBase: decrease by 0.03 (range 0.4-0.75)
+      -> Bounce.CorBaseA: decrease by 0.02 (range 0.3-0.6)
+      -> Rollout.LowSpinMultiplierMax: increase by 0.05 (range 0.8-1.5)
+      -> Rollout.LowSpinThreshold: decrease by 100.0 (range 1000.0-2500.0)
+      -> Rollout.FrictionBlendSpeed: decrease by 1.0 (range 8.0-25.0)
+
+  shot_3w_22:
+    Status:  SEVERE
+    Pattern: CARRY_AND_ROLLOUT_LONG — Both carry and rollout overshoot
+    Regimes: low-launch
+    Diffs:   carry=+3.1, total=+20.2, rollout=+17.1, apex=+0.5ft
+
+  shot_3w_23:
+    Status:  SEVERE
+    Pattern: ROLLOUT_TOO_SHORT — Carry close, total undershoots — rollout is too short
+    Regimes: low-launch, driver-wood
+    Diffs:   carry=+0.8, total=-22.7, rollout=-23.5, apex=-1.2ft
+    Suggested knobs:
+      -> Bounce.FlightTangentialRetentionBase: increase by 0.03 (range 0.4-0.75)
+      -> Bounce.CorBaseA: increase by 0.02 (range 0.3-0.6)
+      -> Rollout.LowSpinMultiplierMax: decrease by 0.05 (range 0.8-1.5)
+      -> Rollout.LowSpinThreshold: increase by 100.0 (range 1000.0-2500.0)
+      -> Rollout.FrictionBlendSpeed: increase by 1.0 (range 8.0-25.0)
+
+  shot_3w_24:
+    Status:  SEVERE
+    Pattern: CARRY_AND_ROLLOUT_LONG — Both carry and rollout overshoot
+    Regimes: low-launch, driver-wood
+    Diffs:   carry=+7.9, total=+29.6, rollout=+21.7, apex=+1.9ft
+
+  shot_5i_11:
+    Status:  SEVERE
+    Pattern: CARRY_AND_ROLLOUT_SHORT — Both carry and rollout undershoot
+    Regimes: none
+    Diffs:   carry=-3.2, total=-17.2, rollout=-14.0, apex=-1.3ft
+
+  shot_5i_12:
+    Status:  SEVERE
+    Pattern: ROLLOUT_TOO_SHORT — Carry close, total undershoots — rollout is too short
+    Regimes: none
+    Diffs:   carry=+1.2, total=-23.5, rollout=-24.7, apex=+1.1ft
+    Suggested knobs:
+      -> Bounce.FlightTangentialRetentionBase: increase by 0.03 (range 0.4-0.75)
+      -> Bounce.FlightSpinFactorMin: increase by 0.03 (range 0.25-0.55)
+      -> Bounce.FlightSpinFactorDivisor: increase by 500.0 (range 4000.0-12000.0)
+      -> Bounce.CorBaseA: increase by 0.02 (range 0.3-0.6)
+      -> Rollout.LowSpinMultiplierMax: decrease by 0.05 (range 0.8-1.5)
+
+  shot_5i_13:
+    Status:  SEVERE
+    Pattern: ROLLOUT_TOO_LONG — Carry close, total overshoots — rollout is too long
+    Regimes: low-launch
+    Diffs:   carry=+2.6, total=+10.1, rollout=+7.5, apex=+0.6ft
+    Suggested knobs:
+      -> Bounce.FlightTangentialRetentionBase: decrease by 0.03 (range 0.4-0.75)
+      -> Bounce.CorBaseA: decrease by 0.02 (range 0.3-0.6)
+      -> Rollout.LowSpinMultiplierMax: increase by 0.05 (range 0.8-1.5)
+      -> Rollout.LowSpinThreshold: decrease by 100.0 (range 1000.0-2500.0)
+      -> Rollout.FrictionBlendSpeed: decrease by 1.0 (range 8.0-25.0)
+
+  shot_5i_15:
+    Status:  SEVERE
+    Pattern: CARRY_TOO_SHORT — Physics carry under reference
+    Regimes: low-launch
+    Diffs:   carry=-4.5, total=+14.7, rollout=+19.2, apex=-1.1ft
+
+  shot_5i_16:
+    Status:  SEVERE
+    Pattern: ROLLOUT_TOO_SHORT — Carry close, total undershoots — rollout is too short
+    Regimes: low-launch
+    Diffs:   carry=+1.1, total=-20.8, rollout=-21.9, apex=-0.2ft
+    Suggested knobs:
+      -> Bounce.FlightTangentialRetentionBase: increase by 0.03 (range 0.4-0.75)
+      -> Bounce.CorBaseA: increase by 0.02 (range 0.3-0.6)
+      -> Rollout.LowSpinMultiplierMax: decrease by 0.05 (range 0.8-1.5)
+      -> Rollout.LowSpinThreshold: increase by 100.0 (range 1000.0-2500.0)
+      -> Rollout.FrictionBlendSpeed: increase by 1.0 (range 8.0-25.0)
+
+  shot_6i_35:
+    Status:  SEVERE
+    Pattern: CARRY_AND_ROLLOUT_SHORT — Both carry and rollout undershoot
+    Regimes: none
+    Diffs:   carry=-5.1, total=-16.6, rollout=-11.5, apex=-3.3ft
+
+  shot_6i_36:
+    Status:  SEVERE
+    Pattern: ROLLOUT_TOO_SHORT — Carry close, total undershoots — rollout is too short
+    Regimes: none
+    Diffs:   carry=+2.1, total=-20.8, rollout=-22.9, apex=+0.6ft
+    Suggested knobs:
+      -> Bounce.FlightTangentialRetentionBase: increase by 0.03 (range 0.4-0.75)
+      -> Bounce.FlightSpinFactorMin: increase by 0.03 (range 0.25-0.55)
+      -> Bounce.FlightSpinFactorDivisor: increase by 500.0 (range 4000.0-12000.0)
+      -> Bounce.CorBaseA: increase by 0.02 (range 0.3-0.6)
+      -> Rollout.LowSpinMultiplierMax: decrease by 0.05 (range 0.8-1.5)
+
+  shot_6i_37:
+    Status:  SEVERE
+    Pattern: CARRY_TOO_SHORT — Physics carry under reference
+    Regimes: none
+    Diffs:   carry=-3.6, total=+12.2, rollout=+15.8, apex=-0.8ft
+    Suggested knobs:
+      -> Flight.ClMaxBase: increase by 0.005 (range 0.22-0.32)
+      -> Flight.CdMin: decrease by 0.005 (range 0.18-0.28)
+      -> Flight.HighLaunchDragBoostMax: decrease by 0.02 (range 1.0-1.3)
+      -> DragScaleMultiplier: decrease by 0.02 (range 0.85-1.15)
+      -> LiftScaleMultiplier: increase by 0.02 (range 0.85-1.15)
+
+  shot_6i_38:
+    Status:  SEVERE
+    Pattern: CARRY_AND_ROLLOUT_SHORT — Both carry and rollout undershoot
+    Regimes: none
+    Diffs:   carry=-3.2, total=-21.3, rollout=-18.1, apex=+0.1ft
+
+  shot_6i_41:
+    Status:  SEVERE
+    Pattern: CARRY_TOO_SHORT — Physics carry under reference
+    Regimes: low-launch
+    Diffs:   carry=-4.6, total=+13.2, rollout=+17.8, apex=-1.0ft
+
+  shot_6i_42:
+    Status:  SEVERE
+    Pattern: ROLLOUT_TOO_SHORT — Carry close, total undershoots — rollout is too short
+    Regimes: none
+    Diffs:   carry=-1.1, total=-17.4, rollout=-16.3, apex=+0.8ft
+    Suggested knobs:
+      -> Bounce.FlightTangentialRetentionBase: increase by 0.03 (range 0.4-0.75)
+      -> Bounce.FlightSpinFactorMin: increase by 0.03 (range 0.25-0.55)
+      -> Bounce.FlightSpinFactorDivisor: increase by 500.0 (range 4000.0-12000.0)
+      -> Bounce.CorBaseA: increase by 0.02 (range 0.3-0.6)
+      -> Rollout.LowSpinMultiplierMax: decrease by 0.05 (range 0.8-1.5)
+
+  shot_6i_44:
+    Status:  SEVERE
+    Pattern: ROLLOUT_TOO_SHORT — Carry close, total undershoots — rollout is too short
+    Regimes: low-launch, driver-wood
+    Diffs:   carry=-1.2, total=-27.4, rollout=-26.2, apex=-1.3ft
+    Suggested knobs:
+      -> Bounce.FlightTangentialRetentionBase: increase by 0.03 (range 0.4-0.75)
+      -> Bounce.CorBaseA: increase by 0.02 (range 0.3-0.6)
+      -> Rollout.LowSpinMultiplierMax: decrease by 0.05 (range 0.8-1.5)
+      -> Rollout.LowSpinThreshold: increase by 100.0 (range 1000.0-2500.0)
+      -> Rollout.FrictionBlendSpeed: increase by 1.0 (range 8.0-25.0)
+
+  shot_6i_45:
+    Status:  SEVERE
+    Pattern: CARRY_AND_ROLLOUT_LONG — Both carry and rollout overshoot
+    Regimes: low-launch
+    Diffs:   carry=+3.5, total=+21.1, rollout=+17.6, apex=+0.6ft
+
+  shot_6i_47:
+    Status:  SEVERE
+    Pattern: CARRY_AND_ROLLOUT_LONG — Both carry and rollout overshoot
+    Regimes: none
+    Diffs:   carry=+7.0, total=+10.8, rollout=+3.8, apex=+11.8ft
+
+  shot_6i_48:
+    Status:  SEVERE
+    Pattern: CARRY_AND_ROLLOUT_LONG — Both carry and rollout overshoot
+    Regimes: mid-iron
+    Diffs:   carry=+6.1, total=+11.1, rollout=+5.0, apex=+14.2ft
+
+  shot_6i_50:
+    Status:  SEVERE
+    Pattern: ROLLOUT_TOO_SHORT — Carry close, total undershoots — rollout is too short
+    Regimes: none
+    Diffs:   carry=-0.4, total=-12.1, rollout=-11.7, apex=+3.9ft
+    Suggested knobs:
+      -> Bounce.FlightTangentialRetentionBase: increase by 0.03 (range 0.4-0.75)
+      -> Bounce.FlightSpinFactorMin: increase by 0.03 (range 0.25-0.55)
+      -> Bounce.FlightSpinFactorDivisor: increase by 500.0 (range 4000.0-12000.0)
+      -> Bounce.CorBaseA: increase by 0.02 (range 0.3-0.6)
+      -> Rollout.LowSpinMultiplierMax: decrease by 0.05 (range 0.8-1.5)
+
+  shot_7i_25:
+    Status:  SEVERE
+    Pattern: ROLLOUT_TOO_SHORT — Carry close, total undershoots — rollout is too short
+    Regimes: none
+    Diffs:   carry=-0.5, total=-18.0, rollout=-17.5, apex=+0.9ft
+    Suggested knobs:
+      -> Bounce.FlightTangentialRetentionBase: increase by 0.03 (range 0.4-0.75)
+      -> Bounce.FlightSpinFactorMin: increase by 0.03 (range 0.25-0.55)
+      -> Bounce.FlightSpinFactorDivisor: increase by 500.0 (range 4000.0-12000.0)
+      -> Bounce.CorBaseA: increase by 0.02 (range 0.3-0.6)
+      -> Rollout.LowSpinMultiplierMax: decrease by 0.05 (range 0.8-1.5)
+
+  shot_7i_26:
+    Status:  SEVERE
+    Pattern: ROLLOUT_TOO_SHORT — Carry close, total undershoots — rollout is too short
+    Regimes: none
+    Diffs:   carry=+1.8, total=-21.8, rollout=-23.6, apex=+1.1ft
+    Suggested knobs:
+      -> Bounce.FlightTangentialRetentionBase: increase by 0.03 (range 0.4-0.75)
+      -> Bounce.FlightSpinFactorMin: increase by 0.03 (range 0.25-0.55)
+      -> Bounce.FlightSpinFactorDivisor: increase by 500.0 (range 4000.0-12000.0)
+      -> Bounce.CorBaseA: increase by 0.02 (range 0.3-0.6)
+      -> Rollout.LowSpinMultiplierMax: decrease by 0.05 (range 0.8-1.5)
+
+  shot_7i_31:
+    Status:  SEVERE
+    Pattern: CARRY_AND_ROLLOUT_SHORT — Both carry and rollout undershoot
+    Regimes: high-spin-wedge
+    Diffs:   carry=-4.8, total=-14.3, rollout=-9.5, apex=-4.1ft
+
+  shot_9i_1:
+    Status:  SEVERE
+    Pattern: ROLLOUT_TOO_SHORT — Carry close, total undershoots — rollout is too short
+    Regimes: mid-iron
+    Diffs:   carry=-1.4, total=-12.6, rollout=-11.2, apex=+1.3ft
+    Suggested knobs:
+      -> Bounce.FlightTangentialRetentionBase: increase by 0.03 (range 0.4-0.75)
+      -> Rollout.MidSpinMultiplierMax: decrease by 0.1 (range 1.5-3.0)
+      -> Rollout.FrictionBlendSpeed: increase by 1.0 (range 8.0-25.0)
+      -> KineticFrictionMultiplier: decrease by 0.05 (range 0.7-1.3)
+      -> Bounce.RolloutHighSpinRetention: increase by 0.03 (range 0.55-0.85)
+
+  shot_9i_2:
+    Status:  SEVERE
+    Pattern: CARRY_AND_ROLLOUT_SHORT — Both carry and rollout undershoot
+    Regimes: none
+    Diffs:   carry=-8.0, total=-9.1, rollout=-1.1, apex=-3.0ft
+
+  shot_driver_51:
+    Status:  SEVERE
+    Pattern: CARRY_AND_ROLLOUT_LONG — Both carry and rollout overshoot
+    Regimes: high-spin-wedge
+    Diffs:   carry=+11.4, total=+29.6, rollout=+18.2, apex=+0.6ft
+
+  shot_driver_52:
+    Status:  SEVERE
+    Pattern: CARRY_AND_ROLLOUT_LONG — Both carry and rollout overshoot
+    Regimes: high-spin-wedge, high-loft-wedge
+    Diffs:   carry=+9.4, total=+25.3, rollout=+15.9, apex=-1.4ft
+
+  shot_driver_53:
+    Status:  SEVERE
+    Pattern: CARRY_AND_ROLLOUT_LONG — Both carry and rollout overshoot
+    Regimes: high-spin-wedge, high-loft-wedge
+    Diffs:   carry=+6.5, total=+17.9, rollout=+11.4, apex=-3.8ft
+
+  shot_driver_55:
+    Status:  SEVERE
+    Pattern: ROLLOUT_TOO_LONG — Carry close, total overshoots — rollout is too long
+    Regimes: low-launch, driver-wood
+    Diffs:   carry=+2.5, total=+22.6, rollout=+20.1, apex=+0.4ft
+    Suggested knobs:
+      -> Bounce.FlightTangentialRetentionBase: decrease by 0.03 (range 0.4-0.75)
+      -> Bounce.CorBaseA: decrease by 0.02 (range 0.3-0.6)
+      -> Rollout.LowSpinMultiplierMax: increase by 0.05 (range 0.8-1.5)
+      -> Rollout.LowSpinThreshold: decrease by 100.0 (range 1000.0-2500.0)
+      -> Rollout.FrictionBlendSpeed: decrease by 1.0 (range 8.0-25.0)
+
+  shot_driver_56:
+    Status:  SEVERE
+    Pattern: CARRY_AND_ROLLOUT_LONG — Both carry and rollout overshoot
+    Regimes: driver-wood
+    Diffs:   carry=+4.8, total=+20.7, rollout=+15.9, apex=+9.7ft
+
+  shot_driver_57:
+    Status:  SEVERE
+    Pattern: CARRY_AND_ROLLOUT_SHORT — Both carry and rollout undershoot
+    Regimes: driver-wood
+    Diffs:   carry=-5.1, total=-19.7, rollout=-14.6, apex=-3.5ft
+
+  shot_driver_58:
+    Status:  SEVERE
+    Pattern: CARRY_AND_ROLLOUT_LONG — Both carry and rollout overshoot
+    Regimes: high-spin-wedge
+    Diffs:   carry=+18.0, total=+37.0, rollout=+19.0, apex=-4.8ft
+
+  shot_driver_59:
+    Status:  SEVERE
+    Pattern: ROLLOUT_TOO_LONG — Carry close, total overshoots — rollout is too long
+    Regimes: high-spin-wedge
+    Diffs:   carry=-0.9, total=+17.7, rollout=+18.6, apex=-3.8ft
+    Suggested knobs:
+      -> Bounce.FlightSpinFactorMin: decrease by 0.03 (range 0.25-0.55)
+      -> Bounce.FlightSpinFactorDivisor: decrease by 500.0 (range 4000.0-12000.0)
+      -> Rollout.HighSpinMultiplierMax: increase by 0.1 (range 1.5-3.5)
+      -> Bounce.RolloutHighSpinRetention: decrease by 0.03 (range 0.55-0.85)
+
+  shot_driver_60:
+    Status:  SEVERE
+    Pattern: ROLLOUT_TOO_SHORT — Carry close, total undershoots — rollout is too short
+    Regimes: none
+    Diffs:   carry=+0.0, total=-14.9, rollout=-14.9, apex=-2.4ft
+    Suggested knobs:
+      -> Bounce.FlightTangentialRetentionBase: increase by 0.03 (range 0.4-0.75)
+      -> Bounce.FlightSpinFactorMin: increase by 0.03 (range 0.25-0.55)
+      -> Bounce.FlightSpinFactorDivisor: increase by 500.0 (range 4000.0-12000.0)
+      -> Bounce.CorBaseA: increase by 0.02 (range 0.3-0.6)
+      -> Rollout.LowSpinMultiplierMax: decrease by 0.05 (range 0.8-1.5)
+
+  shot_pw_66:
+    Status:  SEVERE
+    Pattern: ROLLOUT_TOO_LONG — Carry close, total overshoots — rollout is too long
+    Regimes: high-spin-wedge
+    Diffs:   carry=-2.6, total=+11.3, rollout=+13.9, apex=-3.7ft
+    Suggested knobs:
+      -> Bounce.FlightSpinFactorMin: decrease by 0.03 (range 0.25-0.55)
+      -> Bounce.FlightSpinFactorDivisor: decrease by 500.0 (range 4000.0-12000.0)
+      -> Rollout.HighSpinMultiplierMax: increase by 0.1 (range 1.5-3.5)
+      -> Bounce.RolloutHighSpinRetention: decrease by 0.03 (range 0.55-0.85)
+----------------------------------------------------------------------
+MODERATE SHOTS (5-10 yd total or 3-7 yd carry)
+----------------------------------------------------------------------
+
+  shot_5i_10:
+    Status:  MODERATE
+    Pattern: ROLLOUT_TOO_SHORT — Carry close, total undershoots — rollout is too short
+    Regimes: none
+    Diffs:   carry=+3.0, total=-7.1, rollout=-10.1, apex=+5.9ft
+    Suggested knobs:
+      -> Bounce.FlightTangentialRetentionBase: increase by 0.03 (range 0.4-0.75)
+      -> Bounce.FlightSpinFactorMin: increase by 0.03 (range 0.25-0.55)
+      -> Bounce.FlightSpinFactorDivisor: increase by 500.0 (range 4000.0-12000.0)
+      -> Bounce.CorBaseA: increase by 0.02 (range 0.3-0.6)
+      -> Rollout.LowSpinMultiplierMax: decrease by 0.05 (range 0.8-1.5)
+
+  shot_6i_39:
+    Status:  MODERATE
+    Pattern: ROLLOUT_TOO_LONG — Carry close, total overshoots — rollout is too long
+    Regimes: low-launch
+    Diffs:   carry=-0.5, total=+6.4, rollout=+6.9, apex=+0.0ft
+    Suggested knobs:
+      -> Bounce.FlightTangentialRetentionBase: decrease by 0.03 (range 0.4-0.75)
+      -> Bounce.CorBaseA: decrease by 0.02 (range 0.3-0.6)
+      -> Rollout.LowSpinMultiplierMax: increase by 0.05 (range 0.8-1.5)
+      -> Rollout.LowSpinThreshold: decrease by 100.0 (range 1000.0-2500.0)
+      -> Rollout.FrictionBlendSpeed: decrease by 1.0 (range 8.0-25.0)
+
+  shot_6i_40:
+    Status:  MODERATE
+    Pattern: ROLLOUT_TOO_LONG — Carry close, total overshoots — rollout is too long
+    Regimes: low-launch
+    Diffs:   carry=-1.2, total=+7.8, rollout=+9.0, apex=+0.1ft
+    Suggested knobs:
+      -> Bounce.FlightTangentialRetentionBase: decrease by 0.03 (range 0.4-0.75)
+      -> Bounce.CorBaseA: decrease by 0.02 (range 0.3-0.6)
+      -> Rollout.LowSpinMultiplierMax: increase by 0.05 (range 0.8-1.5)
+      -> Rollout.LowSpinThreshold: decrease by 100.0 (range 1000.0-2500.0)
+      -> Rollout.FrictionBlendSpeed: decrease by 1.0 (range 8.0-25.0)
+
+  shot_6i_43:
+    Status:  MODERATE
+    Pattern: CARRY_TOO_LONG — Physics carry exceeds reference
+    Regimes: none
+    Diffs:   carry=+6.4, total=+0.9, rollout=-5.5, apex=+8.1ft
+    Suggested knobs:
+      -> Flight.ClMaxBase: decrease by 0.005 (range 0.22-0.32)
+      -> Flight.CdMin: increase by 0.005 (range 0.18-0.28)
+      -> Flight.HighLaunchDragBoostMax: increase by 0.02 (range 1.0-1.3)
+      -> DragScaleMultiplier: increase by 0.02 (range 0.85-1.15)
+      -> LiftScaleMultiplier: decrease by 0.02 (range 0.85-1.15)
+
+  shot_6i_46:
+    Status:  MODERATE
+    Pattern: CARRY_TOO_LONG — Physics carry exceeds reference
+    Regimes: driver-wood
+    Diffs:   carry=+3.8, total=-3.5, rollout=-7.3, apex=-1.5ft
+    Suggested knobs:
+      -> Flight.ClMaxBase: decrease by 0.005 (range 0.22-0.32)
+      -> Flight.CdMin: increase by 0.005 (range 0.18-0.28)
+      -> DragScaleMultiplier: increase by 0.02 (range 0.85-1.15)
+      -> LiftScaleMultiplier: decrease by 0.02 (range 0.85-1.15)
+
+  shot_6i_49:
+    Status:  MODERATE
+    Pattern: ROLLOUT_TOO_LONG — Carry close, total overshoots — rollout is too long
+    Regimes: low-launch
+    Diffs:   carry=-2.5, total=+7.0, rollout=+9.5, apex=-0.3ft
+    Suggested knobs:
+      -> Bounce.FlightTangentialRetentionBase: decrease by 0.03 (range 0.4-0.75)
+      -> Bounce.CorBaseA: decrease by 0.02 (range 0.3-0.6)
+      -> Rollout.LowSpinMultiplierMax: increase by 0.05 (range 0.8-1.5)
+      -> Rollout.LowSpinThreshold: decrease by 100.0 (range 1000.0-2500.0)
+      -> Rollout.FrictionBlendSpeed: decrease by 1.0 (range 8.0-25.0)
+
+  shot_7i_29:
+    Status:  MODERATE
+    Pattern: ROLLOUT_TOO_SHORT — Carry close, total undershoots — rollout is too short
+    Regimes: none
+    Diffs:   carry=+1.0, total=-5.8, rollout=-6.8, apex=-3.5ft
+    Suggested knobs:
+      -> Bounce.FlightTangentialRetentionBase: increase by 0.03 (range 0.4-0.75)
+      -> Bounce.FlightSpinFactorMin: increase by 0.03 (range 0.25-0.55)
+      -> Bounce.FlightSpinFactorDivisor: increase by 500.0 (range 4000.0-12000.0)
+      -> Bounce.CorBaseA: increase by 0.02 (range 0.3-0.6)
+      -> Rollout.LowSpinMultiplierMax: decrease by 0.05 (range 0.8-1.5)
+
+  shot_7i_34:
+    Status:  MODERATE
+    Pattern: CARRY_TOO_LONG — Physics carry exceeds reference
+    Regimes: none
+    Diffs:   carry=+4.4, total=+2.6, rollout=-1.8, apex=+3.1ft
+    Suggested knobs:
+      -> Flight.ClMaxBase: decrease by 0.005 (range 0.22-0.32)
+      -> Flight.CdMin: increase by 0.005 (range 0.18-0.28)
+      -> Flight.HighLaunchDragBoostMax: increase by 0.02 (range 1.0-1.3)
+      -> DragScaleMultiplier: increase by 0.02 (range 0.85-1.15)
+      -> LiftScaleMultiplier: decrease by 0.02 (range 0.85-1.15)
+
+  shot_9i_5:
+    Status:  MODERATE
+    Pattern: ROLLOUT_TOO_SHORT — Carry close, total undershoots — rollout is too short
+    Regimes: high-spin-wedge
+    Diffs:   carry=-2.6, total=-5.5, rollout=-2.9, apex=-5.5ft
+    Suggested knobs:
+      -> Bounce.FlightSpinFactorMin: increase by 0.03 (range 0.25-0.55)
+      -> Bounce.FlightSpinFactorDivisor: increase by 500.0 (range 4000.0-12000.0)
+      -> Rollout.HighSpinMultiplierMax: decrease by 0.1 (range 1.5-3.5)
+      -> Bounce.RolloutHighSpinRetention: increase by 0.03 (range 0.55-0.85)
+
+  shot_driver_54:
+    Status:  MODERATE
+    Pattern: CARRY_TOO_LONG — Physics carry exceeds reference
+    Regimes: driver-wood
+    Diffs:   carry=+5.4, total=+0.0, rollout=-5.4, apex=-2.2ft
+    Suggested knobs:
+      -> Flight.ClMaxBase: decrease by 0.005 (range 0.22-0.32)
+      -> Flight.CdMin: increase by 0.005 (range 0.18-0.28)
+      -> DragScaleMultiplier: increase by 0.02 (range 0.85-1.15)
+      -> LiftScaleMultiplier: decrease by 0.02 (range 0.85-1.15)
+
+  shot_pw_64:
+    Status:  MODERATE
+    Pattern: CARRY_TOO_SHORT — Physics carry under reference
+    Regimes: high-spin-wedge
+    Diffs:   carry=-4.4, total=+9.6, rollout=+14.0, apex=-3.7ft
+    Suggested knobs:
+      -> Flight.HighLaunchDragBoostMax: decrease by 0.02 (range 1.0-1.3)
+      -> DragScaleMultiplier: decrease by 0.02 (range 0.85-1.15)
+
+  shot_pw_67:
+    Status:  MODERATE
+    Pattern: ROLLOUT_TOO_LONG — Carry close, total overshoots — rollout is too long
+    Regimes: high-spin-wedge
+    Diffs:   carry=+0.0, total=+5.7, rollout=+5.7, apex=-4.0ft
+    Suggested knobs:
+      -> Bounce.FlightSpinFactorMin: decrease by 0.03 (range 0.25-0.55)
+      -> Bounce.FlightSpinFactorDivisor: decrease by 500.0 (range 4000.0-12000.0)
+      -> Rollout.HighSpinMultiplierMax: increase by 0.1 (range 1.5-3.5)
+      -> Bounce.RolloutHighSpinRetention: decrease by 0.03 (range 0.55-0.85)
+
+  shot_pw_68:
+    Status:  MODERATE
+    Pattern: CARRY_AND_ROLLOUT_LONG — Both carry and rollout overshoot
+    Regimes: high-spin-wedge, mid-iron
+    Diffs:   carry=+3.4, total=+6.1, rollout=+2.7, apex=-6.2ft
+
+======================================================================
+PARAMETER CONFLICTS
+======================================================================
+
+  Bounce.FlightTangentialRetentionBase:
+    - shot_3w_19: needs decrease (pattern: ROLLOUT_TOO_LONG)
+    - shot_3w_21: needs decrease (pattern: ROLLOUT_TOO_LONG)
+    - shot_3w_23: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_5i_10: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_5i_12: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_5i_13: needs decrease (pattern: ROLLOUT_TOO_LONG)
+    - shot_5i_16: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_6i_36: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_6i_39: needs decrease (pattern: ROLLOUT_TOO_LONG)
+    - shot_6i_40: needs decrease (pattern: ROLLOUT_TOO_LONG)
+    - shot_6i_42: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_6i_44: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_6i_49: needs decrease (pattern: ROLLOUT_TOO_LONG)
+    - shot_6i_50: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_7i_25: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_7i_26: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_7i_29: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_9i_1: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_driver_55: needs decrease (pattern: ROLLOUT_TOO_LONG)
+    - shot_driver_60: needs increase (pattern: ROLLOUT_TOO_SHORT)
+
+  Bounce.CorBaseA:
+    - shot_3w_19: needs decrease (pattern: ROLLOUT_TOO_LONG)
+    - shot_3w_21: needs decrease (pattern: ROLLOUT_TOO_LONG)
+    - shot_3w_23: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_5i_10: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_5i_12: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_5i_13: needs decrease (pattern: ROLLOUT_TOO_LONG)
+    - shot_5i_16: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_6i_36: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_6i_39: needs decrease (pattern: ROLLOUT_TOO_LONG)
+    - shot_6i_40: needs decrease (pattern: ROLLOUT_TOO_LONG)
+    - shot_6i_42: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_6i_44: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_6i_49: needs decrease (pattern: ROLLOUT_TOO_LONG)
+    - shot_6i_50: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_7i_25: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_7i_26: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_7i_29: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_driver_55: needs decrease (pattern: ROLLOUT_TOO_LONG)
+    - shot_driver_60: needs increase (pattern: ROLLOUT_TOO_SHORT)
+
+  Rollout.LowSpinMultiplierMax:
+    - shot_3w_19: needs increase (pattern: ROLLOUT_TOO_LONG)
+    - shot_3w_21: needs increase (pattern: ROLLOUT_TOO_LONG)
+    - shot_3w_23: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+    - shot_5i_10: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+    - shot_5i_12: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+    - shot_5i_13: needs increase (pattern: ROLLOUT_TOO_LONG)
+    - shot_5i_16: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+    - shot_6i_36: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+    - shot_6i_39: needs increase (pattern: ROLLOUT_TOO_LONG)
+    - shot_6i_40: needs increase (pattern: ROLLOUT_TOO_LONG)
+    - shot_6i_42: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+    - shot_6i_44: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+    - shot_6i_49: needs increase (pattern: ROLLOUT_TOO_LONG)
+    - shot_6i_50: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+    - shot_7i_25: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+    - shot_7i_26: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+    - shot_7i_29: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+    - shot_driver_55: needs increase (pattern: ROLLOUT_TOO_LONG)
+    - shot_driver_60: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+
+  Rollout.LowSpinThreshold:
+    - shot_3w_19: needs decrease (pattern: ROLLOUT_TOO_LONG)
+    - shot_3w_21: needs decrease (pattern: ROLLOUT_TOO_LONG)
+    - shot_3w_23: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_5i_10: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_5i_12: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_5i_13: needs decrease (pattern: ROLLOUT_TOO_LONG)
+    - shot_5i_16: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_6i_36: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_6i_39: needs decrease (pattern: ROLLOUT_TOO_LONG)
+    - shot_6i_40: needs decrease (pattern: ROLLOUT_TOO_LONG)
+    - shot_6i_42: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_6i_44: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_6i_49: needs decrease (pattern: ROLLOUT_TOO_LONG)
+    - shot_6i_50: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_7i_25: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_7i_26: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_7i_29: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_driver_55: needs decrease (pattern: ROLLOUT_TOO_LONG)
+    - shot_driver_60: needs increase (pattern: ROLLOUT_TOO_SHORT)
+
+  Rollout.FrictionBlendSpeed:
+    - shot_3w_19: needs decrease (pattern: ROLLOUT_TOO_LONG)
+    - shot_3w_21: needs decrease (pattern: ROLLOUT_TOO_LONG)
+    - shot_3w_23: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_5i_10: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_5i_12: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_5i_13: needs decrease (pattern: ROLLOUT_TOO_LONG)
+    - shot_5i_16: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_6i_36: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_6i_39: needs decrease (pattern: ROLLOUT_TOO_LONG)
+    - shot_6i_40: needs decrease (pattern: ROLLOUT_TOO_LONG)
+    - shot_6i_42: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_6i_44: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_6i_49: needs decrease (pattern: ROLLOUT_TOO_LONG)
+    - shot_6i_50: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_7i_25: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_7i_26: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_7i_29: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_9i_1: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_driver_55: needs decrease (pattern: ROLLOUT_TOO_LONG)
+    - shot_driver_60: needs increase (pattern: ROLLOUT_TOO_SHORT)
+
+  KineticFrictionMultiplier:
+    - shot_3w_19: needs increase (pattern: ROLLOUT_TOO_LONG)
+    - shot_3w_21: needs increase (pattern: ROLLOUT_TOO_LONG)
+    - shot_3w_23: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+    - shot_5i_10: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+    - shot_5i_12: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+    - shot_5i_13: needs increase (pattern: ROLLOUT_TOO_LONG)
+    - shot_5i_16: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+    - shot_6i_36: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+    - shot_6i_39: needs increase (pattern: ROLLOUT_TOO_LONG)
+    - shot_6i_40: needs increase (pattern: ROLLOUT_TOO_LONG)
+    - shot_6i_42: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+    - shot_6i_44: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+    - shot_6i_49: needs increase (pattern: ROLLOUT_TOO_LONG)
+    - shot_6i_50: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+    - shot_7i_25: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+    - shot_7i_26: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+    - shot_7i_29: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+    - shot_9i_1: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+    - shot_driver_55: needs increase (pattern: ROLLOUT_TOO_LONG)
+    - shot_driver_60: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+
+  RollingFrictionMultiplier:
+    - shot_3w_19: needs increase (pattern: ROLLOUT_TOO_LONG)
+    - shot_3w_21: needs increase (pattern: ROLLOUT_TOO_LONG)
+    - shot_3w_23: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+    - shot_5i_10: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+    - shot_5i_12: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+    - shot_5i_13: needs increase (pattern: ROLLOUT_TOO_LONG)
+    - shot_5i_16: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+    - shot_6i_36: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+    - shot_6i_39: needs increase (pattern: ROLLOUT_TOO_LONG)
+    - shot_6i_40: needs increase (pattern: ROLLOUT_TOO_LONG)
+    - shot_6i_42: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+    - shot_6i_44: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+    - shot_6i_49: needs increase (pattern: ROLLOUT_TOO_LONG)
+    - shot_6i_50: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+    - shot_7i_25: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+    - shot_7i_26: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+    - shot_7i_29: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+    - shot_driver_55: needs increase (pattern: ROLLOUT_TOO_LONG)
+    - shot_driver_60: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+
+  Bounce.RolloutLowSpinRetention:
+    - shot_3w_19: needs decrease (pattern: ROLLOUT_TOO_LONG)
+    - shot_3w_21: needs decrease (pattern: ROLLOUT_TOO_LONG)
+    - shot_3w_23: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_5i_10: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_5i_12: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_5i_13: needs decrease (pattern: ROLLOUT_TOO_LONG)
+    - shot_5i_16: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_6i_36: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_6i_39: needs decrease (pattern: ROLLOUT_TOO_LONG)
+    - shot_6i_40: needs decrease (pattern: ROLLOUT_TOO_LONG)
+    - shot_6i_42: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_6i_44: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_6i_49: needs decrease (pattern: ROLLOUT_TOO_LONG)
+    - shot_6i_50: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_7i_25: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_7i_26: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_7i_29: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_driver_55: needs decrease (pattern: ROLLOUT_TOO_LONG)
+    - shot_driver_60: needs increase (pattern: ROLLOUT_TOO_SHORT)
+
+  Bounce.FlightSpinFactorMin:
+    - shot_5i_10: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_5i_12: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_6i_36: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_6i_42: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_6i_50: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_7i_25: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_7i_26: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_7i_29: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_9i_5: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_driver_59: needs decrease (pattern: ROLLOUT_TOO_LONG)
+    - shot_driver_60: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_pw_66: needs decrease (pattern: ROLLOUT_TOO_LONG)
+    - shot_pw_67: needs decrease (pattern: ROLLOUT_TOO_LONG)
+
+  Bounce.FlightSpinFactorDivisor:
+    - shot_5i_10: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_5i_12: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_6i_36: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_6i_42: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_6i_50: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_7i_25: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_7i_26: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_7i_29: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_9i_5: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_driver_59: needs decrease (pattern: ROLLOUT_TOO_LONG)
+    - shot_driver_60: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_pw_66: needs decrease (pattern: ROLLOUT_TOO_LONG)
+    - shot_pw_67: needs decrease (pattern: ROLLOUT_TOO_LONG)
+
+  Rollout.HighSpinMultiplierMax:
+    - shot_5i_10: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+    - shot_5i_12: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+    - shot_6i_36: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+    - shot_6i_42: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+    - shot_6i_50: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+    - shot_7i_25: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+    - shot_7i_26: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+    - shot_7i_29: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+    - shot_9i_5: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+    - shot_driver_59: needs increase (pattern: ROLLOUT_TOO_LONG)
+    - shot_driver_60: needs decrease (pattern: ROLLOUT_TOO_SHORT)
+    - shot_pw_66: needs increase (pattern: ROLLOUT_TOO_LONG)
+    - shot_pw_67: needs increase (pattern: ROLLOUT_TOO_LONG)
+
+  Bounce.RolloutHighSpinRetention:
+    - shot_5i_10: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_5i_12: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_6i_36: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_6i_42: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_6i_50: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_7i_25: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_7i_26: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_7i_29: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_9i_1: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_9i_5: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_driver_59: needs decrease (pattern: ROLLOUT_TOO_LONG)
+    - shot_driver_60: needs increase (pattern: ROLLOUT_TOO_SHORT)
+    - shot_pw_66: needs decrease (pattern: ROLLOUT_TOO_LONG)
+    - shot_pw_67: needs decrease (pattern: ROLLOUT_TOO_LONG)
+
+  Flight.ClMaxBase:
+    - shot_6i_37: needs increase (pattern: CARRY_TOO_SHORT)
+    - shot_6i_43: needs decrease (pattern: CARRY_TOO_LONG)
+    - shot_6i_46: needs decrease (pattern: CARRY_TOO_LONG)
+    - shot_7i_34: needs decrease (pattern: CARRY_TOO_LONG)
+    - shot_driver_54: needs decrease (pattern: CARRY_TOO_LONG)
+
+  Flight.CdMin:
+    - shot_6i_37: needs decrease (pattern: CARRY_TOO_SHORT)
+    - shot_6i_43: needs increase (pattern: CARRY_TOO_LONG)
+    - shot_6i_46: needs increase (pattern: CARRY_TOO_LONG)
+    - shot_7i_34: needs increase (pattern: CARRY_TOO_LONG)
+    - shot_driver_54: needs increase (pattern: CARRY_TOO_LONG)
+
+  Flight.HighLaunchDragBoostMax:
+    - shot_6i_37: needs decrease (pattern: CARRY_TOO_SHORT)
+    - shot_6i_43: needs increase (pattern: CARRY_TOO_LONG)
+    - shot_7i_34: needs increase (pattern: CARRY_TOO_LONG)
+    - shot_pw_64: needs decrease (pattern: CARRY_TOO_SHORT)
+
+  DragScaleMultiplier:
+    - shot_6i_37: needs decrease (pattern: CARRY_TOO_SHORT)
+    - shot_6i_43: needs increase (pattern: CARRY_TOO_LONG)
+    - shot_6i_46: needs increase (pattern: CARRY_TOO_LONG)
+    - shot_7i_34: needs increase (pattern: CARRY_TOO_LONG)
+    - shot_driver_54: needs increase (pattern: CARRY_TOO_LONG)
+    - shot_pw_64: needs decrease (pattern: CARRY_TOO_SHORT)
+
+  LiftScaleMultiplier:
+    - shot_6i_37: needs increase (pattern: CARRY_TOO_SHORT)
+    - shot_6i_43: needs decrease (pattern: CARRY_TOO_LONG)
+    - shot_6i_46: needs decrease (pattern: CARRY_TOO_LONG)
+    - shot_7i_34: needs decrease (pattern: CARRY_TOO_LONG)
+    - shot_driver_54: needs decrease (pattern: CARRY_TOO_LONG)

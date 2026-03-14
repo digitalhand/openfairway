@@ -1,0 +1,20 @@
+@startuml
+title Short-Shot-First Calibration with Carry Exception Layer
+
+actor Engineer
+participant "Core Physics Profile\n(calibration_profile.json)" as Core
+participant "Physics Export\n(export_physics_csv.gd)" as Export
+participant "Comparator\n(compare_csv.py)" as Compare
+participant "Carry Exception Layer\n(carry_exception_profile.json)" as CarryX
+participant "Analyzer\n(calibration_analyzer.py)" as Analyzer
+
+Engineer -> Core: Tune flight parameters
+Engineer -> Export: Run export
+Export -> Compare: physics.csv
+Compare -> Compare: Join with flightscope.csv
+Compare -> CarryX: Optional apply to top-N carry outliers
+CarryX --> Compare: corrected carry + metadata
+Compare -> Analyzer: shot_diff_analysis.csv
+Analyzer --> Engineer: short (<115 yd) and long (>200 yd) error metrics
+
+@enduml

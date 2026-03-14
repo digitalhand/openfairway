@@ -7,6 +7,7 @@ Realistic golf ball physics engine for Godot 4.5+ C# projects. Usable from both 
 - [Installation](#installation)
 - [Quick Start (GDScript)](#quick-start-gdscript)
 - [Runtime Architecture](#runtime-architecture)
+- [Calibration Tooling Note](#calibration-tooling-note)
 - [Game Integration: Ball and Surface Ownership](#game-integration-ball-and-surface-ownership)
 - [Surface Authoring](#surface-authoring)
 - [API Reference - GDScript Usage](#api-reference---gdscript-usage)
@@ -107,6 +108,18 @@ print("Force: ", force)
 ![Physics runtime components](assets/images/physics-runtime-components.png)
 
 Source: [`assets/diagrams/physics-runtime-components.puml`](assets/diagrams/physics-runtime-components.puml)
+
+## Calibration Tooling Note
+
+Carry calibration for source-of-truth comparison is handled by tooling in `tools/shot_calibration/`, including a bounded carry exception layer profile at `assets/data/calibration/carry_exception_profile.json`.
+
+That layer is part of the calibration compare/analyze pipeline (`compare_csv.py` and `calibrate.py`). It does not change the addon runtime equations or in-game flight integration path in `addons/openfairway/physics/`.
+
+For calibration commands and regime/window configuration details, see:
+
+- `tools/shot_calibration/README.md`
+- `assets/data/calibration/calibration_profile.json`
+- `assets/data/calibration/carry_exception_profile.json`
 
 ## Game Integration: Ball and Surface Ownership
 
