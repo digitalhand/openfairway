@@ -31,6 +31,7 @@ YouTube Video [Demo of OpenFairway v1.0.2](https://youtu.be/IYSF5w6ROzo) (update
 - [Launch Monitor Connection Indicator](#launch-monitor-connection-indicator)
 - [Surface Zones (Local Terrain Overrides)](#surface-zones-local-terrain-overrides)
 - [Distance Benchmarks](#distance-benchmarks)
+- [Calibration Workflow](#calibration-workflow)
 - [Known Feature Gaps](#known-feature-gaps)
 - [Addon Classes](#addon-classes)
 - [Addon Structure](#addon-structure)
@@ -294,6 +295,16 @@ dotnet test --filter "Category=GarminCarryWindow"
 ```
 
 Use the benchmark script for broad flight/rollout trend checking and the Garmin suite for carry-window regression. See [`tests/PhysicsTests/README.md`](/home/jesher/Code/Github/digitalhand/openfairway/tests/PhysicsTests/README.md) for the full workflow and expected diagnostics.
+
+## Calibration Workflow
+
+Use the calibration tooling under [`tools/shot_calibration/README.md`](/home/jesher/Code/Github/digitalhand/openfairway/tools/shot_calibration/README.md) for carry-focused analysis and iteration against source-of-truth data.
+
+- Physics parameter tuning profile: `assets/data/calibration/calibration_profile.json`
+- Calibration carry exception profile (regime + window targets): `assets/data/calibration/carry_exception_profile.json`
+- Critical carry report output: `assets/data/openfairway_critical_carry_<timestamp>.csv`
+
+The carry exception layer is calibration analysis tooling. It is applied in the compare/analyze pipeline and does not modify core runtime equations in `addons/openfairway/physics/`.
 
 ## Known Feature Gaps
 

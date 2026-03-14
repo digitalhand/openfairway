@@ -2,6 +2,19 @@
 
 Compare OpenFairway physics output against FlightScope reference data, find where shots are off, and tune physics parameters to close the gap.
 
+## Table of Contents
+
+- [Prerequisites](#prerequisites)
+- [Quick Start](#quick-start)
+- [Carry Exception Layer (Regime + Windows)](#carry-exception-layer-regime--windows)
+- [Directory Layout](#directory-layout)
+- [FlightScope Scraper](#flightscope-scraper)
+- [Profile Override System](#profile-override-system)
+- [Diagnostic Report](#diagnostic-report)
+- [Tool Reference](#tool-reference)
+- [Shot Data Format](#shot-data-format)
+- [Output Columns](#output-columns)
+
 ## Prerequisites
 
 ```bash
@@ -23,6 +36,9 @@ python tools/shot_calibration/calibrate.py run
 
 # One session only (outputs stay in that session's directory)
 python tools/shot_calibration/calibrate.py run --session assets/data/shot_session_3
+
+# Disable carry exception layer (pure physics baseline)
+python tools/shot_calibration/calibrate.py run --no-carry-exceptions
 ```
 
 ### Analyze (compare + diagnose + accuracy reports)
@@ -38,13 +54,16 @@ python tools/shot_calibration/calibrate.py analyze --session assets/data/shot_se
 
 # Rebuild FlightScope CSV from reference JSON before comparing
 python tools/shot_calibration/calibrate.py analyze --session assets/data/shot_session_3 --flightscope-export
+
+# Compare with an explicit carry exception profile
+python tools/shot_calibration/calibrate.py analyze --carry-exceptions assets/data/calibration/carry_exception_profile.json
 ```
 
 The `analyze` command:
 1. Compares `physics.csv` vs `flightscope.csv` → `shot_diff_analysis.csv`
 2. Prints a diagnostic report
 3. Writes accuracy reports to `assets/data/`:
-   - `openfairway_accuracy_summary_<timestamp>.json` — carry + total + apex accuracy stats
+   - `openfairway_accuracy_summary_<timestamp>.json` — carry + total + apex stats + carry window gates (`<115`, `115-150`, `150-180`, `>200`)
    - `openfairway_critical_carry_<timestamp>.csv` — top 20 worst shots by carry error
    - `openfairway_critical_overall_<timestamp>.csv` — top 20 worst shots by max(carry, total) error
 4. Saves an iteration snapshot to history
@@ -94,6 +113,41 @@ python tools/shot_calibration/calibrate.py diff 1 2
 
 Profile overrides are JSON files loaded at runtime — no C# rebuild needed between iterations. See [Profile Override System](#profile-override-system).
 
+## Carry Exception Layer (Regime + Windows)
+
+For calibration-only analysis, `compare_csv.py` can apply a bounded, regime-based carry correction layer after raw physics output.
+
+- Default profile path: `assets/data/calibration/carry_exception_profile.json`
+- Auto-loaded by `compare_csv.py` and `calibrate.py` when present
+- Disable with `--no-carry-exceptions`
+
+The layer supports:
+
+- `apply_to_top_n_by_abs_error`: apply only to hardest carry outliers
+- `prioritize_short_shots`: consume the top-N budget on `<115 yd` shots first
+- `selection_metric`:
+  - `abs_error`
+  - `short_precision` (threshold-aware for `<115 yd`)
+  - `window_tolerance` (prioritize configured carry windows)
+- `priority_windows`: range-specific tolerance targets, for example:
+  - `115 < carry <= 150` with `target_abs_yd: 3`
+  - `150 < carry <= 180` with `target_abs_yd: 6` (within the requested `±5..7` band)
+- Deterministic regime keys (`family-speed-vla-spin`) such as `D-S4-V1-P2`
+- Optional shot-level overrides (`offset_yd_by_shot_name`) for unique outliers
+- Carry caps by distance bucket:
+  - Short shots (`<115 yd`) capped to small corrections
+  - Long shots (`>200 yd`) capped to larger corrections
+  - Optional per-window cap (`max_abs_offset_yd`) for window-specific bounds
+
+`shot_diff_analysis.csv` now includes:
+
+- `physics_carry_raw_yd`
+- `diff_carry_raw_yd`
+- `carry_exception_regime`
+- `carry_exception_offset_yd`
+- `carry_exception_source`
+- `carry_exception_applied`
+
 ## Directory Layout
 
 ```
@@ -116,6 +170,7 @@ assets/data/
     ├── flightscope.csv             # Combined FlightScope reference (all shots)
     ├── shot_diff_analysis.csv      # Combined diff (all shots)
     ├── calibration_profile.json    # Current profile override (optional)
+    ├── carry_exception_profile.json # Carry correction profile (optional)
     └── history/
         ├── iteration_001.json      # Iteration snapshots
         └── ...
@@ -302,7 +357,7 @@ When different failing shots need opposite adjustments to the same parameter, it
 | `export_physics_json.gd` | Simulate all shots, write JSON | Godot |
 | `physics_export_data.gd` | Shared helper for shot discovery | (not run directly) |
 | `export_flightscope_csv.py` | Export FlightScope reference as CSV | Python |
-| `compare_csv.py` | Diff physics vs FlightScope → `shot_diff_analysis.csv` | Python |
+| `compare_csv.py` | Diff physics vs FlightScope (+ optional carry exception layer) → `shot_diff_analysis.csv` | Python |
 | `calibration_analyzer.py` | Generate diagnostic report from diff CSV | Python |
 | `generate_profile.py` | Build profile override JSON from diagnostics | Python |
 | `flightscope_scraper.py` | Scrape FlightScope trajectory optimizer | Python + Chrome/Brave |
@@ -360,4 +415,10 @@ Shot files use the BallData format from launch monitors (R10, Garmin, etc.):
 | `physics_apex_ft` | Physics peak height (feet) |
 | `flightscope_apex_ft` | FlightScope peak height (feet) |
 | `diff_apex_ft` | Apex delta (physics - flightscope) |
+| `physics_carry_raw_yd` | Raw physics carry before exception correction |
+| `diff_carry_raw_yd` | Raw carry delta before exception correction |
+| `carry_exception_regime` | Regime key used to look up carry correction |
+| `carry_exception_offset_yd` | Applied carry offset (yards) |
+| `carry_exception_source` | Correction source (`regime` or `shot`) |
+| `carry_exception_applied` | Whether correction was applied to this row |
 | `status` | pass / moderate / severe |

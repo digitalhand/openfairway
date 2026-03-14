@@ -6,8 +6,10 @@ Main entry point for the tune-simulate-compare loop.
 Usage:
     python tools/shot_calibration/calibrate.py run
     python tools/shot_calibration/calibrate.py run --profile assets/data/calibration/calibration_profile.json
+    python tools/shot_calibration/calibrate.py run --no-carry-exceptions
     python tools/shot_calibration/calibrate.py analyze
     python tools/shot_calibration/calibrate.py analyze --session assets/data/shot_session_3
+    python tools/shot_calibration/calibrate.py analyze --carry-exceptions assets/data/calibration/carry_exception_profile.json
     python tools/shot_calibration/calibrate.py status
     python tools/shot_calibration/calibrate.py history
     python tools/shot_calibration/calibrate.py diff 1 3
@@ -33,6 +35,7 @@ FLIGHTSCOPE_CSV = os.path.join(CALIBRATION_DIR, "flightscope.csv")
 SOT_CSV = os.path.join(DATA_DIR, "SOT", "flightscope_SoT.csv")
 DIFF_CSV = os.path.join(CALIBRATION_DIR, "shot_diff_analysis.csv")
 DEFAULT_PROFILE = os.path.join(CALIBRATION_DIR, "calibration_profile.json")
+DEFAULT_CARRY_EXCEPTION_PROFILE = os.path.join(CALIBRATION_DIR, "carry_exception_profile.json")
 
 sys.path.insert(0, SCRIPT_DIR)
 from calibration_analyzer import load_diff_csv, analyze, format_report
@@ -171,6 +174,21 @@ def run_command(cmd, description, cwd=None):
     return True
 
 
+def resolve_carry_exception_profile(args):
+    """Resolve optional carry-exception profile path from CLI args/default."""
+    if getattr(args, "no_carry_exceptions", False):
+        return None
+
+    explicit = getattr(args, "carry_exceptions", None)
+    if explicit:
+        return os.path.normpath(os.path.join(PROJECT_ROOT, explicit)) if not os.path.isabs(explicit) else os.path.normpath(explicit)
+
+    if os.path.exists(DEFAULT_CARRY_EXCEPTION_PROFILE):
+        return DEFAULT_CARRY_EXCEPTION_PROFILE
+
+    return None
+
+
 def find_godot():
     """Find Godot executable."""
     for name in ["godot", "godot4", "Godot_v4.5-stable_linux.x86_64"]:
@@ -296,6 +314,10 @@ def cmd_run(args):
         with open(profile_path, "r") as f:
             profile_overrides = json.load(f)
 
+    carry_exception_path = resolve_carry_exception_profile(args)
+    if carry_exception_path:
+        print(f"Using carry exception profile: {carry_exception_path}")
+
     # Discover session directories (default: include all sessions)
     session_dirs = []
     if not session_dir and not args.no_sessions:
@@ -420,6 +442,10 @@ def cmd_run(args):
         physics_csv, flightscope_csv,
         "--output", diff_csv,
     ]
+    if carry_exception_path:
+        compare_cmd.extend(["--carry-exceptions", carry_exception_path])
+    elif args.no_carry_exceptions:
+        compare_cmd.append("--no-carry-exceptions")
     if not run_command(compare_cmd, "Comparing physics vs FlightScope"):
         sys.exit(1)
 
@@ -518,6 +544,35 @@ def _generate_accuracy_reports(diff_csv, output_dir, top_n=20):
     total_diffs = [float(r["diff_total_yd"]) for r in ref_rows if r.get("diff_total_yd")]
     apex_diffs = [float(r["diff_apex_ft"]) for r in ref_rows if r.get("diff_apex_ft")]
 
+    def _safe_float(value):
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None
+
+    short_rows = [
+        r for r in ref_rows
+        if _safe_float(r.get("flightscope_carry_yd")) is not None
+        and _safe_float(r.get("flightscope_carry_yd")) < 115.0
+    ]
+    mid_115_150_rows = [
+        r for r in ref_rows
+        if _safe_float(r.get("flightscope_carry_yd")) is not None
+        and _safe_float(r.get("flightscope_carry_yd")) > 115.0
+        and _safe_float(r.get("flightscope_carry_yd")) <= 150.0
+    ]
+    mid_150_180_rows = [
+        r for r in ref_rows
+        if _safe_float(r.get("flightscope_carry_yd")) is not None
+        and _safe_float(r.get("flightscope_carry_yd")) > 150.0
+        and _safe_float(r.get("flightscope_carry_yd")) <= 180.0
+    ]
+    long_rows = [
+        r for r in ref_rows
+        if _safe_float(r.get("flightscope_carry_yd")) is not None
+        and _safe_float(r.get("flightscope_carry_yd")) > 200.0
+    ]
+
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M")
     os.makedirs(output_dir, exist_ok=True)
     written = []
@@ -538,10 +593,48 @@ def _generate_accuracy_reports(diff_csv, output_dir, top_n=20):
     apex_accuracy = {f"{k}_ft": v for k, v in apex_stats.items() if k != "within_pct"}
     apex_accuracy["within_pct_ft"] = apex_stats.get("within_pct", {})
 
+    short_carry_diffs = [float(r["diff_carry_yd"]) for r in short_rows if r.get("diff_carry_yd")]
+    short_stats = _compute_accuracy_stats(short_carry_diffs, [0.5, 1, 2, 3])
+    short_accuracy = {f"{k}_yd": v for k, v in short_stats.items() if k != "within_pct"}
+    short_accuracy["within_pct_yd"] = short_stats.get("within_pct", {})
+
+    mid_115_150_diffs = [float(r["diff_carry_yd"]) for r in mid_115_150_rows if r.get("diff_carry_yd")]
+    mid_115_150_stats = _compute_accuracy_stats(mid_115_150_diffs, [1, 2, 3, 5])
+    mid_115_150_accuracy = {f"{k}_yd": v for k, v in mid_115_150_stats.items() if k != "within_pct"}
+    mid_115_150_accuracy["within_pct_yd"] = mid_115_150_stats.get("within_pct", {})
+
+    mid_150_180_diffs = [float(r["diff_carry_yd"]) for r in mid_150_180_rows if r.get("diff_carry_yd")]
+    mid_150_180_stats = _compute_accuracy_stats(mid_150_180_diffs, [3, 5, 6, 7, 10])
+    mid_150_180_accuracy = {f"{k}_yd": v for k, v in mid_150_180_stats.items() if k != "within_pct"}
+    mid_150_180_accuracy["within_pct_yd"] = mid_150_180_stats.get("within_pct", {})
+
+    long_carry_diffs = [float(r["diff_carry_yd"]) for r in long_rows if r.get("diff_carry_yd")]
+    long_stats = _compute_accuracy_stats(long_carry_diffs, [3, 5, 7, 10])
+    long_accuracy = {f"{k}_yd": v for k, v in long_stats.items() if k != "within_pct"}
+    long_accuracy["within_pct_yd"] = long_stats.get("within_pct", {})
+
     full_summary = {
         "timestamp": datetime.datetime.now().strftime("%Y-%m-%dT%H:%M"),
         "total_shots": len(all_rows),
         "shots_with_reference": len(ref_rows),
+        "priority_gates": {
+            "short_carry_lt_115yd": {
+                "shots": len(short_rows),
+                "carry_accuracy": short_accuracy,
+            },
+            "carry_115_150yd": {
+                "shots": len(mid_115_150_rows),
+                "carry_accuracy": mid_115_150_accuracy,
+            },
+            "carry_150_180yd": {
+                "shots": len(mid_150_180_rows),
+                "carry_accuracy": mid_150_180_accuracy,
+            },
+            "long_carry_gt_200yd": {
+                "shots": len(long_rows),
+                "carry_accuracy": long_accuracy,
+            },
+        },
         "carry_accuracy": carry_accuracy,
         "total_accuracy": total_accuracy,
         "apex_accuracy": apex_accuracy,
@@ -610,6 +703,10 @@ def cmd_analyze(args):
         history_dir = os.path.join(session_dir, "history")
         print(f"Session: {session_dir}")
 
+    carry_exception_path = resolve_carry_exception_profile(args)
+    if carry_exception_path:
+        print(f"Using carry exception profile: {carry_exception_path}")
+
     # Discover session directories (default: include all sessions)
     session_dirs = []
     if not session_dir and not args.no_sessions:
@@ -667,6 +764,10 @@ def cmd_analyze(args):
         physics_csv, flightscope_csv,
         "--output", diff_csv,
     ]
+    if carry_exception_path:
+        compare_cmd.extend(["--carry-exceptions", carry_exception_path])
+    elif args.no_carry_exceptions:
+        compare_cmd.append("--no-carry-exceptions")
     if not run_command(compare_cmd, "Comparing physics vs FlightScope"):
         sys.exit(1)
 
@@ -825,12 +926,16 @@ def parse_args():
     run_parser.add_argument("--export-flightscope", action="store_true", help="Run export_flightscope_csv.py instead of using SoT CSV")
     run_parser.add_argument("--session", default=None, help="Session directory path (all outputs go into session dir)")
     run_parser.add_argument("--no-sessions", action="store_true", help="Exclude session directories (standard shots only)")
+    run_parser.add_argument("--carry-exceptions", default=None, help="Path to carry exception profile JSON")
+    run_parser.add_argument("--no-carry-exceptions", action="store_true", help="Disable carry exception profile")
 
     analyze_parser = subparsers.add_parser("analyze", help="Post-scrape analysis: compare, diagnose, generate accuracy reports")
     analyze_parser.add_argument("--session", default=None, help="Session directory path")
     analyze_parser.add_argument("--no-sessions", action="store_true", help="Exclude session directories (standard shots only)")
     analyze_parser.add_argument("--flightscope-export", action="store_true", help="Re-export FlightScope CSV before comparing")
     analyze_parser.add_argument("--show", type=int, default=20, help="Number of worst shots to include in critical CSVs (default: 20)")
+    analyze_parser.add_argument("--carry-exceptions", default=None, help="Path to carry exception profile JSON")
+    analyze_parser.add_argument("--no-carry-exceptions", action="store_true", help="Disable carry exception profile")
 
     subparsers.add_parser("status", help="Show last iteration summary")
     subparsers.add_parser("history", help="Show all iteration summaries")
