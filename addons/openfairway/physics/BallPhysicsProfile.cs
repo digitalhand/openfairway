@@ -155,7 +155,16 @@ public sealed class BallPhysicsProfile
 
             // Fast iron with high spin: over-carry
             ["I-S3-V2-P3"] = new() { DragScaleMultiplier = 1.08f, LiftScaleMultiplier = 0.96f },
-            ["I-S2-V2-P3"] = new() { DragScaleMultiplier = 1.04f },
+            ["I-S3-V1-P2"] = new() { DragScaleMultiplier = 1.04f, LiftScaleMultiplier = 0.98f },
+            ["I-S2-V2-P3"] = new() { DragScaleMultiplier = 1.05f },
+            ["I-S2-V2-P4"] = new() { DragScaleMultiplier = 1.06f, LiftScaleMultiplier = 0.95f },
+
+            // Mid-speed iron: over-carry clusters
+            ["I-S2-V1-P2"] = new() { DragScaleMultiplier = 1.03f, LiftScaleMultiplier = 0.99f },
+            ["I-S2-V0-P2"] = new() { DragScaleMultiplier = 1.06f, LiftScaleMultiplier = 0.96f },
+
+            // Mid-speed iron: under-carry (very low spin)
+            ["I-S2-V1-P0"] = new() { DragScaleMultiplier = 0.96f, LiftScaleMultiplier = 1.03f },
 
             // Mid-speed iron: all short
             ["I-S2-V1-P1"] = new() { DragScaleMultiplier = 0.97f, LiftScaleMultiplier = 1.02f },

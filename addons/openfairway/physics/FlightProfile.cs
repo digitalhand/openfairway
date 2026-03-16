@@ -101,7 +101,7 @@ public sealed class FlightProfile
     // --- Mid-spin Cl boost (bell-shaped lift recovery for mid-iron SR regime) ---
     public float MidSpinClBoostSrStart { get; init; } = 0.17f;
     public float MidSpinClBoostSrEnd { get; init; } = 0.31f;
-    public float MidSpinClBoostMax { get; init; } = 0.50f;
+    public float MidSpinClBoostMax { get; init; } = 0.45f;
 
     // --- High-launch drag boost ---
     public float HighLaunchDragBoostMax { get; init; } = 1.24f;
