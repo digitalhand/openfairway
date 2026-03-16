@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 """
-FlightScope Trajectory Optimizer discovery script.
+FS Trajectory Optimizer discovery script.
 
-Launches Chrome, navigates to the FlightScope trajectory optimizer,
+Launches Chrome, navigates to the FS trajectory optimizer,
 dismisses the weather popup, toggles wind OFF, and dumps all interactive
 elements, screenshots, and rendered HTML for building scraper selectors.
 
@@ -10,8 +10,8 @@ Requirements:
     pip install selenium
 
 Usage:
-    python tools/shot_calibration/flightscope_discover.py
-    python tools/shot_calibration/flightscope_discover.py --fill-test-shot
+    python tools/shot_calibration/fs_discover.py
+    python tools/shot_calibration/fs_discover.py --fill-test-shot
 """
 
 import argparse
@@ -429,7 +429,7 @@ def _set_direction_dropdown(driver, label_fragment, direction):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Discover FlightScope page structure")
+    parser = argparse.ArgumentParser(description="Discover FS trajectory page structure")
     parser.add_argument("--fill-test-shot", action="store_true",
                         help="Fill in a test driver shot and capture results")
     parser.add_argument("--headless", action="store_true",
@@ -485,12 +485,12 @@ def main():
         capture_network_log(driver)
 
         # Save screenshot
-        screenshot_path = OUTPUT_DIR / "debug_flightscope.png"
+        screenshot_path = OUTPUT_DIR / "debug_fs.png"
         driver.save_screenshot(str(screenshot_path))
         print(f"\nScreenshot saved to {screenshot_path}")
 
         # Save rendered HTML
-        html_path = OUTPUT_DIR / "debug_flightscope.html"
+        html_path = OUTPUT_DIR / "debug_fs.html"
         with open(html_path, "w", encoding="utf-8") as f:
             f.write(driver.page_source)
         print(f"HTML saved to {html_path}")

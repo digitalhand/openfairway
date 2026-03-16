@@ -1,0 +1,304 @@
+{
+  "timestamp": "2026-03-16T14:17",
+  "total_shots": 182,
+  "shots_with_reference": 175,
+  "priority_gates": {
+    "short_carry_lt_115yd": {
+      "shots": 87,
+      "carry_accuracy": {
+        "avg_error_yd": -0.8,
+        "avg_off_yd": 1.7,
+        "typical_off_yd": 1.5,
+        "consistency_yd": 2.1,
+        "worst_off_yd": 6.1,
+        "within_pct_yd": {
+          "0.5": 18.4,
+          "1": 34.5,
+          "2": 71.3,
+          "3": 83.9,
+          "5": 98.9
+        }
+      }
+    },
+    "carry_115_150yd": {
+      "shots": 49,
+      "carry_accuracy": {
+        "avg_error_yd": 0.0,
+        "avg_off_yd": 1.9,
+        "typical_off_yd": 1.7,
+        "consistency_yd": 2.4,
+        "worst_off_yd": 5.8,
+        "within_pct_yd": {
+          "1": 32.7,
+          "2": 61.2,
+          "3": 81.6,
+          "5": 93.9
+        }
+      }
+    },
+    "carry_150_180yd": {
+      "shots": 25,
+      "carry_accuracy": {
+        "avg_error_yd": 0.3,
+        "avg_off_yd": 1.7,
+        "typical_off_yd": 1.0,
+        "consistency_yd": 2.4,
+        "worst_off_yd": 6.5,
+        "within_pct_yd": {
+          "3": 80.0,
+          "5": 92.0,
+          "6": 96.0,
+          "7": 100.0,
+          "10": 100.0
+        }
+      }
+    },
+    "long_carry_gt_200yd": {
+      "shots": 2,
+      "carry_accuracy": {
+        "avg_error_yd": 2.5,
+        "avg_off_yd": 2.5,
+        "typical_off_yd": 2.5,
+        "consistency_yd": 1.6,
+        "worst_off_yd": 4.1,
+        "within_pct_yd": {
+          "3": 50.0,
+          "5": 100.0,
+          "7": 100.0,
+          "10": 100.0,
+          "15": 100.0
+        }
+      }
+    }
+  },
+  "carry_accuracy": {
+    "avg_error_yd": -0.3,
+    "avg_off_yd": 1.8,
+    "typical_off_yd": 1.4,
+    "consistency_yd": 2.3,
+    "worst_off_yd": 6.5,
+    "within_pct_yd": {
+      "1": 37.1,
+      "2": 68.0,
+      "3": 82.9,
+      "5": 96.6,
+      "7": 100.0,
+      "10": 100.0,
+      "15": 100.0,
+      "20": 100.0
+    }
+  },
+  "total_accuracy": {
+    "avg_error_yd": 1.1,
+    "avg_off_yd": 10.2,
+    "typical_off_yd": 8.8,
+    "consistency_yd": 12.6,
+    "worst_off_yd": 29.5,
+    "within_pct_yd": {
+      "1": 7.4,
+      "2": 14.9,
+      "3": 22.3,
+      "5": 32.6,
+      "7": 41.1,
+      "10": 55.4,
+      "15": 74.3,
+      "20": 85.1
+    }
+  },
+  "apex_accuracy": {
+    "avg_error_ft": -1.1,
+    "avg_off_ft": 3.4,
+    "typical_off_ft": 2.7,
+    "consistency_ft": 4.9,
+    "worst_off_ft": 26.0,
+    "within_pct_ft": {
+      "1": 32.0,
+      "2": 41.1,
+      "3": 57.7,
+      "5": 76.6,
+      "7": 86.3,
+      "10": 97.1,
+      "13": 97.7,
+      "15": 98.3,
+      "20": 98.9,
+      "50": 100.0
+    }
+  },
+  "physics_only_priority_gates": {
+    "short_carry_lt_115yd": {
+      "shots": 87,
+      "carry_accuracy": {
+        "avg_error_yd": -0.8,
+        "avg_off_yd": 1.7,
+        "typical_off_yd": 1.5,
+        "consistency_yd": 2.1,
+        "worst_off_yd": 6.1,
+        "within_pct_yd": {
+          "0.5": 18.4,
+          "1": 34.5,
+          "2": 71.3,
+          "3": 83.9,
+          "5": 98.9
+        }
+      }
+    },
+    "carry_115_150yd": {
+      "shots": 49,
+      "carry_accuracy": {
+        "avg_error_yd": 0.0,
+        "avg_off_yd": 1.9,
+        "typical_off_yd": 1.7,
+        "consistency_yd": 2.4,
+        "worst_off_yd": 5.8,
+        "within_pct_yd": {
+          "1": 32.7,
+          "2": 61.2,
+          "3": 81.6,
+          "5": 93.9
+        }
+      }
+    },
+    "carry_150_180yd": {
+      "shots": 25,
+      "carry_accuracy": {
+        "avg_error_yd": 0.3,
+        "avg_off_yd": 1.7,
+        "typical_off_yd": 1.0,
+        "consistency_yd": 2.4,
+        "worst_off_yd": 6.5,
+        "within_pct_yd": {
+          "3": 80.0,
+          "5": 92.0,
+          "6": 96.0,
+          "7": 100.0,
+          "10": 100.0
+        }
+      }
+    },
+    "long_carry_gt_200yd": {
+      "shots": 2,
+      "carry_accuracy": {
+        "avg_error_yd": 2.5,
+        "avg_off_yd": 2.5,
+        "typical_off_yd": 2.5,
+        "consistency_yd": 1.6,
+        "worst_off_yd": 4.1,
+        "within_pct_yd": {
+          "3": 50.0,
+          "5": 100.0,
+          "7": 100.0,
+          "10": 100.0,
+          "15": 100.0
+        }
+      }
+    }
+  },
+  "objectives": {
+    "physics_only": {
+      "shots": 175,
+      "within_3yd_pct": 82.9,
+      "residual_outliers_gt_window_target": 67
+    },
+    "short_shot_priority": {
+      "shots": 87,
+      "goal_within_1yd_pct": 80.0,
+      "actual_within_1yd_pct": 34.5,
+      "actual_within_0.5yd_pct": 18.4,
+      "actual_within_3yd_pct": 83.9
+    },
+    "residual_regime_candidates": {
+      "count": 67,
+      "short_count": 57,
+      "by_window": {
+        "<115": 57,
+        "115-150": 9,
+        "150-180": 1,
+        "180-200": 0,
+        ">200": 0
+      }
+    }
+  },
+  "critical_baseline": {
+    "path": "/home/jesher/Code/Github/digitalhand/openfairway/assets/data/openfairway_critical_carry_20260316_1340.csv",
+    "shots": 175,
+    "tracked_shots": 175,
+    "missing_shots": [],
+    "improved": 0,
+    "regressed": 0,
+    "unchanged": 175,
+    "within_target_now": 108,
+    "within_target_now_pct": 61.7,
+    "top_remaining_outliers": [
+      {
+        "shot_name": "s3_shot_driver_58",
+        "current_abs_yd": 6.5,
+        "baseline_abs_yd": 6.5,
+        "target_abs_yd": 6.0,
+        "carry_window": "150-180"
+      },
+      {
+        "shot_name": "bump_and_run",
+        "current_abs_yd": 6.1,
+        "baseline_abs_yd": 6.1,
+        "target_abs_yd": 1.0,
+        "carry_window": "<115"
+      },
+      {
+        "shot_name": "s5_shot_7i_27",
+        "current_abs_yd": 5.8,
+        "baseline_abs_yd": 5.8,
+        "target_abs_yd": 3.0,
+        "carry_window": "115-150"
+      },
+      {
+        "shot_name": "s4_shot_3w_33",
+        "current_abs_yd": 5.6,
+        "baseline_abs_yd": 5.6,
+        "target_abs_yd": 3.0,
+        "carry_window": "115-150"
+      },
+      {
+        "shot_name": "s5_shot_3w_37",
+        "current_abs_yd": 5.4,
+        "baseline_abs_yd": 5.4,
+        "target_abs_yd": 3.0,
+        "carry_window": "115-150"
+      },
+      {
+        "shot_name": "s5_shot_driver_43",
+        "current_abs_yd": 5.1,
+        "baseline_abs_yd": 5.1,
+        "target_abs_yd": 6.0,
+        "carry_window": "150-180"
+      },
+      {
+        "shot_name": "s4_shot_5i_29",
+        "current_abs_yd": 5.0,
+        "baseline_abs_yd": 5.0,
+        "target_abs_yd": 1.0,
+        "carry_window": "<115"
+      },
+      {
+        "shot_name": "s2_shot_21",
+        "current_abs_yd": 4.9,
+        "baseline_abs_yd": 4.9,
+        "target_abs_yd": 6.0,
+        "carry_window": "150-180"
+      },
+      {
+        "shot_name": "s3_shot_6i_35",
+        "current_abs_yd": 4.8,
+        "baseline_abs_yd": 4.8,
+        "target_abs_yd": 1.0,
+        "carry_window": "<115"
+      },
+      {
+        "shot_name": "s4_shot_5i_25",
+        "current_abs_yd": 4.8,
+        "baseline_abs_yd": 4.8,
+        "target_abs_yd": 1.0,
+        "carry_window": "<115"
+      }
+    ]
+  }
+}

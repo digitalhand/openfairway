@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://c05ojmpw46mf0"
+
+[deps]
+
+files=["res://assets/data/shot_session_4/fs.filename.translation", "res://assets/data/shot_session_4/fs.speed.translation", "res://assets/data/shot_session_4/fs.vla.translation", "res://assets/data/shot_session_4/fs.hla.translation", "res://assets/data/shot_session_4/fs.total.translation", "res://assets/data/shot_session_4/fs.spin.translation", "res://assets/data/shot_session_4/fs.backspin.translation", "res://assets/data/shot_session_4/fs.sidespin.translation", "res://assets/data/shot_session_4/fs.carry.translation", "res://assets/data/shot_session_4/fs.total.translation", "res://assets/data/shot_session_4/fs.rollout.translation", "res://assets/data/shot_session_4/fs.apex.translation"]
+
+source_file="res://assets/data/shot_session_4/fs.csv"
+dest_files=["res://assets/data/shot_session_4/fs.filename.translation", "res://assets/data/shot_session_4/fs.speed.translation", "res://assets/data/shot_session_4/fs.vla.translation", "res://assets/data/shot_session_4/fs.hla.translation", "res://assets/data/shot_session_4/fs.total.translation", "res://assets/data/shot_session_4/fs.spin.translation", "res://assets/data/shot_session_4/fs.backspin.translation", "res://assets/data/shot_session_4/fs.sidespin.translation", "res://assets/data/shot_session_4/fs.carry.translation", "res://assets/data/shot_session_4/fs.total.translation", "res://assets/data/shot_session_4/fs.rollout.translation", "res://assets/data/shot_session_4/fs.apex.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

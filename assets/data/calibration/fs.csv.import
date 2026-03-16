@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://dm6xs7lidm3a4"
+
+[deps]
+
+files=["res://assets/data/calibration/fs.filename.translation", "res://assets/data/calibration/fs.speed.translation", "res://assets/data/calibration/fs.vla.translation", "res://assets/data/calibration/fs.hla.translation", "res://assets/data/calibration/fs.total.translation", "res://assets/data/calibration/fs.spin.translation", "res://assets/data/calibration/fs.backspin.translation", "res://assets/data/calibration/fs.sidespin.translation", "res://assets/data/calibration/fs.carry.translation", "res://assets/data/calibration/fs.total.translation", "res://assets/data/calibration/fs.rollout.translation", "res://assets/data/calibration/fs.apex.translation"]
+
+source_file="res://assets/data/calibration/fs.csv"
+dest_files=["res://assets/data/calibration/fs.filename.translation", "res://assets/data/calibration/fs.speed.translation", "res://assets/data/calibration/fs.vla.translation", "res://assets/data/calibration/fs.hla.translation", "res://assets/data/calibration/fs.total.translation", "res://assets/data/calibration/fs.spin.translation", "res://assets/data/calibration/fs.backspin.translation", "res://assets/data/calibration/fs.sidespin.translation", "res://assets/data/calibration/fs.carry.translation", "res://assets/data/calibration/fs.total.translation", "res://assets/data/calibration/fs.rollout.translation", "res://assets/data/calibration/fs.apex.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

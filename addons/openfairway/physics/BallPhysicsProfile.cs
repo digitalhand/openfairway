@@ -120,7 +120,7 @@ public sealed class BallPhysicsProfile
     }
 
     /// <summary>
-    /// Calibrated regime-specific scale overrides derived from FlightScope
+    /// Calibrated regime-specific scale overrides derived from FS reference
     /// reference data. These correct systematic carry biases per launch regime
     /// (e.g. chip shots under-carry at low Re, driver shots over-carry at high Re).
     /// </summary>
@@ -154,7 +154,7 @@ public sealed class BallPhysicsProfile
             ["W-S1a-V3-P3"] = new() { DragScaleMultiplier = 0.83f, LiftScaleMultiplier = 1.10f },
 
             // Fast iron with high spin: over-carry
-            ["I-S3-V2-P3"] = new() { DragScaleMultiplier = 1.08f, LiftScaleMultiplier = 0.96f },
+            ["I-S3-V2-P3"] = new() { DragScaleMultiplier = 1.11f, LiftScaleMultiplier = 0.94f },
             ["I-S3-V1-P2"] = new() { DragScaleMultiplier = 1.04f, LiftScaleMultiplier = 0.98f },
             ["I-S2-V2-P3"] = new() { DragScaleMultiplier = 1.05f },
             ["I-S2-V2-P4"] = new() { DragScaleMultiplier = 1.06f, LiftScaleMultiplier = 0.95f },
@@ -172,6 +172,7 @@ public sealed class BallPhysicsProfile
             // Driver regime: slight over-carry
             ["D-S3-V1"] = new() { DragScaleMultiplier = 1.04f, LiftScaleMultiplier = 0.99f },
             ["D-S4-V0-P1"] = new() { DragScaleMultiplier = 1.03f, LiftScaleMultiplier = 0.98f },
+            ["D-S4-V0-P2"] = new() { DragScaleMultiplier = 1.09f, LiftScaleMultiplier = 0.94f },
             ["D-S4-V1-P0"] = new() { DragScaleMultiplier = 0.98f, LiftScaleMultiplier = 1.02f },
             ["D-S4-V1-P1"] = new() { DragScaleMultiplier = 1.04f },
             ["D-S4-V1-P2"] = new() { DragScaleMultiplier = 1.04f },

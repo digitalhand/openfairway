@@ -45,7 +45,7 @@ namespace OpenFairway.Tests
             TestContext.WriteLine($"  Total: {total:F1} yards");
             TestContext.WriteLine($"  Rollout: {total - carry:F1} yards");
 
-            // GSPro expected: carry ~113 yards, total ~175 yards
+            // GSP reference expected: carry ~113 yards, total ~175 yards
             // With bounce fix, we should see significant improvement from previous 95.3/113.7
             Assert.That(carry, Is.InRange(90.0f, 120.0f), "Carry should be ~95-115 yards");
             Assert.That(total, Is.GreaterThan(carry + 10.0f), "Total should have at least 10 yards rollout");

@@ -335,17 +335,17 @@ namespace OpenFairway.Tests
             Assert.That(tweakedDriver, Is.EqualTo(baselineDriver).Within(0.1f));
         }
 
-        // ── FlightScope calibration tests ──
+        // ── FS calibration tests ──
 
-        private static readonly string FlightScopeReferencePath =
-            Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "..", "..", "assets", "data", "SOT", "flightscope_reference.json");
+        private static readonly string FsReferencePath =
+            Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "..", "..", "assets", "data", "SOT", "fs_reference.json");
 
-        public static IEnumerable<TestCaseData> FlightScopeCalibrationCases()
+        public static IEnumerable<TestCaseData> FsCalibrationCases()
         {
-            if (!File.Exists(FlightScopeReferencePath))
+            if (!File.Exists(FsReferencePath))
                 yield break;
 
-            string json = File.ReadAllText(FlightScopeReferencePath);
+            string json = File.ReadAllText(FsReferencePath);
             var reference = JsonSerializer.Deserialize<System.Collections.Generic.Dictionary<string, JsonElement>>(json);
 
             foreach (var kvp in reference)
@@ -357,34 +357,34 @@ namespace OpenFairway.Tests
                 if (!entry.TryGetProperty("filename", out var filenameEl))
                     continue;
 
-                float fsCarry = (float)carryEl.GetDouble();
+                float refCarry = (float)carryEl.GetDouble();
                 string filename = filenameEl.GetString();
 
-                if (fsCarry <= 0.0f)
+                if (refCarry <= 0.0f)
                     continue;
 
-                yield return new TestCaseData(shotName, filename, fsCarry)
-                    .SetName($"FlightScope_{shotName}");
+                yield return new TestCaseData(shotName, filename, refCarry)
+                    .SetName($"Fs_{shotName}");
             }
         }
 
-        [TestCaseSource(nameof(FlightScopeCalibrationCases))]
+        [TestCaseSource(nameof(FsCalibrationCases))]
         [Category("PhysicsRuntime")]
-        [Category("FlightScopeCalibration")]
-        public void CarryMatchesFlightScopeReference(
+        [Category("FsCalibration")]
+        public void CarryMatchesFsReference(
             string shotName,
             string filename,
-            float flightScopeCarry)
+            float fsCarry)
         {
             Godot.Collections.Dictionary shot = TestShotLoader.LoadTestShot(filename);
             Godot.Collections.Dictionary result = _adapter.SimulateCarryOnly(shot);
 
             float carry = (float)result["carry_yd"];
-            float delta = carry - flightScopeCarry;
+            float delta = carry - fsCarry;
 
-            TestContext.WriteLine($"{shotName}: simulated={carry:F1} yd, FlightScope={flightScopeCarry:F1} yd, delta={delta:+0.0;-0.0} yd");
+            TestContext.WriteLine($"{shotName}: simulated={carry:F1} yd, FS={fsCarry:F1} yd, delta={delta:+0.0;-0.0} yd");
 
-            Assert.Pass($"Delta: {delta:+0.0;-0.0} yd (simulated={carry:F1}, FlightScope={flightScopeCarry:F1})");
+            Assert.Pass($"Delta: {delta:+0.0;-0.0} yd (simulated={carry:F1}, FS={fsCarry:F1})");
         }
     }
 }

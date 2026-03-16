@@ -7,7 +7,13 @@
     "total_spin_rpm": 7490.96484375,
     "spin_axis_deg": 30,
     "_status": "failed",
-    "_reason": "submit_not_clickable"
+    "_reason": "submit_not_clickable",
+    "carry_yd": 0,
+    "roll_yd": 0,
+    "total_yd": 0,
+    "lateral_yd": 0,
+    "time_s": 0,
+    "apex_ft": 0
   },
   "shot_3w_19": {
     "filename": "shot_3w_19.json",
@@ -22,6 +28,22 @@
     "lateral_yd": 14.1,
     "time_s": 2.6,
     "apex_ft": 12.2
+  },
+  "shot_3w_20": {
+    "filename": "shot_3w_20.json",
+    "speed_mph": 116.02548217773438,
+    "vla_deg": 4.395872116088867,
+    "hla_deg": 2.2949562072753906,
+    "total_spin_rpm": 2026.020751953125,
+    "spin_axis_deg": 9.966802597045898,
+    "carry_yd": 0,
+    "roll_yd": 0,
+    "total_yd": 0,
+    "lateral_yd": 0,
+    "time_s": 0,
+    "apex_ft": 0,
+    "_status": "pending",
+    "_reason": "Awaiting FS trajectory lookup"
   },
   "shot_3w_21": {
     "filename": "shot_3w_21.json",
@@ -134,6 +156,22 @@
     "lateral_yd": 2.8,
     "time_s": 1.7,
     "apex_ft": 6.8
+  },
+  "shot_5i_14": {
+    "filename": "shot_5i_14.json",
+    "speed_mph": 87.68553161621094,
+    "vla_deg": 4.525229454040527,
+    "hla_deg": -7.676884651184082,
+    "total_spin_rpm": 3390.28271484375,
+    "spin_axis_deg": 1.7997634410858154,
+    "carry_yd": 0,
+    "roll_yd": 0,
+    "total_yd": 0,
+    "lateral_yd": 0,
+    "time_s": 0,
+    "apex_ft": 0,
+    "_status": "pending",
+    "_reason": "Awaiting FS trajectory lookup"
   },
   "shot_5i_15": {
     "filename": "shot_5i_15.json",
@@ -583,6 +621,22 @@
     "time_s": 4.6,
     "apex_ft": 57.7
   },
+  "shot_9i_4": {
+    "filename": "shot_9i_4.json",
+    "speed_mph": 95.73126220703125,
+    "vla_deg": 4.748410701751709,
+    "hla_deg": -6.780673027038574,
+    "total_spin_rpm": 2312.071044921875,
+    "spin_axis_deg": 6.028021335601807,
+    "carry_yd": 0,
+    "roll_yd": 0,
+    "total_yd": 0,
+    "lateral_yd": 0,
+    "time_s": 0,
+    "apex_ft": 0,
+    "_status": "pending",
+    "_reason": "Awaiting FS trajectory lookup"
+  },
   "shot_9i_5": {
     "filename": "shot_9i_5.json",
     "speed_mph": 84.02252960205078,
@@ -596,6 +650,22 @@
     "lateral_yd": 13.0,
     "time_s": 4.0,
     "apex_ft": 41.8
+  },
+  "shot_9i_6": {
+    "filename": "shot_9i_6.json",
+    "speed_mph": 94.70030212402344,
+    "vla_deg": 0,
+    "hla_deg": 3.677737236022949,
+    "total_spin_rpm": 2200.49462890625,
+    "spin_axis_deg": 28.95497703552246,
+    "carry_yd": 0,
+    "roll_yd": 0,
+    "total_yd": 0,
+    "lateral_yd": 0,
+    "time_s": 0,
+    "apex_ft": 0,
+    "_status": "pending",
+    "_reason": "Awaiting FS trajectory lookup"
   },
   "shot_9i_7": {
     "filename": "shot_9i_7.json",
@@ -778,6 +848,54 @@
     "lateral_yd": 30.5,
     "time_s": 3.9,
     "apex_ft": 34.0
+  },
+  "shot_pw_61": {
+    "filename": "shot_pw_61.json",
+    "speed_mph": 31.893327713012695,
+    "vla_deg": 25.35186195373535,
+    "hla_deg": -1.259826421737671,
+    "total_spin_rpm": 3867.899169921875,
+    "spin_axis_deg": 0,
+    "carry_yd": 0,
+    "roll_yd": 0,
+    "total_yd": 0,
+    "lateral_yd": 0,
+    "time_s": 0,
+    "apex_ft": 0,
+    "_status": "pending",
+    "_reason": "Awaiting FS trajectory lookup"
+  },
+  "shot_pw_62": {
+    "filename": "shot_pw_62.json",
+    "speed_mph": 39.62671661376953,
+    "vla_deg": 23.693159103393555,
+    "hla_deg": 0.6018989086151123,
+    "total_spin_rpm": 3843.46923828125,
+    "spin_axis_deg": 2.082167387008667,
+    "carry_yd": 0,
+    "roll_yd": 0,
+    "total_yd": 0,
+    "lateral_yd": 0,
+    "time_s": 0,
+    "apex_ft": 0,
+    "_status": "pending",
+    "_reason": "Awaiting FS trajectory lookup"
+  },
+  "shot_pw_63": {
+    "filename": "shot_pw_63.json",
+    "speed_mph": 37.149356842041016,
+    "vla_deg": 24.00528335571289,
+    "hla_deg": 1.8256330490112305,
+    "total_spin_rpm": 3913.80419921875,
+    "spin_axis_deg": 0,
+    "carry_yd": 0,
+    "roll_yd": 0,
+    "total_yd": 0,
+    "lateral_yd": 0,
+    "time_s": 0,
+    "apex_ft": 0,
+    "_status": "pending",
+    "_reason": "Awaiting FS trajectory lookup"
   },
   "shot_pw_64": {
     "filename": "shot_pw_64.json",

@@ -124,7 +124,7 @@ For calibration commands and regime/window configuration details, see:
 
 ## Regime Tuning Workflow
 
-Use this workflow when the goal is to improve addon physics against FlightScope reference data without launching gameplay scenes.
+Use this workflow when the goal is to improve addon physics against FS reference data without launching gameplay scenes.
 
 ### What actually improves shots
 
@@ -213,7 +213,7 @@ If a regime has mixed signs, do not keep pushing it. Split the regime more narro
 
 1. Update source defaults in `BallPhysicsProfile.cs` (or optionally `assets/data/calibration/calibration_profile.json` for experimental overrides)
 2. Re-export physics headlessly
-3. Re-run analysis against the same FlightScope corpus
+3. Re-run analysis against the same FS reference corpus
 4. Compare the new critical-carry report against the prior baseline
 
 Example:

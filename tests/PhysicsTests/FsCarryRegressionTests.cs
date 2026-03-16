@@ -5,7 +5,7 @@ using NUnit.Framework;
 namespace OpenFairway.Tests
 {
     [TestFixture]
-    public class FlightScopeCarryRegressionTests
+    public class FsCarryRegressionTests
     {
         private const float CarryToleranceYd = 3.0f;
         private const float ApexToleranceFt = 4.0f;
@@ -21,24 +21,24 @@ namespace OpenFairway.Tests
         public static IEnumerable<TestCaseData> CarryCases()
         {
             yield return new TestCaseData("Flopped", "flop_test_shot.json", 61.8f, 76.9f, true)
-                .SetName("Flopped_CarryMatchesFlightScope");
+                .SetName("Flopped_CarryMatchesFs");
             yield return new TestCaseData("Drive", "drive_test_shot.json", 244.1f, 0.0f, false)
-                .SetName("Drive_CarryMatchesFlightScope");
+                .SetName("Drive_CarryMatchesFs");
             yield return new TestCaseData("Wood Low", "wood_low_test_shot.json", 122.2f, 0.0f, false)
-                .SetName("WoodLow_CarryMatchesFlightScope");
+                .SetName("WoodLow_CarryMatchesFs");
             yield return new TestCaseData("Approach Mid Iron", "approach_mid_iron_test_shot.json", 125.8f, 69.3f, true)
-                .SetName("ApproachMidIron_CarryMatchesFlightScope");
+                .SetName("ApproachMidIron_CarryMatchesFs");
             yield return new TestCaseData("Wedge", "wedge_test_shot.json", 70.6f, 31.2f, true)
-                .SetName("Wedge_CarryMatchesFlightScope");
+                .SetName("Wedge_CarryMatchesFs");
             yield return new TestCaseData("Checked", "checked_test_shot.json", 77.9f, 79.7f, true)
-                .SetName("Checked_CarryMatchesFlightScope");
+                .SetName("Checked_CarryMatchesFs");
             yield return new TestCaseData("Topped", "topped_test_shot.json", 56.3f, 0.0f, false)
-                .SetName("Topped_CarryMatchesFlightScope");
+                .SetName("Topped_CarryMatchesFs");
         }
 
         [TestCaseSource(nameof(CarryCases))]
-        [Category("FlightScopeCarry")]
-        public void CarryMatchesFlightScope(
+        [Category("FsCarry")]
+        public void CarryMatchesFs(
             string shotName,
             string filename,
             float targetCarryYd,

@@ -6,7 +6,7 @@ using NUnit.Framework;
 namespace OpenFairway.Tests
 {
     [TestFixture]
-    public class GarminCarryWindowRegressionTests
+    public class LmCarryWindowRegressionTests
     {
         private const float WindowToleranceYd = 2.0f;
         private const float TightWedgeToleranceYd = 1.0f;
@@ -42,7 +42,7 @@ namespace OpenFairway.Tests
 
         [TestCaseSource(nameof(CarryWindowCases))]
         [Category("PhysicsRuntime")]
-        [Category("GarminCarryWindow")]
+        [Category("LmCarryWindow")]
         public void CarryFallsInsideComparisonWindow(
             string shotName,
             string filename,
@@ -87,17 +87,17 @@ namespace OpenFairway.Tests
         public static IEnumerable<TestCaseData> TightWedgeCarryCases()
         {
             yield return new TestCaseData("P Wedge 1", "p_wedge_shot_1.json", 104.6f)
-                .SetName("PWedge1_CarryMatchesFlightScopeWithinOneYard");
+                .SetName("PWedge1_CarryMatchesFsWithinOneYard");
             yield return new TestCaseData("Wedge Shot 1", "wedge_shot_1.json", 42.7f)
-                .SetName("WedgeShot1_CarryMatchesFlightScopeWithinOneYard");
+                .SetName("WedgeShot1_CarryMatchesFsWithinOneYard");
             yield return new TestCaseData("Wedge Shot 2", "wedge_shot_2.json", 49.0f)
-                .SetName("WedgeShot2_CarryMatchesFlightScopeWithinOneYard");
+                .SetName("WedgeShot2_CarryMatchesFsWithinOneYard");
         }
 
         [TestCaseSource(nameof(TightWedgeCarryCases))]
         [Category("PhysicsRuntime")]
         [Category("WedgeTightening")]
-        public void TightWedgeCarryMatchesFlightScope(
+        public void TightWedgeCarryMatchesFs(
             string shotName,
             string filename,
             float targetCarryYd)

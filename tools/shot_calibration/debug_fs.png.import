@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://do0gy6ijbek5"
-path="res://.godot/imported/debug_flightscope.png-09cca84a87c1fe7f76918d10920e346e.ctex"
+path="res://.godot/imported/debug_fs.png-7b15d59708d5133fb96e232174a228b8.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://tools/shot_calibration/debug_flightscope.png"
-dest_files=["res://.godot/imported/debug_flightscope.png-09cca84a87c1fe7f76918d10920e346e.ctex"]
+source_file="res://tools/shot_calibration/debug_fs.png"
+dest_files=["res://.godot/imported/debug_fs.png-7b15d59708d5133fb96e232174a228b8.ctex"]
 
 [params]
 

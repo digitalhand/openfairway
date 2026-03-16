@@ -1,23 +1,23 @@
 #!/usr/bin/env python
 """
-FlightScope Trajectory Optimizer scraper.
+FS Trajectory Optimizer scraper.
 
 Reads shot data from assets/data/*.json, enters each shot into
 https://trajectory.flightscope.com/, and captures the carry/total/apex results.
 
-Outputs: assets/data/SOT/flightscope_reference.json
+Outputs: assets/data/SOT/fs_reference.json
 
 Requirements:
     pip install selenium undetected-chromedriver
 
 Usage:
-    python tools/shot_calibration/flightscope_scraper.py
-    python tools/shot_calibration/flightscope_scraper.py --shots driver2 --visible
-    python tools/shot_calibration/flightscope_scraper.py --shots driver1.json wood1.json
-    python tools/shot_calibration/flightscope_scraper.py --visible
-    python tools/shot_calibration/flightscope_scraper.py --session assets/data/shot_session_3 --visible
-    python tools/shot_calibration/flightscope_scraper.py --retry-failed    # re-attempt failed shots
-    python tools/shot_calibration/flightscope_scraper.py --force           # ignore existing, start fresh
+    python tools/shot_calibration/fs_scraper.py
+    python tools/shot_calibration/fs_scraper.py --shots driver2 --visible
+    python tools/shot_calibration/fs_scraper.py --shots driver1.json wood1.json
+    python tools/shot_calibration/fs_scraper.py --visible
+    python tools/shot_calibration/fs_scraper.py --session assets/data/shot_session_3 --visible
+    python tools/shot_calibration/fs_scraper.py --retry-failed    # re-attempt failed shots
+    python tools/shot_calibration/fs_scraper.py --force           # ignore existing, start fresh
 """
 
 import argparse
@@ -43,7 +43,7 @@ from selenium.webdriver.support import expected_conditions as EC
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 DATA_DIR = REPO_ROOT / "assets" / "data"
-OUTPUT_FILE = REPO_ROOT / "assets" / "data" / "SOT" / "flightscope_reference.json"
+OUTPUT_FILE = REPO_ROOT / "assets" / "data" / "SOT" / "fs_reference.json"
 URL = "https://trajectory.flightscope.com/"
 PREFERRED_BROWSER_PATHS = [
     "/usr/bin/google-chrome-stable",
@@ -98,8 +98,8 @@ def _human_delay(base_sec: float, jitter_fraction: float = 0.4):
     time.sleep(max(0.05, base_sec + random.uniform(-jitter, jitter)))
 
 
-def _is_on_flightscope(driver) -> bool:
-    """Check if the browser is already on the FlightScope page."""
+def _is_on_fs_page(driver) -> bool:
+    """Check if the browser is already on the FS trajectory page."""
     try:
         current = driver.current_url or ""
         return "trajectory.flightscope.com" in current
@@ -163,7 +163,7 @@ def load_shot_data(filename: str, data_dir: Path = None) -> dict:
         backspin = total_spin * math.cos(axis_rad)
         sidespin = total_spin * math.sin(axis_rad)
 
-    # Filter out shots outside FlightScope's useful input range
+    # Filter out shots outside the trajectory optimizer's useful input range
     if speed < 45:
         print(f"  SKIP: {filename} — speed {speed:.1f} mph < 45 mph")
         return None
@@ -171,7 +171,7 @@ def load_shot_data(filename: str, data_dir: Path = None) -> dict:
         print(f"  SKIP: {filename} — VLA {vla:.1f}° <= 5°")
         return None
     if vla > 45:
-        print(f"  SKIP: {filename} — VLA {vla:.1f}° > 45° (too steep for FlightScope)")
+        print(f"  SKIP: {filename} — VLA {vla:.1f}° > 45° (too steep for trajectory optimizer)")
         return None
     if total_spin < 1000 or total_spin > 12000:
         print(f"  SKIP: {filename} — total spin {total_spin:.0f} RPM outside 1000–12000 range")
@@ -789,7 +789,7 @@ def _read_results_row(driver, row_index=0):
 
 
 def _extract_api_requests(driver):
-    """Extract API requests to FlightScope from performance logs."""
+    """Extract API requests to FS trajectory optimizer from performance logs."""
     api_entries = []
     try:
         logs = driver.get_log("performance")
@@ -933,7 +933,7 @@ def _is_completed(entry: dict) -> bool:
     return entry.get("carry_yd") is not None and entry.get("_status") != "failed"
 
 
-def scrape_flightscope(
+def scrape_fs(
     shots: dict,
     visible: bool = False,
     debug_port: int = None,
@@ -943,7 +943,7 @@ def scrape_flightscope(
     retry_failed: bool = False,
 ) -> dict:
     """
-    Automate FlightScope trajectory optimizer to get carry/total/apex.
+    Automate FS trajectory optimizer to get carry/total/apex.
 
     When *debug_port* is set, attaches to an existing browser and leaves it
     running after scraping completes.
@@ -957,11 +957,11 @@ def scrape_flightscope(
     shot_statuses = {}
 
     try:
-        # Skip navigation when already on FlightScope (preserves reCAPTCHA v3 score)
-        already_on_page = debug_port and _is_on_flightscope(driver)
+        # Skip navigation when already on FS page (preserves reCAPTCHA v3 score)
+        already_on_page = debug_port and _is_on_fs_page(driver)
 
         if already_on_page:
-            _log("Already on FlightScope — skipping navigation to preserve reCAPTCHA score")
+            _log("Already on FS page — skipping navigation to preserve reCAPTCHA score")
             try:
                 wait.until(EC.presence_of_element_located((By.TAG_NAME, "input")))
             except Exception:
@@ -1052,7 +1052,7 @@ def scrape_flightscope(
                         _log(
                             "HINT: reCAPTCHA v3 may be silently rejecting headless requests. "
                             "Try --visible mode, or on Linux headless use: "
-                            "xvfb-run python tools/shot_calibration/flightscope_scraper.py --visible"
+                            "xvfb-run python tools/shot_calibration/fs_scraper.py --visible"
                         )
                     _capture_debug_artifacts(driver, shot_name, attempt, failure_reason)
                     break
@@ -1130,7 +1130,7 @@ def scrape_flightscope(
 def create_manual_reference(shots: dict) -> dict:
     """
     Create a template reference file for manual entry.
-    Use this when the automated scraper can't access FlightScope.
+    Use this when the automated scraper can't access the trajectory optimizer.
     """
     results = {}
     for shot_name, shot_data in shots.items():
@@ -1145,7 +1145,7 @@ def create_manual_reference(shots: dict) -> dict:
             "carry_yd": 0.0,
             "total_yd": 0.0,
             "apex_ft": 0.0,
-            "_note": "Fill in FlightScope values manually",
+            "_note": "Fill in FS reference values manually",
         }
     return results
 
@@ -1176,7 +1176,7 @@ def _discover_session_shots(session_dir: Path) -> dict:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Scrape FlightScope trajectory data for calibration")
+    parser = argparse.ArgumentParser(description="Scrape FS trajectory data for calibration")
     parser.add_argument("--shots", nargs="*", help="Specific shot filenames to scrape (default: all)")
     parser.add_argument("--session", type=str, default=None, help="Session directory path (auto-discovers shots, outputs to session dir)")
     parser.add_argument("--template", action="store_true", help="Generate empty template for manual entry")
@@ -1198,7 +1198,7 @@ def main():
         session_dir = REPO_ROOT / session_dir
     data_dir = session_dir if session_dir else DATA_DIR
     output_path = Path(args.output) if args.output else (
-        session_dir / "flightscope_reference.json" if session_dir else OUTPUT_FILE
+        session_dir / "fs_reference.json" if session_dir else OUTPUT_FILE
     )
 
     # Build shot list
@@ -1237,7 +1237,7 @@ def main():
         with open(output_path, "w") as f:
             json.dump(results, f, indent=2)
     else:
-        results = scrape_flightscope(
+        results = scrape_fs(
             shots, visible=args.visible, debug_port=args.debug_port,
             output_path=output_path, browser_profile=args.browser_profile,
             existing_results=existing_results, retry_failed=args.retry_failed,

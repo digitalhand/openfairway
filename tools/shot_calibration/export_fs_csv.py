@@ -1,13 +1,13 @@
 #!/usr/bin/env python
-"""Export FlightScope reference CSV from shot JSON files.
+"""Export FS reference CSV from shot JSON files.
 
 Auto-discovers all *.json shot files in assets/data/.
-Merges in known reference values from flightscope_reference.json if available.
+Merges in known reference values from fs_reference.json if available.
 
 Usage:
-    python tools/shot_calibration/export_flightscope_csv.py
-    python tools/shot_calibration/export_flightscope_csv.py --reference assets/data/SOT/flightscope_reference.json
-    python tools/shot_calibration/export_flightscope_csv.py > assets/data/calibration/flightscope.csv
+    python tools/shot_calibration/export_fs_csv.py
+    python tools/shot_calibration/export_fs_csv.py --reference assets/data/SOT/fs_reference.json
+    python tools/shot_calibration/export_fs_csv.py > assets/data/calibration/fs.csv
 """
 
 import argparse
@@ -22,7 +22,7 @@ HEADER = "shot_name,filename,speed_mph,vla_deg,hla_deg,total_spin_rpm,spin_axis_
 
 
 def load_reference(path):
-    """Load flightscope_reference.json and index by filename."""
+    """Load fs_reference.json and index by filename."""
     if not path or not os.path.exists(path):
         return {}
     with open(path, "r") as f:
@@ -67,11 +67,11 @@ def load_shot(data_dir, fname):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Export FlightScope reference CSV")
+    parser = argparse.ArgumentParser(description="Export FS reference CSV")
     parser.add_argument(
         "--reference",
         default=None,
-        help="Path to flightscope_reference.json (default: assets/data/SOT/flightscope_reference.json)",
+        help="Path to fs_reference.json (default: assets/data/SOT/fs_reference.json)",
     )
     parser.add_argument(
         "--data-dir",
@@ -89,10 +89,10 @@ def main():
     if args.session:
         session_dir = os.path.normpath(args.session)
         data_dir = os.path.normpath(args.data_dir) if args.data_dir else session_dir
-        reference = args.reference if args.reference else os.path.join(session_dir, "flightscope_reference.json")
+        reference = args.reference if args.reference else os.path.join(session_dir, "fs_reference.json")
     else:
         data_dir = os.path.normpath(args.data_dir) if args.data_dir else os.path.normpath(DATA_DIR)
-        reference = args.reference if args.reference else os.path.join(DATA_DIR, "SOT", "flightscope_reference.json")
+        reference = args.reference if args.reference else os.path.join(DATA_DIR, "SOT", "fs_reference.json")
     ref = load_reference(reference)
     files = discover_shots(data_dir)
 

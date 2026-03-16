@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-03-16T11:41",
+  "timestamp": "2026-03-16T13:40",
   "total_shots": 182,
   "shots_with_reference": 175,
   "priority_gates": {
@@ -23,15 +23,15 @@
     "carry_115_150yd": {
       "shots": 49,
       "carry_accuracy": {
-        "avg_error_yd": 0.2,
-        "avg_off_yd": 1.8,
+        "avg_error_yd": 0.0,
+        "avg_off_yd": 1.9,
         "typical_off_yd": 1.7,
-        "consistency_yd": 2.2,
+        "consistency_yd": 2.4,
         "worst_off_yd": 5.8,
         "within_pct_yd": {
-          "1": 34.7,
-          "2": 65.3,
-          "3": 87.8,
+          "1": 32.7,
+          "2": 61.2,
+          "3": 81.6,
           "5": 93.9
         }
       }
@@ -39,17 +39,17 @@
     "carry_150_180yd": {
       "shots": 25,
       "carry_accuracy": {
-        "avg_error_yd": 1.1,
-        "avg_off_yd": 2.2,
-        "typical_off_yd": 1.1,
-        "consistency_yd": 3.4,
-        "worst_off_yd": 11.3,
+        "avg_error_yd": 0.3,
+        "avg_off_yd": 1.7,
+        "typical_off_yd": 1.0,
+        "consistency_yd": 2.4,
+        "worst_off_yd": 6.5,
         "within_pct_yd": {
-          "3": 76.0,
-          "5": 88.0,
-          "6": 92.0,
-          "7": 92.0,
-          "10": 96.0
+          "3": 80.0,
+          "5": 92.0,
+          "6": 96.0,
+          "7": 100.0,
+          "10": 100.0
         }
       }
     },
@@ -72,54 +72,54 @@
     }
   },
   "carry_accuracy": {
-    "avg_error_yd": -0.1,
+    "avg_error_yd": -0.3,
     "avg_off_yd": 1.8,
     "typical_off_yd": 1.4,
-    "consistency_yd": 2.4,
-    "worst_off_yd": 11.3,
+    "consistency_yd": 2.3,
+    "worst_off_yd": 6.5,
     "within_pct_yd": {
       "1": 37.1,
-      "2": 68.6,
-      "3": 84.0,
-      "5": 96.0,
-      "7": 98.9,
-      "10": 99.4,
+      "2": 68.0,
+      "3": 82.9,
+      "5": 96.6,
+      "7": 100.0,
+      "10": 100.0,
       "15": 100.0,
       "20": 100.0
     }
   },
   "total_accuracy": {
-    "avg_error_yd": 1.3,
+    "avg_error_yd": 1.1,
     "avg_off_yd": 10.2,
-    "typical_off_yd": 8.7,
-    "consistency_yd": 12.5,
+    "typical_off_yd": 8.8,
+    "consistency_yd": 12.6,
     "worst_off_yd": 29.5,
     "within_pct_yd": {
-      "1": 6.9,
-      "2": 14.3,
-      "3": 21.1,
+      "1": 7.4,
+      "2": 14.9,
+      "3": 22.3,
       "5": 32.6,
-      "7": 41.7,
-      "10": 56.0,
+      "7": 41.1,
+      "10": 55.4,
       "15": 74.3,
       "20": 85.1
     }
   },
   "apex_accuracy": {
-    "avg_error_ft": -1.0,
-    "avg_off_ft": 3.3,
+    "avg_error_ft": -1.1,
+    "avg_off_ft": 3.4,
     "typical_off_ft": 2.7,
-    "consistency_ft": 4.8,
+    "consistency_ft": 4.9,
     "worst_off_ft": 26.0,
     "within_pct_ft": {
       "1": 32.0,
       "2": 41.1,
       "3": 57.7,
-      "5": 77.1,
-      "7": 87.4,
-      "10": 97.7,
-      "13": 98.3,
-      "15": 98.9,
+      "5": 76.6,
+      "7": 86.3,
+      "10": 97.1,
+      "13": 97.7,
+      "15": 98.3,
       "20": 98.9,
       "50": 100.0
     }
@@ -145,15 +145,15 @@
     "carry_115_150yd": {
       "shots": 49,
       "carry_accuracy": {
-        "avg_error_yd": 0.2,
-        "avg_off_yd": 1.8,
+        "avg_error_yd": 0.0,
+        "avg_off_yd": 1.9,
         "typical_off_yd": 1.7,
-        "consistency_yd": 2.2,
+        "consistency_yd": 2.4,
         "worst_off_yd": 5.8,
         "within_pct_yd": {
-          "1": 34.7,
-          "2": 65.3,
-          "3": 87.8,
+          "1": 32.7,
+          "2": 61.2,
+          "3": 81.6,
           "5": 93.9
         }
       }
@@ -161,17 +161,17 @@
     "carry_150_180yd": {
       "shots": 25,
       "carry_accuracy": {
-        "avg_error_yd": 1.1,
-        "avg_off_yd": 2.2,
-        "typical_off_yd": 1.1,
-        "consistency_yd": 3.4,
-        "worst_off_yd": 11.3,
+        "avg_error_yd": 0.3,
+        "avg_off_yd": 1.7,
+        "typical_off_yd": 1.0,
+        "consistency_yd": 2.4,
+        "worst_off_yd": 6.5,
         "within_pct_yd": {
-          "3": 76.0,
-          "5": 88.0,
-          "6": 92.0,
-          "7": 92.0,
-          "10": 96.0
+          "3": 80.0,
+          "5": 92.0,
+          "6": 96.0,
+          "7": 100.0,
+          "10": 100.0
         }
       }
     },
@@ -196,8 +196,8 @@
   "objectives": {
     "physics_only": {
       "shots": 175,
-      "within_3yd_pct": 84.0,
-      "residual_outliers_gt_window_target": 65
+      "within_3yd_pct": 82.9,
+      "residual_outliers_gt_window_target": 67
     },
     "short_shot_priority": {
       "shots": 87,
@@ -207,12 +207,12 @@
       "actual_within_3yd_pct": 83.9
     },
     "residual_regime_candidates": {
-      "count": 65,
+      "count": 67,
       "short_count": 57,
       "by_window": {
         "<115": 57,
-        "115-150": 6,
-        "150-180": 2,
+        "115-150": 9,
+        "150-180": 1,
         "180-200": 0,
         ">200": 0
       }
