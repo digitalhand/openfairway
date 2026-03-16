@@ -28,47 +28,46 @@ Always activate the venv before running Python tools. GDScript tools (`export_ph
 
 ## Quick Start
 
-### Run Everything (simulate + scrape + compare + diagnose)
+### Full Pipeline (Godot export + compare + diagnose + accuracy reports + iteration)
+
+`analyze` is the one-stop command. `run` is an alias for it.
 
 ```bash
 # All shots (standard + all shot sessions combined)
-python tools/shot_calibration/calibrate.py run
-
-# One session only (outputs stay in that session's directory)
-python tools/shot_calibration/calibrate.py run --session assets/data/shot_session_3
-
-# Optional: explicitly enable carry exception layer (diagnostic-only)
-python tools/shot_calibration/calibrate.py run --carry-exceptions assets/data/calibration/carry_exception_profile.json
-```
-
-### Analyze (compare + diagnose + accuracy reports)
-
-Use this when `physics.csv` and `flightscope.csv` already exist (e.g., you scraped FlightScope separately):
-
-```bash
-# All shots
 python tools/shot_calibration/calibrate.py analyze
 
-# One session
+# Skip Godot export (reuse existing physics.csv)
+python tools/shot_calibration/calibrate.py analyze --skip-godot
+
+# With a profile override
+python tools/shot_calibration/calibrate.py analyze --profile assets/data/calibration/calibration_profile.json
+
+# One session only (outputs stay in that session's directory)
 python tools/shot_calibration/calibrate.py analyze --session assets/data/shot_session_3
 
-# Rebuild FlightScope CSV from reference JSON before comparing
-python tools/shot_calibration/calibrate.py analyze --session assets/data/shot_session_3 --flightscope-export
+# Standard shots only (no sessions)
+python tools/shot_calibration/calibrate.py analyze --no-sessions
 
-# Compare with an explicit carry exception profile
+# Optional: explicitly enable carry exception layer (diagnostic-only)
 python tools/shot_calibration/calibrate.py analyze --carry-exceptions assets/data/calibration/carry_exception_profile.json
+
+# 'run' works exactly the same
+python tools/shot_calibration/calibrate.py run
+python tools/shot_calibration/calibrate.py run --skip-godot
 ```
 
 `run` and `analyze` default to raw physics comparison (no carry exception layer) unless you explicitly pass `--carry-exceptions`.
 
-The `analyze` command:
-1. Compares `physics.csv` vs `flightscope.csv` → `shot_diff_analysis.csv`
-2. Prints a diagnostic report
-3. Writes accuracy reports to `assets/data/`:
+The pipeline steps:
+1. Exports `physics.csv` via Godot headless (skip with `--skip-godot`)
+2. Builds merged FlightScope CSV (SoT + session references)
+3. Compares physics vs FlightScope → `shot_diff_analysis.csv`
+4. Prints a diagnostic report
+5. Writes accuracy reports to `assets/data/`:
    - `openfairway_accuracy_summary_<timestamp>.json` — carry + total + apex stats + carry window gates (`<115`, `115-150`, `150-180`, `>200`)
    - `openfairway_critical_carry_<timestamp>.csv` — top 20 worst shots by carry error
    - `openfairway_critical_overall_<timestamp>.csv` — top 20 worst shots by max(carry, total) error
-4. Saves an iteration snapshot to history
+6. Saves an iteration snapshot to history
 
 **Accuracy report field reference:**
 
@@ -100,14 +99,14 @@ python tools/shot_calibration/calibrate.py status
 ### Tuning Loop
 
 ```bash
-# 1. Run calibration
-python tools/shot_calibration/calibrate.py run
+# 1. Run full calibration pipeline
+python tools/shot_calibration/calibrate.py analyze
 
 # 2. Auto-generate a profile with suggested tweaks
 python tools/shot_calibration/generate_profile.py
 
 # 3. Re-run (picks up calibration_profile.json automatically)
-python tools/shot_calibration/calibrate.py run
+python tools/shot_calibration/calibrate.py analyze
 
 # 4. Compare before/after
 python tools/shot_calibration/calibrate.py diff 1 2

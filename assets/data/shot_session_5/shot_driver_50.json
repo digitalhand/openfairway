@@ -1,0 +1,15 @@
+{
+  "BallData": {
+    "Speed": 135.46240234375,
+    "SpinAxis": -6.440639019012451,
+    "TotalSpin": 2365.08447265625,
+    "BackSpin": 2350.157470703125,
+    "SideSpin": -265.3004455566406,
+    "HLA": -2.232011318206787,
+    "VLA": 4.17094612121582,
+    "CarryDistance": 0
+  },
+  "ShotDataOptions": {
+    "ContainsBallData": true
+  }
+}
