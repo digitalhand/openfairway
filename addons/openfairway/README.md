@@ -15,6 +15,7 @@ Realistic golf ball physics engine for Godot 4.5+ C# projects. Usable from both 
   - [BallPhysics](#ballphysics)
   - [PhysicsParams](#physicsparams)
   - [BounceResult](#bounceresult)
+  - [BounceCalculator](#bouncecalculator)
   - [Aerodynamics](#aerodynamics)
   - [Surface](#surface)
   - [PhysicsEnums](#physicsenums)
@@ -75,10 +76,10 @@ params.air_density = aero.get_air_density(0.0, 75.0, PhysicsEnums.Units.IMPERIAL
 params.air_viscosity = aero.get_dynamic_viscosity(75.0, PhysicsEnums.Units.IMPERIAL)
 params.drag_scale = 1.0
 params.lift_scale = 1.0
-params.surface_type = PhysicsEnums.SurfaceType.Fairway
+params.surface_type = PhysicsEnums.SurfaceType.FAIRWAY
 params.floor_normal = Vector3.UP
 
-var fairway = surface.get_params(PhysicsEnums.SurfaceType.Fairway)
+var fairway = surface.get_params(PhysicsEnums.SurfaceType.FAIRWAY)
 params.kinetic_friction = fairway["u_k"]
 params.rolling_friction = fairway["u_kr"]
 params.grass_viscosity = fairway["nu_g"]
@@ -180,7 +181,7 @@ Resolution order is most-specific to least-specific:
 3. `I-S1a`
 4. `I`
 
-Default regime overrides are baked into `BallPhysicsProfile.BuildDefaultRegimeOverrides()` (22 keys as of iteration 072). The `calibration_profile.json` is optional and only needed for experimental overrides during tuning.
+Default regime overrides are baked into `BallPhysicsProfile.BuildDefaultRegimeOverrides()` (32 keys as of iteration 099). The `calibration_profile.json` is optional and only needed for experimental overrides during tuning.
 
 Prefer specific regime keys (e.g. `D-S4-V1-P0`) over broad catch-alls (e.g. `D-S4-V1`) when sub-bins have opposite carry directions. Removing the `D-S4-V1` catch-all and replacing it with `D-S4-V1-P0`, `D-S4-V1-P1`, `D-S4-V1-P2` was necessary because P0 shots were short while P1/P2 were long.
 
@@ -330,7 +331,7 @@ params.kinetic_friction = 0.50
 params.rolling_friction = 0.050
 params.grass_viscosity = 0.0017
 params.critical_angle = 0.29
-params.surface_type = PhysicsEnums.SurfaceType.Fairway
+params.surface_type = PhysicsEnums.SurfaceType.FAIRWAY
 params.floor_normal = Vector3.UP
 params.rollout_impact_spin = 0.0
 params.spinback_response_scale = 0.78
@@ -360,6 +361,25 @@ var new_omega: Vector3 = result.new_omega
 var new_state: PhysicsEnums.BallState = result.new_state
 ```
 
+### BounceCalculator
+
+Standalone bounce physics, extracted from `BallPhysics`. Useful when you need bounce resolution without the full force/torque API.
+
+```gdscript
+var bc = BounceCalculator.new()
+
+var result: BounceResult = bc.calculate_bounce(vel, omega, normal, state, params)
+var cor: float = bc.get_coefficient_of_restitution(speed_normal)
+```
+
+Profile-aware overloads accept a `BounceProfile` for tunable COR curves and retention parameters:
+
+```gdscript
+var bp = BounceProfile.new()
+var result: BounceResult = bc.calculate_bounce(vel, omega, normal, state, params, bp)
+var cor: float = bc.get_coefficient_of_restitution(speed_normal, bp)
+```
+
 ### Aerodynamics
 
 Air density, viscosity, and drag/lift helpers.
@@ -380,7 +400,7 @@ Compatibility helper for GDScript consumers. Internally it forwards to `SurfaceP
 
 ```gdscript
 var surface = Surface.new()
-var p: Dictionary = surface.get_params(PhysicsEnums.SurfaceType.Green)
+var p: Dictionary = surface.get_params(PhysicsEnums.SurfaceType.GREEN)
 ```
 
 Returned dictionary keys:
@@ -400,29 +420,29 @@ Available surface types:
 
 | GDScript enum | Description |
 |---|---|
-| `PhysicsEnums.SurfaceType.Fairway` | Standard fairway baseline |
-| `PhysicsEnums.SurfaceType.FairwaySoft` | Softer fairway with more check and less rollout |
-| `PhysicsEnums.SurfaceType.Rough` | Higher friction and drag |
-| `PhysicsEnums.SurfaceType.Firm` | Lower friction and more forward release |
-| `PhysicsEnums.SurfaceType.Green` | Strongest spinback/check response |
+| `PhysicsEnums.SurfaceType.FAIRWAY` | Standard fairway baseline |
+| `PhysicsEnums.SurfaceType.FAIRWAY_SOFT` | Softer fairway with more check and less rollout |
+| `PhysicsEnums.SurfaceType.ROUGH` | Higher friction and drag |
+| `PhysicsEnums.SurfaceType.FIRM` | Lower friction and more forward release |
+| `PhysicsEnums.SurfaceType.GREEN` | Strongest spinback/check response |
 
 ### PhysicsEnums
 
 The addon ships `physics_enums.gd` so enums are always available in GDScript.
 
 ```gdscript
-PhysicsEnums.BallState.Rest
-PhysicsEnums.BallState.Flight
-PhysicsEnums.BallState.Rollout
+PhysicsEnums.BallState.REST
+PhysicsEnums.BallState.FLIGHT
+PhysicsEnums.BallState.ROLLOUT
 
-PhysicsEnums.Units.Metric
-PhysicsEnums.Units.Imperial
+PhysicsEnums.Units.METRIC
+PhysicsEnums.Units.IMPERIAL
 
-PhysicsEnums.SurfaceType.Fairway
-PhysicsEnums.SurfaceType.FairwaySoft
-PhysicsEnums.SurfaceType.Rough
-PhysicsEnums.SurfaceType.Firm
-PhysicsEnums.SurfaceType.Green
+PhysicsEnums.SurfaceType.FAIRWAY
+PhysicsEnums.SurfaceType.FAIRWAY_SOFT
+PhysicsEnums.SurfaceType.ROUGH
+PhysicsEnums.SurfaceType.FIRM
+PhysicsEnums.SurfaceType.GREEN
 ```
 
 ### ShotSetup
@@ -461,6 +481,14 @@ var result_green: Dictionary = adapter.simulate_shot_from_json(
     PhysicsEnums.SurfaceType.Green,
     Vector3.UP
 )
+```
+
+Carry-only variants run the flight loop only (no bounce or rollout), useful for rapid calibration:
+
+```gdscript
+var carry_result: Dictionary = adapter.simulate_carry_only_from_json(shot_dict)
+var carry_profile: Dictionary = adapter.simulate_carry_only_with_profile(shot_dict, profile)
+var carry_flight: Dictionary = adapter.simulate_carry_only(shot_dict, flight_profile)
 ```
 
 Returned keys include:
@@ -579,13 +607,13 @@ Source: [`assets/diagrams/landing-surface-sequence.puml`](assets/diagrams/landin
 
 `SurfacePhysicsCatalog` is the single source of truth for the built-in surfaces:
 
-| Surface | `u_k` | `u_kr` | `theta_c` rad | `spin_scale` | `theta_boost` rad |
-|---|---:|---:|---:|---:|---:|
-| Fairway | 0.50 | 0.050 | 0.29 | 0.78 | 0.00 |
-| FairwaySoft | 0.56 | 0.070 | 0.32 | 0.92 | 0.00 |
-| Rough | 0.62 | 0.095 | 0.35 | 0.70 | 0.00 |
-| Firm | 0.30 | 0.030 | 0.25 | 0.60 | 0.00 |
-| Green | 0.58 | 0.028 | 0.36 | 1.12 | 0.12 |
+| Surface | `u_k` | `u_kr` | `nu_g` | `theta_c` rad | `spin_scale` | `theta_boost` rad |
+|---|---:|---:|---:|---:|---:|---:|
+| Fairway | 0.50 | 0.050 | 0.0017 | 0.29 | 0.78 | 0.00 |
+| FairwaySoft | 0.56 | 0.070 | 0.0024 | 0.32 | 0.92 | 0.00 |
+| Rough | 0.62 | 0.095 | 0.0032 | 0.35 | 0.70 | 0.00 |
+| Firm | 0.30 | 0.030 | 0.0010 | 0.25 | 0.60 | 0.00 |
+| Green | 0.58 | 0.028 | 0.0009 | 0.36 | 1.12 | 0.12 |
 
 Green also enables a spinback ramp:
 
@@ -599,6 +627,40 @@ Tune these files when behavior changes:
 - `addons/openfairway/physics/SurfacePhysicsCatalog.cs` for per-surface values
 - `addons/openfairway/physics/BallPhysics.cs` for shared formulas and physical constants
 - `addons/openfairway/physics/BallPhysicsProfile.cs` for ball-specific modifiers
+
+## GDScript Interop: Drift Risks and Migration Notes
+
+### Enum naming convention
+
+C# enums use PascalCase (`SurfaceType.Fairway`); GDScript mirrors in `physics_enums.gd` use UPPER_SNAKE_CASE (`SurfaceType.FAIRWAY`). The integer values match, but names differ:
+
+| C# (`PhysicsEnums.cs`) | GDScript (`physics_enums.gd`) |
+|---|---|
+| `BallState.Rest` | `BallState.REST` |
+| `BallState.Flight` | `BallState.FLIGHT` |
+| `BallState.Rollout` | `BallState.ROLLOUT` |
+| `Units.Metric` | `Units.METRIC` |
+| `Units.Imperial` | `Units.IMPERIAL` |
+| `SurfaceType.Fairway` | `SurfaceType.FAIRWAY` |
+| `SurfaceType.FairwaySoft` | `SurfaceType.FAIRWAY_SOFT` |
+| `SurfaceType.Rough` | `SurfaceType.ROUGH` |
+| `SurfaceType.Firm` | `SurfaceType.FIRM` |
+| `SurfaceType.Green` | `SurfaceType.GREEN` |
+
+When adding new enum values to `PhysicsEnums.cs`, update `physics_enums.gd` to match. Integer values must stay aligned across both files.
+
+### `.tres` file compatibility
+
+`PhysicsParams` extends `Resource` and can be saved as `.tres`. Property renames or removals in C# will silently break saved `.tres` files — Godot loads them without error but the renamed properties revert to defaults. After renaming or removing a `PhysicsParams` property, re-export any `.tres` files that reference it.
+
+### New API additions (iter 099)
+
+- `BounceCalculator` — standalone bounce resolution with profile-aware overloads (see [BounceCalculator](#bouncecalculator))
+- `SimulateCarryOnlyFromJson`, `SimulateCarryOnlyWithProfile`, `SimulateCarryOnly` — flight-only simulation variants on `PhysicsAdapter` (see [PhysicsAdapter](#physicsadapter))
+
+### Surface type additions
+
+`Green` was added after the initial release. GDScript consumers should include a default/fallback branch when switching on `SurfaceType`. `SurfacePhysicsCatalog.Get()` falls back to Fairway for any unrecognized surface type.
 
 ## Diagrams
 
