@@ -30,7 +30,7 @@ from selenium.webdriver.support import expected_conditions as EC
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 OUTPUT_DIR = REPO_ROOT / "tools" / "shot_calibration"
-URL = "https://trajectory.flightscope.com/"
+URL = os.environ.get("GOLF_SOURCE_URL", "")
 
 # Driver test shot -- typical driver launch
 TEST_SHOT = {

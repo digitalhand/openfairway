@@ -43,3 +43,7 @@ AGENTS.md
 
 __pycache__/
 debug_runs/
+
+# Calibration debug artifacts
+tools/shot_calibration/debug_fs.html
+tools/shot_calibration/debug_fs.png

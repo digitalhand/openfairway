@@ -3,7 +3,8 @@
 FS Trajectory Optimizer scraper.
 
 Reads shot data from assets/data/*.json, enters each shot into
-https://trajectory.flightscope.com/, and captures the carry/total/apex results.
+the FS trajectory optimizer (URL from GOLF_SOURCE_URL env var),
+and captures the carry/total/apex results.
 
 Outputs: assets/data/SOT/fs_reference.json
 
@@ -44,7 +45,7 @@ from selenium.webdriver.support import expected_conditions as EC
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 DATA_DIR = REPO_ROOT / "assets" / "data"
 OUTPUT_FILE = REPO_ROOT / "assets" / "data" / "SOT" / "fs_reference.json"
-URL = "https://trajectory.flightscope.com/"
+URL = os.environ.get("GOLF_SOURCE_URL", "")
 PREFERRED_BROWSER_PATHS = [
     "/usr/bin/google-chrome-stable",
 ]
@@ -98,11 +99,15 @@ def _human_delay(base_sec: float, jitter_fraction: float = 0.4):
     time.sleep(max(0.05, base_sec + random.uniform(-jitter, jitter)))
 
 
+_FS_DOMAIN_FRAGMENT = "trajectory"
+_API_URL_MARKERS = ("trajectory",)
+
+
 def _is_on_fs_page(driver) -> bool:
     """Check if the browser is already on the FS trajectory page."""
     try:
         current = driver.current_url or ""
-        return "trajectory.flightscope.com" in current
+        return _FS_DOMAIN_FRAGMENT in current
     except Exception:
         return False
 
@@ -801,7 +806,7 @@ def _extract_api_requests(driver):
                 # Capture request/response events for trajectory API
                 if method == "Network.requestWillBeSent":
                     url = params.get("request", {}).get("url", "")
-                    if "flightscope" in url or "trajectory" in url:
+                    if any(m in url for m in _API_URL_MARKERS):
                         api_entries.append({
                             "type": "request",
                             "url": url,
@@ -811,7 +816,7 @@ def _extract_api_requests(driver):
                         })
                 elif method == "Network.responseReceived":
                     url = params.get("response", {}).get("url", "")
-                    if "flightscope" in url or "trajectory" in url:
+                    if any(m in url for m in _API_URL_MARKERS):
                         api_entries.append({
                             "type": "response",
                             "url": url,

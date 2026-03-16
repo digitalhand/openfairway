@@ -179,7 +179,7 @@ assets/data/
 
 ## FS Scraper
 
-Scrapes [FS Trajectory Optimizer](https://trajectory.flightscope.com/) to get reference carry/total/apex values. If interrupted, re-running the same command picks up where it left off.
+Scrapes data to get reference carry/total/apex values. Set `GOLF_SOURCE_URL` env var to override the default source. If interrupted, re-running the same command picks up where it left off.
 
 ```bash
 # Scrape a session (visible browser recommended)
@@ -207,7 +207,7 @@ The scraper uses `undetected-chromedriver` with a browser profile saved at `~/.c
 google-chrome --incognito --remote-debugging-port=9222 --user-data-dir=~/.config/openfairway/scraper-profile
 ```
 
-Open https://trajectory.flightscope.com/ manually the first time so reCAPTCHA sees a real user.
+Open the FS Trajectory Optimizer manually the first time so reCAPTCHA sees a real user.
 
 **Terminal 2** — Run the scraper against that browser:
 
