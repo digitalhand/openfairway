@@ -1,20 +1,27 @@
 @startuml
-title Short-Shot-First Calibration with Carry Exception Layer
+title Calibration Analyze Flow (LM / FS / GSP)
 
 actor Engineer
-participant "Core Physics Profile\n(calibration_profile.json)" as Core
-participant "Physics Export\n(export_physics_csv.gd)" as Export
+participant "LM Shot Inputs\nassets/data/*.json + shot_session_*" as LM
+participant "Calibrator\ncalibrate.py analyze" as Cal
+participant "Physics Export\nexport_physics_csv.gd" as Export
+participant "FS Sources\nfs_SoT.csv + session fs_reference.json" as FS
+participant "GSP Source\ngsp_SoT.csv (optional)" as GSP
 participant "Comparator\n(compare_csv.py)" as Compare
-participant "Carry Exception Layer\n(carry_exception_profile.json)" as CarryX
-participant "Analyzer\n(calibration_analyzer.py)" as Analyzer
+participant "Carry Exception Layer\ncarry_exception_profile.json (optional)" as CarryX
+participant "Reports\nshot_diff_analysis.csv + history/iteration_*.json" as Reports
 
-Engineer -> Core: Tune flight parameters
-Engineer -> Export: Run export
-Export -> Compare: physics.csv
-Compare -> Compare: Join with flightscope.csv
-Compare -> CarryX: Optional apply to top-N carry outliers
+Engineer -> Cal: Run analyze [--gsp]
+Cal -> LM: Load LM shot files
+Cal -> Export: Export physics.csv
+Export --> Cal: physics.csv
+Cal -> FS: Build merged fs.csv
+Cal -> GSP: Build gsp.csv (if --gsp)
+Cal -> Compare: Compare physics vs fs (+ gsp optional)
+Compare -> CarryX: Apply optional carry exceptions
 CarryX --> Compare: corrected carry + metadata
-Compare -> Analyzer: shot_diff_analysis.csv
-Analyzer --> Engineer: short (<115 yd) and long (>200 yd) error metrics
+Compare --> Cal: shot_diff_analysis.csv
+Cal -> Reports: Write critical reports + iteration snapshot
+Reports --> Engineer: Review diff_carry_yd and diff_gsp_* fields
 
 @enduml

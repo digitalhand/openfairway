@@ -2,7 +2,7 @@
 
 The worlds first open source golf physics library. Realistic golf ball physics engine for Godot 4. Provides force, torque, bounce, and surface interaction calculations usable from both C# and GDScript. 
 
-- Latest release **v1.0.5** data compared to FlightScope and GSPro. See data results here: [Shot Data]
+- Latest release **v1.0.5** data compared to FS and GSP reference sources. See data results here: [Shot Data]
 - Fast iteration tooling using godot console to calculate physics tuning against source of truth. 
 - (https://github.com/digitalhand/openfairway/tree/main/assets/data/calibration/history) 
 
@@ -288,13 +288,13 @@ Run the headless benchmark suite and produce a carry/total/rollout table for the
 godot --headless --script run_benchmarks.gd
 ```
 
-For carry work, also run the Godot-backed Garmin carry-window suite:
+For carry work, also run the Godot-backed LM carry-window suite:
 
 ```bash
-dotnet test --filter "Category=GarminCarryWindow"
+dotnet test --filter "Category=LmCarryWindow"
 ```
 
-Use the benchmark script for broad flight/rollout trend checking and the Garmin suite for carry-window regression. See [`tests/PhysicsTests/README.md`](/home/jesher/Code/Github/digitalhand/openfairway/tests/PhysicsTests/README.md) for the full workflow and expected diagnostics.
+Use the benchmark script for broad flight/rollout trend checking and the LM suite for carry-window regression. See [`tests/PhysicsTests/README.md`](/home/jesher/Code/Github/digitalhand/openfairway/tests/PhysicsTests/README.md) for the full workflow and expected diagnostics.
 
 ## Calibration Workflow
 

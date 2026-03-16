@@ -137,7 +137,7 @@ def load_profile(path):
     return profile
 
 
-def _clamp_offset(offset, flightscope_carry, caps, window_max_abs=None):
+def _clamp_offset(offset, ref_carry, caps, window_max_abs=None):
     if offset is None:
         return None
 
@@ -147,11 +147,11 @@ def _clamp_offset(offset, flightscope_carry, caps, window_max_abs=None):
     long_max = _parse_float(caps.get("long_max_abs_yd"))
 
     clamped = offset
-    if flightscope_carry is None:
+    if ref_carry is None:
         return _clamp_abs(clamped, window_max_abs)
-    if short_lt is not None and flightscope_carry < short_lt:
+    if short_lt is not None and ref_carry < short_lt:
         clamped = _clamp_abs(clamped, short_max)
-    elif long_gt is not None and flightscope_carry > long_gt:
+    elif long_gt is not None and ref_carry > long_gt:
         clamped = _clamp_abs(clamped, long_max)
 
     return _clamp_abs(clamped, window_max_abs)
@@ -279,7 +279,7 @@ def apply_carry_exceptions(rows, profile, classify_status):
         source = "shot" if shot_offset is not None else ("regime" if regime_offset is not None else "")
         diff_carry = _parse_float(row.get("diff_carry_yd"))
         p_carry = _parse_float(row.get("physics_carry_yd"))
-        f_carry = _parse_float(row.get("flightscope_carry_yd"))
+        f_carry = _parse_float(row.get("fs_carry_yd"))
         if base_offset is None or diff_carry is None or p_carry is None or f_carry is None:
             continue
         is_short = short_lt is not None and f_carry < short_lt
@@ -328,9 +328,9 @@ def apply_carry_exceptions(rows, profile, classify_status):
         offset = selected_payload[0]
         source = selected_payload[1]
         p_carry = _parse_float(row.get("physics_carry_raw_yd"))
-        f_carry = _parse_float(row.get("flightscope_carry_yd"))
+        f_carry = _parse_float(row.get("fs_carry_yd"))
         p_total = _parse_float(row.get("physics_total_yd"))
-        f_total = _parse_float(row.get("flightscope_total_yd"))
+        f_total = _parse_float(row.get("fs_total_yd"))
 
         if offset is None or p_carry is None or f_carry is None:
             continue
@@ -350,7 +350,7 @@ def apply_carry_exceptions(rows, profile, classify_status):
             diff_total = p_total - f_total
 
             row["rollout_physics_yd"] = _fmt_decimal(p_rollout, 1)
-            row["rollout_flightscope_yd"] = _fmt_decimal(f_rollout, 1)
+            row["rollout_fs_yd"] = _fmt_decimal(f_rollout, 1)
             row["diff_rollout_yd"] = _fmt_decimal(diff_rollout, 1)
             row["diff_total_yd"] = _fmt_decimal(diff_total, 1)
             row["status"] = classify_status(diff_carry, diff_total)

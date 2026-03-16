@@ -1,6 +1,6 @@
 # Shot Calibration Tools
 
-Compare OpenFairway physics output against FlightScope reference data, find where shots are off, and tune physics parameters to close the gap.
+Compare OpenFairway physics output against FS reference data, find where shots are off, and tune physics parameters to close the gap.
 
 ## Table of Contents
 
@@ -8,7 +8,7 @@ Compare OpenFairway physics output against FlightScope reference data, find wher
 - [Quick Start](#quick-start)
 - [Carry Exception Layer (Regime + Windows)](#carry-exception-layer-regime--windows)
 - [Directory Layout](#directory-layout)
-- [FlightScope Scraper](#flightscope-scraper)
+- [FS Scraper](#fs-scraper)
 - [Profile Override System](#profile-override-system)
 - [Diagnostic Report](#diagnostic-report)
 - [Tool Reference](#tool-reference)
@@ -60,8 +60,8 @@ python tools/shot_calibration/calibrate.py run --skip-godot
 
 The pipeline steps:
 1. Exports `physics.csv` via Godot headless (skip with `--skip-godot`)
-2. Builds merged FlightScope CSV (SoT + session references)
-3. Compares physics vs FlightScope → `shot_diff_analysis.csv`
+2. Builds merged FS CSV (SoT + session references)
+3. Compares physics vs FS → `shot_diff_analysis.csv`
 4. Prints a diagnostic report
 5. Writes accuracy reports to `assets/data/`:
    - `openfairway_accuracy_summary_<timestamp>.json` — carry + total + apex stats + carry window gates (`<115`, `115-150`, `150-180`, `>200`)
@@ -155,20 +155,20 @@ The layer supports:
 assets/data/
 ├── *.json                          # Shot input files (from launch monitors)
 ├── SOT/
-│   ├── flightscope_SoT.csv        # FlightScope reference CSV (standard shots)
-│   └── flightscope_reference.json  # FlightScope reference data
+│   ├── fs_SoT.csv        # FS reference CSV (standard shots)
+│   └── fs_reference.json  # FS reference data
 ├── openfairway_*_<timestamp>.*     # Accuracy reports (from analyze)
 ├── shot_session_N/                 # Session directories (from ShotRecordingService)
 │   ├── shot_*.json                 # Recorded shot files
 │   ├── physics.csv                 # Physics simulation output
-│   ├── flightscope_reference.json  # FlightScope reference (from scraper)
-│   ├── flightscope.csv             # FlightScope reference CSV
-│   ├── shot_diff_analysis.csv      # Physics vs FlightScope diff
+│   ├── fs_reference.json  # FS reference (from scraper)
+│   ├── fs.csv             # FS reference CSV
+│   ├── shot_diff_analysis.csv      # Physics vs FS diff
 │   └── history/                    # Iteration history for this session
 │       └── iteration_001.json
 └── calibration/
     ├── physics.csv                 # Combined physics output (all shots)
-    ├── flightscope.csv             # Combined FlightScope reference (all shots)
+    ├── fs.csv             # Combined FS reference (all shots)
     ├── shot_diff_analysis.csv      # Combined diff (all shots)
     ├── calibration_profile.json    # Current profile override (optional)
     ├── carry_exception_profile.json # Carry correction profile (optional)
@@ -177,22 +177,22 @@ assets/data/
         └── ...
 ```
 
-## FlightScope Scraper
+## FS Scraper
 
-Scrapes [FlightScope Trajectory Optimizer](https://trajectory.flightscope.com/) to get reference carry/total/apex values. If interrupted, re-running the same command picks up where it left off.
+Scrapes data to get reference carry/total/apex values. Set `GOLF_SOURCE_URL` env var to override the default source. If interrupted, re-running the same command picks up where it left off.
 
 ```bash
 # Scrape a session (visible browser recommended)
-python tools/shot_calibration/flightscope_scraper.py --session assets/data/shot_session_3 --visible
+python tools/shot_calibration/fs_scraper.py --session assets/data/shot_session_3 --visible
 
 # Scrape standard shots
-python tools/shot_calibration/flightscope_scraper.py --visible
+python tools/shot_calibration/fs_scraper.py --visible
 
 # Retry shots that failed last time
-python tools/shot_calibration/flightscope_scraper.py --session assets/data/shot_session_3 --retry-failed
+python tools/shot_calibration/fs_scraper.py --session assets/data/shot_session_3 --retry-failed
 
 # Start over from scratch
-python tools/shot_calibration/flightscope_scraper.py --session assets/data/shot_session_3 --visible --force
+python tools/shot_calibration/fs_scraper.py --session assets/data/shot_session_3 --visible --force
 ```
 
 Requires Chrome or Brave in your `PATH`.
@@ -207,12 +207,12 @@ The scraper uses `undetected-chromedriver` with a browser profile saved at `~/.c
 google-chrome --incognito --remote-debugging-port=9222 --user-data-dir=~/.config/openfairway/scraper-profile
 ```
 
-Open https://trajectory.flightscope.com/ manually the first time so reCAPTCHA sees a real user.
+Open the FS Trajectory Optimizer manually the first time so reCAPTCHA sees a real user.
 
 **Terminal 2** — Run the scraper against that browser:
 
 ```bash
-python tools/shot_calibration/flightscope_scraper.py --session assets/data/shot_session_3 --debug-port 9222
+python tools/shot_calibration/fs_scraper.py --session assets/data/shot_session_3 --debug-port 9222
 ```
 
 The browser stays open when scraping finishes — you can scrape more sessions without restarting it. Use `brave-browser` instead of `google-chrome` if using Brave.
@@ -357,16 +357,16 @@ When different failing shots need opposite adjustments to the same parameter, it
 | `export_physics_csv.gd` | Simulate all shots, write CSV | Godot |
 | `export_physics_json.gd` | Simulate all shots, write JSON | Godot |
 | `physics_export_data.gd` | Shared helper for shot discovery | (not run directly) |
-| `export_flightscope_csv.py` | Export FlightScope reference as CSV | Python |
-| `compare_csv.py` | Diff physics vs FlightScope (raw by default; optional carry exception layer when explicitly enabled) → `shot_diff_analysis.csv` | Python |
+| `export_fs_csv.py` | Export FS reference as CSV | Python |
+| `compare_csv.py` | Diff physics vs FS (raw by default; optional carry exception layer when explicitly enabled) → `shot_diff_analysis.csv` | Python |
 | `calibration_analyzer.py` | Generate diagnostic report from diff CSV | Python |
 | `generate_profile.py` | Build profile override JSON from diagnostics | Python |
-| `flightscope_scraper.py` | Scrape FlightScope trajectory optimizer | Python + Chrome/Brave |
-| `flightscope_discover.py` | Debug helper for FlightScope page | Python + Chrome/Brave |
+| `fs_scraper.py` | Scrape FS trajectory optimizer | Python + Chrome/Brave |
+| `fs_discover.py` | Debug helper for FS page | Python + Chrome/Brave |
 
 ## Shot Data Format
 
-Shot files use the BallData format from launch monitors (R10, Garmin, etc.):
+Shot files use the BallData format from launch monitors (R10, LM, etc.):
 
 ```json
 {
@@ -405,17 +405,17 @@ Shot files use the BallData format from launch monitors (R10, Garmin, etc.):
 | `total_spin_rpm` | Total spin in RPM |
 | `spin_axis_deg` | Spin axis in degrees |
 | `physics_carry_yd` | Physics carry distance (yards) |
-| `flightscope_carry_yd` | FlightScope carry distance (yards) |
-| `diff_carry_yd` | Carry delta (physics - flightscope) |
+| `fs_carry_yd` | FS carry distance (yards) |
+| `diff_carry_yd` | Carry delta (physics - reference) |
 | `physics_total_yd` | Physics total distance (yards) |
-| `flightscope_total_yd` | FlightScope total distance (yards) |
-| `diff_total_yd` | Total delta (physics - flightscope) |
+| `fs_total_yd` | FS total distance (yards) |
+| `diff_total_yd` | Total delta (physics - reference) |
 | `rollout_physics_yd` | Physics rollout (total - carry) |
-| `rollout_flightscope_yd` | FlightScope rollout (total - carry) |
-| `diff_rollout_yd` | Rollout delta (physics - flightscope) |
+| `rollout_fs_yd` | FS rollout (total - carry) |
+| `diff_rollout_yd` | Rollout delta (physics - reference) |
 | `physics_apex_ft` | Physics peak height (feet) |
-| `flightscope_apex_ft` | FlightScope peak height (feet) |
-| `diff_apex_ft` | Apex delta (physics - flightscope) |
+| `fs_apex_ft` | FS peak height (feet) |
+| `diff_apex_ft` | Apex delta (physics - reference) |
 | `physics_carry_raw_yd` | Raw physics carry before exception correction |
 | `diff_carry_raw_yd` | Raw carry delta before exception correction |
 | `carry_exception_regime` | Regime key used to look up carry correction |

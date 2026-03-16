@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://c8hmov08l2m0j"
+
+[deps]
+
+files=["res://assets/data/SOT/fs_SoT.filename.translation", "res://assets/data/SOT/fs_SoT.speed.translation", "res://assets/data/SOT/fs_SoT.vla.translation", "res://assets/data/SOT/fs_SoT.hla.translation", "res://assets/data/SOT/fs_SoT.total.translation", "res://assets/data/SOT/fs_SoT.spin.translation", "res://assets/data/SOT/fs_SoT.backspin.translation", "res://assets/data/SOT/fs_SoT.sidespin.translation", "res://assets/data/SOT/fs_SoT.carry.translation", "res://assets/data/SOT/fs_SoT.total.translation", "res://assets/data/SOT/fs_SoT.rollout.translation", "res://assets/data/SOT/fs_SoT.apex.translation"]
+
+source_file="res://assets/data/SOT/fs_SoT.csv"
+dest_files=["res://assets/data/SOT/fs_SoT.filename.translation", "res://assets/data/SOT/fs_SoT.speed.translation", "res://assets/data/SOT/fs_SoT.vla.translation", "res://assets/data/SOT/fs_SoT.hla.translation", "res://assets/data/SOT/fs_SoT.total.translation", "res://assets/data/SOT/fs_SoT.spin.translation", "res://assets/data/SOT/fs_SoT.backspin.translation", "res://assets/data/SOT/fs_SoT.sidespin.translation", "res://assets/data/SOT/fs_SoT.carry.translation", "res://assets/data/SOT/fs_SoT.total.translation", "res://assets/data/SOT/fs_SoT.rollout.translation", "res://assets/data/SOT/fs_SoT.apex.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

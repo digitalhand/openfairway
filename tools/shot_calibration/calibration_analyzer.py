@@ -297,16 +297,16 @@ def load_diff_csv(path):
                 "total_spin_rpm": parse_float(row.get("total_spin_rpm")),
                 "spin_axis_deg": parse_float(row.get("spin_axis_deg")),
                 "physics_carry_yd": parse_float(row.get("physics_carry_yd")),
-                "flightscope_carry_yd": parse_float(row.get("flightscope_carry_yd")),
+                "fs_carry_yd": parse_float(row.get("fs_carry_yd")),
                 "diff_carry_yd": parse_float(row.get("diff_carry_yd")),
                 "physics_total_yd": parse_float(row.get("physics_total_yd")),
-                "flightscope_total_yd": parse_float(row.get("flightscope_total_yd")),
+                "fs_total_yd": parse_float(row.get("fs_total_yd")),
                 "diff_total_yd": parse_float(row.get("diff_total_yd")),
                 "physics_apex_ft": parse_float(row.get("physics_apex_ft")),
-                "flightscope_apex_ft": parse_float(row.get("flightscope_apex_ft")),
+                "fs_apex_ft": parse_float(row.get("fs_apex_ft")),
                 "diff_apex_ft": parse_float(row.get("diff_apex_ft")),
                 "rollout_physics_yd": parse_float(row.get("rollout_physics_yd")),
-                "rollout_flightscope_yd": parse_float(row.get("rollout_flightscope_yd")),
+                "rollout_fs_yd": parse_float(row.get("rollout_fs_yd")),
                 "diff_rollout_yd": parse_float(row.get("diff_rollout_yd")),
             }
             if parsed["shot_name"]:
@@ -374,8 +374,8 @@ def compute_rollout_diff(row):
         return row["diff_rollout_yd"]
     p_carry = row["physics_carry_yd"]
     p_total = row["physics_total_yd"]
-    f_carry = row["flightscope_carry_yd"]
-    f_total = row["flightscope_total_yd"]
+    f_carry = row["fs_carry_yd"]
+    f_total = row["fs_total_yd"]
     if all(v is not None for v in [p_carry, p_total, f_carry, f_total]):
         p_rollout = p_total - p_carry
         f_rollout = f_total - f_carry

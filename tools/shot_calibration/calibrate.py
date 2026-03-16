@@ -2,7 +2,7 @@
 """Orchestrator for the iterative physics calibration pipeline.
 
 Primary command is `analyze`, which runs the full pipeline: Godot export,
-FlightScope merge, compare, diagnose, accuracy reports, and iteration save.
+FS reference merge, compare, diagnose, accuracy reports, and iteration save.
 
 Usage:
     # Full pipeline (Godot export + compare + diagnose + accuracy reports + iteration)
@@ -37,8 +37,10 @@ DATA_DIR = os.path.join(PROJECT_ROOT, "assets", "data")
 CALIBRATION_DIR = os.path.join(DATA_DIR, "calibration")
 HISTORY_DIR = os.path.join(CALIBRATION_DIR, "history")
 PHYSICS_CSV = os.path.join(CALIBRATION_DIR, "physics.csv")
-FLIGHTSCOPE_CSV = os.path.join(CALIBRATION_DIR, "flightscope.csv")
-SOT_CSV = os.path.join(DATA_DIR, "SOT", "flightscope_SoT.csv")
+FS_CSV = os.path.join(CALIBRATION_DIR, "fs.csv")
+SOT_CSV = os.path.join(DATA_DIR, "SOT", "fs_SoT.csv")
+GSP_CSV = os.path.join(CALIBRATION_DIR, "gsp.csv")
+GSP_SOT_CSV = os.path.join(DATA_DIR, "SOT", "gsp_SoT.csv")
 DIFF_CSV = os.path.join(CALIBRATION_DIR, "shot_diff_analysis.csv")
 DEFAULT_PROFILE = os.path.join(CALIBRATION_DIR, "calibration_profile.json")
 
@@ -73,16 +75,16 @@ def build_dirs_spec(session_dirs):
 
 
 def load_session_reference(session_dir):
-    """Load flightscope_reference.json from a session directory. Returns dict keyed by shot key."""
-    ref_path = os.path.join(session_dir, "flightscope_reference.json")
+    """Load fs_reference.json from a session directory. Returns dict keyed by shot key."""
+    ref_path = os.path.join(session_dir, "fs_reference.json")
     if not os.path.exists(ref_path):
         return {}
     with open(ref_path, "r") as f:
         return json.load(f)
 
 
-def build_merged_flightscope_csv(sot_csv, session_dirs, output_path):
-    """Merge SoT CSV rows with session flightscope_reference.json entries into a combined CSV.
+def build_merged_fs_csv(sot_csv, session_dirs, output_path):
+    """Merge SoT CSV rows with session fs_reference.json entries into a combined CSV.
 
     Session shots get prefixed names (e.g., s2_shot_10). BackSpin/SideSpin are read from
     the shot JSON files since the reference JSON doesn't contain them.
@@ -102,6 +104,10 @@ def build_merged_flightscope_csv(sot_csv, session_dirs, output_path):
         prefix = session_prefix(sd)
 
         for shot_key, entry in sorted(ref_data.items()):
+            # Skip placeholder entries without reference carry data
+            if entry.get("carry_yd", 0) == 0 or entry.get("_status") == "pending":
+                continue
+
             fname = entry.get("filename", f"{shot_key}.json")
             shot_path = os.path.join(sd, fname)
 
@@ -140,6 +146,26 @@ def build_merged_flightscope_csv(sot_csv, session_dirs, output_path):
     fieldnames = ["shot_name", "filename", "speed_mph", "vla_deg", "hla_deg",
                   "total_spin_rpm", "spin_axis_deg", "backspin_rpm", "sidespin_rpm",
                   "carry_yd", "total_yd", "rollout_yd", "apex_ft"]
+    with open(output_path, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
+        writer.writeheader()
+        for row in rows:
+            writer.writerow(row)
+
+    return rows
+
+
+def build_merged_gsp_csv(gsp_sot_csv, output_path):
+    """Build GSP reference CSV from the GSP SoT file (carry, total, apex only)."""
+    rows = []
+    if os.path.exists(gsp_sot_csv):
+        with open(gsp_sot_csv, "r") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                rows.append(row)
+
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    fieldnames = ["shot_name", "filename", "carry_yd", "total_yd", "apex_ft"]
     with open(output_path, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
         writer.writeheader()
@@ -407,9 +433,9 @@ def _summarize_baseline_comparison(ref_rows, baseline_path):
 
         prev_abs = abs(_get_numeric(baseline_row, "diff_carry_raw_yd", "diff_carry_yd") or 0.0)
         curr_abs = abs(_get_numeric(current_row, "diff_carry_raw_yd", "diff_carry_yd") or 0.0)
-        carry_yd = _get_numeric(current_row, "flightscope_carry_yd")
+        carry_yd = _get_numeric(current_row, "fs_carry_yd")
         if carry_yd is None:
-            carry_yd = _get_numeric(baseline_row, "flightscope_carry_yd")
+            carry_yd = _get_numeric(baseline_row, "fs_carry_yd")
         target_abs = _window_target_abs_yd(carry_yd)
 
         if curr_abs < prev_abs - 0.05:
@@ -456,11 +482,11 @@ def _generate_accuracy_reports(diff_csv, output_dir, top_n=20, critical_baseline
         reader = csv.DictReader(f)
         all_rows = list(reader)
 
-    # Filter to shots with reference data (non-zero flightscope carry or total)
+    # Filter to shots with reference data (non-zero FS carry or total)
     ref_rows = [
         r for r in all_rows
-        if float(r.get("flightscope_carry_yd", 0) or 0) > 0
-        or float(r.get("flightscope_total_yd", 0) or 0) > 0
+        if float(r.get("fs_carry_yd", 0) or 0) > 0
+        or float(r.get("fs_total_yd", 0) or 0) > 0
     ]
 
     carry_diffs = [_get_numeric(r, "diff_carry_yd") for r in ref_rows]
@@ -472,25 +498,25 @@ def _generate_accuracy_reports(diff_csv, output_dir, top_n=20, critical_baseline
 
     short_rows = [
         r for r in ref_rows
-        if _safe_float(r.get("flightscope_carry_yd")) is not None
-        and _safe_float(r.get("flightscope_carry_yd")) < 115.0
+        if _safe_float(r.get("fs_carry_yd")) is not None
+        and _safe_float(r.get("fs_carry_yd")) < 115.0
     ]
     mid_115_150_rows = [
         r for r in ref_rows
-        if _safe_float(r.get("flightscope_carry_yd")) is not None
-        and _safe_float(r.get("flightscope_carry_yd")) > 115.0
-        and _safe_float(r.get("flightscope_carry_yd")) <= 150.0
+        if _safe_float(r.get("fs_carry_yd")) is not None
+        and _safe_float(r.get("fs_carry_yd")) > 115.0
+        and _safe_float(r.get("fs_carry_yd")) <= 150.0
     ]
     mid_150_180_rows = [
         r for r in ref_rows
-        if _safe_float(r.get("flightscope_carry_yd")) is not None
-        and _safe_float(r.get("flightscope_carry_yd")) > 150.0
-        and _safe_float(r.get("flightscope_carry_yd")) <= 180.0
+        if _safe_float(r.get("fs_carry_yd")) is not None
+        and _safe_float(r.get("fs_carry_yd")) > 150.0
+        and _safe_float(r.get("fs_carry_yd")) <= 180.0
     ]
     long_rows = [
         r for r in ref_rows
-        if _safe_float(r.get("flightscope_carry_yd")) is not None
-        and _safe_float(r.get("flightscope_carry_yd")) > 200.0
+        if _safe_float(r.get("fs_carry_yd")) is not None
+        and _safe_float(r.get("fs_carry_yd")) > 200.0
     ]
 
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M")
@@ -566,7 +592,7 @@ def _generate_accuracy_reports(diff_csv, output_dir, top_n=20, critical_baseline
     short_residual = 0
     for row in ref_rows:
         raw_diff = _get_numeric(row, "diff_carry_raw_yd", "diff_carry_yd")
-        carry_yd = _safe_float(row.get("flightscope_carry_yd"))
+        carry_yd = _safe_float(row.get("fs_carry_yd"))
         if raw_diff is None:
             continue
         target_abs = _window_target_abs_yd(carry_yd)
@@ -635,11 +661,11 @@ def _generate_accuracy_reports(diff_csv, output_dir, top_n=20, critical_baseline
                 "count": len(residual_candidates),
                 "short_count": short_residual,
                 "by_window": {
-                    "<115": sum(1 for row in residual_candidates if _safe_float(row.get("flightscope_carry_yd")) is not None and _safe_float(row.get("flightscope_carry_yd")) < 115.0),
-                    "115-150": sum(1 for row in residual_candidates if _safe_float(row.get("flightscope_carry_yd")) is not None and 115.0 < _safe_float(row.get("flightscope_carry_yd")) <= 150.0),
-                    "150-180": sum(1 for row in residual_candidates if _safe_float(row.get("flightscope_carry_yd")) is not None and 150.0 < _safe_float(row.get("flightscope_carry_yd")) <= 180.0),
-                    "180-200": sum(1 for row in residual_candidates if _safe_float(row.get("flightscope_carry_yd")) is not None and 180.0 < _safe_float(row.get("flightscope_carry_yd")) <= 200.0),
-                    ">200": sum(1 for row in residual_candidates if _safe_float(row.get("flightscope_carry_yd")) is not None and _safe_float(row.get("flightscope_carry_yd")) > 200.0),
+                    "<115": sum(1 for row in residual_candidates if _safe_float(row.get("fs_carry_yd")) is not None and _safe_float(row.get("fs_carry_yd")) < 115.0),
+                    "115-150": sum(1 for row in residual_candidates if _safe_float(row.get("fs_carry_yd")) is not None and 115.0 < _safe_float(row.get("fs_carry_yd")) <= 150.0),
+                    "150-180": sum(1 for row in residual_candidates if _safe_float(row.get("fs_carry_yd")) is not None and 150.0 < _safe_float(row.get("fs_carry_yd")) <= 180.0),
+                    "180-200": sum(1 for row in residual_candidates if _safe_float(row.get("fs_carry_yd")) is not None and 180.0 < _safe_float(row.get("fs_carry_yd")) <= 200.0),
+                    ">200": sum(1 for row in residual_candidates if _safe_float(row.get("fs_carry_yd")) is not None and _safe_float(row.get("fs_carry_yd")) > 200.0),
                 },
             },
         },
@@ -771,12 +797,12 @@ def _run_analysis_pipeline(diff_csv, history_dir, report_output_dir, args,
 
 
 def cmd_analyze(args):
-    """Full calibration pipeline: Godot export, FlightScope merge, compare, diagnose,
+    """Full calibration pipeline: Godot export, FS reference merge, compare, diagnose,
     accuracy reports, and iteration save."""
     # Resolve paths based on --session flag
     session_dir = None
     physics_csv = PHYSICS_CSV
-    flightscope_csv = FLIGHTSCOPE_CSV
+    fs_csv = FS_CSV
     diff_csv = DIFF_CSV
     history_dir = HISTORY_DIR
     report_output_dir = DATA_DIR
@@ -788,7 +814,7 @@ def cmd_analyze(args):
             else os.path.normpath(args.session)
         )
         physics_csv = os.path.join(session_dir, "physics.csv")
-        flightscope_csv = os.path.join(session_dir, "flightscope.csv")
+        fs_csv = os.path.join(session_dir, "fs.csv")
         diff_csv = os.path.join(session_dir, "shot_diff_analysis.csv")
         history_dir = os.path.join(session_dir, "history")
         report_output_dir = session_dir
@@ -837,33 +863,33 @@ def cmd_analyze(args):
             print(f"ERROR: Physics CSV not found at {physics_csv}", file=sys.stderr)
             sys.exit(1)
 
-    # Step 2: FlightScope reference CSV
-    if not args.skip_godot or args.flightscope_export:
-        # Build fresh FlightScope CSV (automatic when Godot runs, or explicit via --flightscope-export)
-        os.makedirs(os.path.dirname(flightscope_csv), exist_ok=True)
+    # Step 2: FS reference CSV
+    if not args.skip_godot or args.fs_export:
+        # Build fresh FS reference CSV (automatic when Godot runs, or explicit via --fs-export)
+        os.makedirs(os.path.dirname(fs_csv), exist_ok=True)
         if session_dir:
             export_cmd = [
-                sys.executable, os.path.join(SCRIPT_DIR, "export_flightscope_csv.py"),
+                sys.executable, os.path.join(SCRIPT_DIR, "export_fs_csv.py"),
                 "--session", session_dir,
             ]
             result = subprocess.run(
                 export_cmd, cwd=PROJECT_ROOT, capture_output=True, text=True
             )
             if result.returncode != 0:
-                print(f"ERROR: FlightScope CSV export failed: {result.stderr}", file=sys.stderr)
+                print(f"ERROR: FS reference CSV export failed: {result.stderr}", file=sys.stderr)
                 sys.exit(1)
-            with open(flightscope_csv, "w") as f:
+            with open(fs_csv, "w") as f:
                 f.write(result.stdout)
-            print(f"  Exported FlightScope CSV -> {flightscope_csv}")
+            print(f"  Exported FS reference CSV -> {fs_csv}")
         else:
             # Default: SoT CSV + session references merged
-            print(f"\n--- Loading FlightScope reference data ---")
+            print(f"\n--- Loading FS reference data ---")
             if not os.path.exists(SOT_CSV):
                 print(f"ERROR: SoT CSV not found at {SOT_CSV}", file=sys.stderr)
                 sys.exit(1)
 
             if session_dirs:
-                merged_rows = build_merged_flightscope_csv(SOT_CSV, session_dirs, flightscope_csv)
+                merged_rows = build_merged_fs_csv(SOT_CSV, session_dirs, fs_csv)
                 sot_count = 0
                 session_count = 0
                 for row in merged_rows:
@@ -874,14 +900,14 @@ def cmd_analyze(args):
                             session_count += 1
                         else:
                             sot_count += 1
-                print(f"  Merged FlightScope CSV: {sot_count} standard + {session_count} session shots")
-                print(f"  Wrote {flightscope_csv}")
+                print(f"  Merged FS reference CSV: {sot_count} standard + {session_count} session shots")
+                print(f"  Wrote {fs_csv}")
             else:
-                shutil.copy2(SOT_CSV, flightscope_csv)
-                print(f"  Copied {SOT_CSV} -> {flightscope_csv}")
+                shutil.copy2(SOT_CSV, fs_csv)
+                print(f"  Copied {SOT_CSV} -> {fs_csv}")
 
             # Print reference coverage summary
-            with open(flightscope_csv, "r") as f:
+            with open(fs_csv, "r") as f:
                 reader = csv.DictReader(f)
                 total_shots = 0
                 shots_with_ref = 0
@@ -892,33 +918,42 @@ def cmd_analyze(args):
                     if carry > 0 or total > 0:
                         shots_with_ref += 1
                 missing = total_shots - shots_with_ref
-                print(f"  FlightScope reference: {shots_with_ref} of {total_shots} shots have reference data ({missing} missing)")
+                print(f"  FS reference: {shots_with_ref} of {total_shots} shots have reference data ({missing} missing)")
     else:
-        # --skip-godot without --flightscope-export: validate existing CSV
-        if not os.path.exists(flightscope_csv):
-            print(f"ERROR: FlightScope CSV not found at {flightscope_csv}", file=sys.stderr)
-            print("  Remove --skip-godot or add --flightscope-export to generate it.", file=sys.stderr)
+        # --skip-godot without --fs-export: validate existing CSV
+        if not os.path.exists(fs_csv):
+            print(f"ERROR: FS reference CSV not found at {fs_csv}", file=sys.stderr)
+            print("  Remove --skip-godot or add --fs-export to generate it.", file=sys.stderr)
             sys.exit(1)
 
-    # Step 2b: Filter physics CSV to only include shots with FlightScope reference
+    # Step 2b: Filter physics CSV to only include shots with FS reference
     if session_dirs and not session_dir:
-        with open(flightscope_csv, "r") as f:
+        with open(fs_csv, "r") as f:
             reader = csv.DictReader(f)
             ref_names = {row["shot_name"] for row in reader}
         filter_physics_csv(physics_csv, ref_names)
         print(f"  Filtered physics CSV to {len(ref_names)} referenced shots")
 
+    # Step 2c: Build GSP reference CSV if --gsp enabled
+    gsp_csv_path = None
+    if getattr(args, "gsp", False):
+        gsp_csv_path = GSP_CSV
+        gsp_rows = build_merged_gsp_csv(GSP_SOT_CSV, gsp_csv_path)
+        print(f"  GSP reference CSV: {len(gsp_rows)} shots -> {gsp_csv_path}")
+
     # Step 3: Compare CSVs
     compare_cmd = [
         sys.executable, os.path.join(SCRIPT_DIR, "compare_csv.py"),
-        physics_csv, flightscope_csv,
+        physics_csv, fs_csv,
         "--output", diff_csv,
     ]
+    if gsp_csv_path:
+        compare_cmd.extend(["--gsp-csv", gsp_csv_path])
     if carry_exception_path:
         compare_cmd.extend(["--carry-exceptions", carry_exception_path])
     elif args.no_carry_exceptions:
         compare_cmd.append("--no-carry-exceptions")
-    if not run_command(compare_cmd, "Comparing physics vs FlightScope"):
+    if not run_command(compare_cmd, "Comparing physics vs FS reference"):
         sys.exit(1)
 
     # Steps 4-7: Diagnose, accuracy reports, save iteration
@@ -1048,7 +1083,8 @@ def parse_args():
         p.add_argument("--critical-baseline", default=None, help="Optional prior critical-carry CSV to compare against (defaults to latest existing report in assets/data)")
         p.add_argument("--carry-exceptions", default=None, help="Path to carry exception profile JSON (explicit opt-in; default disabled)")
         p.add_argument("--no-carry-exceptions", action="store_true", help="Disable carry exception profile")
-        p.add_argument("--flightscope-export", action="store_true", help="Force re-export FlightScope CSV even with --skip-godot")
+        p.add_argument("--fs-export", action="store_true", help="Force re-export FS reference CSV even with --skip-godot")
+        p.add_argument("--gsp", action="store_true", help="Enable GSP data source comparison")
 
     run_parser = subparsers.add_parser("run", help="Full calibration pipeline (alias for analyze)")
     _add_common_flags(run_parser)

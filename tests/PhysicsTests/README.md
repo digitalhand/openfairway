@@ -40,17 +40,17 @@ godot --headless --script run_benchmarks.gd
 
 The script prints whatever benchmark set is currently defined in `run_benchmarks.gd`, including driver, wood, wedge, chip, and specialty-shot fixtures. Capture that output as the local baseline before changing physics.
 
-### 3. Garmin Carry-Window Runtime Regression (`Category=GarminCarryWindow`)
+### 3. LM Carry-Window Runtime Regression (`Category=LmCarryWindow`)
 
-This is the carry-focused runtime suite for the Garmin / GSPro / FlightScope comparison corpus. It requires a Godot-backed test environment.
+This is the carry-focused runtime suite for the LM / GSP / FS comparison corpus. It requires a Godot-backed test environment.
 
 Run locally after opening the project in Godot:
 
 ```bash
-dotnet test --filter "Category=GarminCarryWindow"
+dotnet test --filter "Category=LmCarryWindow"
 ```
 
-`GarminCarryWindowRegressionTests.cs` checks carry against comparison windows and prints the shared flight diagnostics used during tuning:
+`LmCarryWindowRegressionTests.cs` checks carry against comparison windows and prints the shared flight diagnostics used during tuning:
 
 - `initial_spin_ratio`
 - `initial_re`
@@ -132,7 +132,7 @@ Compare carry/total/rollout against the baseline from step 1.
 ### 5. Run Carry-Window Runtime Regression
 
 ```bash
-dotnet test --filter "Category=GarminCarryWindow"
+dotnet test --filter "Category=LmCarryWindow"
 ```
 
 Confirm that carry remains inside the expected comparison windows and inspect the printed flight diagnostics when tuning carry-sensitive shots.
@@ -149,7 +149,7 @@ python parse_shot_debug.py < debug_output.txt
 
 If distances changed intentionally:
 1. Update any benchmark notes in this README if the workflow or diagnostic expectations changed
-2. Update expected values in `DistanceBenchmarkTests.cs`, `FlightScopeCarryRegressionTests.cs`, or `GarminCarryWindowRegressionTests.cs` as appropriate
+2. Update expected values in `DistanceBenchmarkTests.cs`, `FsCarryRegressionTests.cs`, or `LmCarryWindowRegressionTests.cs` as appropriate
 3. If preserving historical manual notes, update `ShotDistanceRegressionTests` comments in `RolloutPhysicsTests.cs`
 4. Include both code changes and test updates in the same commit
 
