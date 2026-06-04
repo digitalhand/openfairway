@@ -24,6 +24,14 @@ public sealed class RolloutProfile
     public float FrictionBlendSpeed { get; init; } = 15.0f;
     public float TangentVelocityThreshold { get; init; } = 0.05f;
 
+    // --- Slope rolling resistance ---
+    // Turf resists the down-slope gravity drive up to RollingFriction * SlopeResistanceRatio,
+    // applied against the slope-corrected normal force (m*g*cos(theta)) at all speeds. Below
+    // the resulting threshold angle atan(u_kr * ratio) the ball is held; above it the ball
+    // still rolls but with a weakened push. Zero effect on flat ground (drive is zero there),
+    // so flat-rollout calibration is preserved. Per-surface u_kr => rough grabs, greens roll.
+    public float SlopeResistanceRatio { get; init; } = 1.6f;
+
     // --- Metadata ---
     public string Name { get; init; } = "Default";
     public string Version { get; init; } = "1.0";

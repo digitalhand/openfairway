@@ -53,20 +53,12 @@ public partial class BallPhysics : RefCounted
 
         if (onGround)
         {
-            // When on ground, normal force cancels gravity vertically
-            // while gravity still contributes along the local slope tangent.
-            Vector3 floorNormal = parameters.FloorNormal.LengthSquared() > 0.000001f
-                ? parameters.FloorNormal.Normalized()
-                : Vector3.Up;
-
-            Vector3 gravityAlongSlope = gravity - floorNormal * gravity.Dot(floorNormal);
-
-            // Ground integration is handled in world-space with collision response.
-            // Keep the along-slope gravity contribution in horizontal axes only.
-            gravityAlongSlope.Y = 0.0f;
-
+            // On ground the normal force cancels gravity vertically; only the down-slope
+            // component drives the ball. Turf resists that drive (see GetSlopeDriveForce),
+            // so gentle slopes hold and steeper slopes roll with a weakened push instead of
+            // accelerating away forever.
             Vector3 groundForces = CalculateGroundForces(velocity, omega, parameters);
-            groundForces += gravityAlongSlope;
+            groundForces += GetSlopeDriveForce(parameters.FloorNormal, parameters.RollingFriction);
             groundForces.Y = 0.0f;  // Zero out any vertical component
             return groundForces;
         }
@@ -74,6 +66,40 @@ public partial class BallPhysics : RefCounted
         {
             return gravity + CalculateAirForces(velocity, omega, parameters);
         }
+    }
+
+    /// <summary>
+    /// Horizontal gravity force that drives a grounded ball down-slope, after turf
+    /// rolling-resistance. Returns the (Y-zeroed) gravity-along-slope force with its
+    /// magnitude reduced by the surface's slope rolling-resistance capacity
+    /// (u_kr * ratio * m * g * cos(theta)): below the threshold angle atan(u_kr * ratio)
+    /// the drive is fully cancelled (the ball holds / settles); above it the ball still
+    /// rolls but with a weakened push instead of accelerating away. Zero on flat ground,
+    /// so flat-rollout calibration is preserved. Applies at all speeds. Pure math
+    /// (no Godot object construction) so it is CI-testable.
+    /// </summary>
+    public static Vector3 GetSlopeDriveForce(Vector3 floorNormal, float rollingFriction)
+        => GetSlopeDriveForce(floorNormal, rollingFriction, DefaultRollout);
+
+    public static Vector3 GetSlopeDriveForce(Vector3 floorNormal, float rollingFriction, RolloutProfile rp)
+    {
+        Vector3 normal = floorNormal.LengthSquared() > 0.000001f ? floorNormal.Normalized() : Vector3.Up;
+
+        Vector3 gravityAlongSlope = GravityForce - normal * GravityForce.Dot(normal);
+        gravityAlongSlope.Y = 0.0f;  // ground collision handles vertical motion; keep horizontal drive only
+
+        float driveMag = gravityAlongSlope.Length();
+        if (driveMag < 0.000001f)
+            return Vector3.Zero;  // flat ground: no drive, preserves flat-rollout calibration
+
+        // Turf resists the gravity drive up to its rolling-resistance capacity (against the
+        // slope-corrected normal force). Reusing per-surface RollingFriction makes Rough grab
+        // steeper lies than Green. Subtracting at all speeds stops balls accelerating downhill.
+        float cosTheta = Mathf.Clamp(normal.Y, 0.0f, 1.0f);
+        float resistance = rollingFriction * rp.SlopeResistanceRatio * MASS * 9.81f * cosTheta;
+        float effectiveDrive = Mathf.Max(0.0f, driveMag - resistance);
+
+        return gravityAlongSlope * (effectiveDrive / driveMag);
     }
 
     private float GetSpinFrictionMultiplier(Vector3 omega, float impactSpinRpm, float ballSpeed)

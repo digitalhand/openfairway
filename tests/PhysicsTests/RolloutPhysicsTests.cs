@@ -443,6 +443,102 @@ namespace OpenFairway.Tests
     }
 
     /// <summary>
+    /// Tests for the slope rolling-resistance (BallPhysics.GetSlopeDriveForce): turf resists
+    /// the down-slope gravity drive up to its capacity, so below the threshold angle the ball
+    /// is held and above it the ball still rolls but with a weakened (not accelerating) push.
+    /// Guards against the "ball accelerates / rolls forever down hills" regression, and the
+    /// flat-ground no-op that preserves rollout calibration.
+    ///
+    /// CI-safe: exercises only the pure static helper (Vector3/Mathf math + plain catalog
+    /// reads), never constructs Godot-backed BallPhysics/PhysicsParams objects. Test slope
+    /// angles are derived from the live source constants (catalog u_kr + RolloutProfile
+    /// ratio) so they stay correct if the tuning changes. Floor normals make "downhill" +X.
+    /// </summary>
+    [TestFixture]
+    public class SlopeRollingResistanceTests
+    {
+        private static readonly RolloutProfile Profile = RolloutProfile.Default;
+
+        private static Vector3 DownhillSlopeNormalX(float slopeDegrees)
+        {
+            float radians = Mathf.DegToRad(slopeDegrees);
+            return new Vector3(Mathf.Sin(radians), Mathf.Cos(radians), 0.0f).Normalized();
+        }
+
+        private static float RollingFrictionFor(PhysicsEnums.SurfaceType surface)
+            => SurfacePhysicsCatalog.Get(surface).RollingFriction;
+
+        // Largest slope (deg) the surface fully holds (drive cancelled): atan(u_kr * ratio).
+        private static float HoldAngleDegrees(PhysicsEnums.SurfaceType surface)
+            => Mathf.RadToDeg(Mathf.Atan(RollingFrictionFor(surface) * Profile.SlopeResistanceRatio));
+
+        private static float DownSlopeDrive(PhysicsEnums.SurfaceType surface, float slopeDeg)
+            => BallPhysics.GetSlopeDriveForce(DownhillSlopeNormalX(slopeDeg), RollingFrictionFor(surface)).Length();
+
+        // Unresisted gravity-along-slope magnitude (N) for a normal tilted in the X/Y plane.
+        private static float FullGravityDrive(float slopeDeg)
+        {
+            float r = Mathf.DegToRad(slopeDeg);
+            return 9.81f * BallPhysics.MASS * Mathf.Sin(r) * Mathf.Cos(r);
+        }
+
+        [Test]
+        [Category("RolloutPhysics")]
+        public void FlatGround_NoDrive_PreservesRolloutCalibration()
+        {
+            // The whole point: on flat ground the drive is zero, so flat rollout is untouched.
+            float drive = BallPhysics.GetSlopeDriveForce(Vector3.Up, RollingFrictionFor(PhysicsEnums.SurfaceType.Fairway)).Length();
+
+            Assert.That(drive, Is.EqualTo(0.0f).Within(1e-6f),
+                "Flat ground must produce no down-slope drive (flat-rollout calibration preserved).");
+        }
+
+        [Test]
+        [Category("RolloutPhysics")]
+        public void BelowThresholdAngle_IsHeld_NoDownSlopeDrive()
+        {
+            // Inside Fairway's hold angle: turf resistance fully cancels the gravity drive.
+            float slope = HoldAngleDegrees(PhysicsEnums.SurfaceType.Fairway) * 0.7f;
+            float drive = DownSlopeDrive(PhysicsEnums.SurfaceType.Fairway, slope);
+
+            Assert.That(drive, Is.EqualTo(0.0f).Within(1e-4f),
+                "A slope below the threshold angle should be held: no down-slope drive.");
+        }
+
+        [Test]
+        [Category("RolloutPhysics")]
+        public void AboveThresholdAngle_RollsButWeakened()
+        {
+            // Beyond the hold angle the ball still rolls, but with a weakened push: the drive
+            // is non-zero yet strictly less than the raw gravity-along-slope (no more runaway).
+            float slope = HoldAngleDegrees(PhysicsEnums.SurfaceType.Fairway) + 5.0f;
+            float drive = DownSlopeDrive(PhysicsEnums.SurfaceType.Fairway, slope);
+            float fullDrive = FullGravityDrive(slope);
+
+            Assert.That(drive, Is.GreaterThan(0.0f), "A steep slope should still drive the ball down-slope.");
+            Assert.That(drive, Is.LessThan(fullDrive),
+                "The drive must be weakened by turf resistance, not the full gravity-along-slope.");
+        }
+
+        [Test]
+        [Category("RolloutPhysics")]
+        public void ModerateSlope_RoughHolds_GreenRolls()
+        {
+            // A slope between Green's and Rough's hold angles: Rough grabs it, Green rolls.
+            float greenHold = HoldAngleDegrees(PhysicsEnums.SurfaceType.Green);
+            float roughHold = HoldAngleDegrees(PhysicsEnums.SurfaceType.Rough);
+            Assert.That(roughHold, Is.GreaterThan(greenHold), "Rough should hold steeper slopes than Green.");
+
+            float slope = (greenHold + roughHold) * 0.5f;
+
+            Assert.That(DownSlopeDrive(PhysicsEnums.SurfaceType.Rough, slope), Is.EqualTo(0.0f).Within(1e-4f),
+                "Rough's higher rolling friction should hold the ball on a moderate slope.");
+            Assert.That(DownSlopeDrive(PhysicsEnums.SurfaceType.Green, slope), Is.GreaterThan(0.02f),
+                "Green's low rolling friction should let the ball roll on the same slope.");
+        }
+    }
+
+    /// <summary>
     /// Regression tests for shot distances.
     /// These document expected distances and detect unintended physics changes.
     /// NOTE: These cannot run as automated unit tests due to Godot runtime requirements,
